@@ -1,0 +1,7 @@
+{
+  "author": "Yize Wu",
+  "description": "3D Gaussian Splatting renderer",
+  "displayName": "Gsplat",
+  "name": "wu.yize.gsplat",
+  "version": "1.0.0"
+}

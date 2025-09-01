@@ -32,6 +32,7 @@ namespace Gsplat
             }
 
             m_gsplats.Add(gsplat);
+            // TODO: InitPayload here
         }
 
         public void UnregisterGsplat(GsplatRenderer gsplat)

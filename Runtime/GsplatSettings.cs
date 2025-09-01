@@ -45,10 +45,10 @@ namespace Gsplat
         public Shader Shader;
         public ComputeShader ComputeShader;
         public uint SplatInstanceSize = 128;
-        public Material Material { get; private set; }
+        public Material[] Materials { get; private set; }
         public Mesh Mesh { get; private set; }
 
-        public bool Valid => Material && Mesh && SplatInstanceSize > 0;
+        public bool Valid => Materials.Length != 0 && Mesh && SplatInstanceSize > 0;
 
         Shader m_prevShader;
         ComputeShader m_prevComputeShader;
@@ -81,19 +81,34 @@ namespace Gsplat
             };
         }
 
-        void OnValidate()
+        void CreateMaterials()
         {
-            if (SplatInstanceSize != m_prevSplatInstanceSize)
+            if (Materials != null)
+                foreach (var mat in Materials)
+                    DestroyImmediate(mat);
+
+            if (!Shader)
             {
-                DestroyImmediate(Mesh);
-                CreateMeshInstance();
-                m_prevSplatInstanceSize = SplatInstanceSize;
+                Materials = null;
+                return;
             }
 
+            Materials = new Material[4];
+            for (int i = 0; i < 4; ++i)
+            {
+                Materials[i] = new Material(Shader) { hideFlags = HideFlags.HideAndDontSave };
+                Materials[i].EnableKeyword($"SH_BANDS_{i}");
+            }
+        }
+
+        void OnValidate()
+        {
             if (Shader != m_prevShader)
             {
-                DestroyImmediate(Material);
-                Material = Shader ? new Material(Shader) { hideFlags = HideFlags.DontSave } : null;
+                //DestroyImmediate(Material);
+                //Material = Shader ? new Material(Shader) { hideFlags = HideFlags.DontSave } : null;
+                //Material?.SetInt(k_splatInstanceSize, (int)SplatInstanceSize);
+                CreateMaterials();
                 m_prevShader = Shader;
             }
 
@@ -102,17 +117,29 @@ namespace Gsplat
                 GsplatRenderSystem.Instance.InitSorter(ComputeShader);
                 m_prevComputeShader = ComputeShader;
             }
+
+            if (SplatInstanceSize != m_prevSplatInstanceSize)
+            {
+                DestroyImmediate(Mesh);
+                CreateMeshInstance();
+                m_prevSplatInstanceSize = SplatInstanceSize;
+            }
         }
 
         void OnEnable()
         {
-            CreateMeshInstance();
-            m_prevSplatInstanceSize = SplatInstanceSize;
-
-            Material = Shader ? new Material(Shader) { hideFlags = HideFlags.DontSave } : null;
+            Debug.Log("GsplatSettings OnEnable");
+            // Material = Shader ? new Material(Shader) { hideFlags = HideFlags.DontSave } : null;
+            // Material?.SetInt(k_splatInstanceSize, (int)SplatInstanceSize);
+            CreateMaterials();
             m_prevShader = Shader;
             GsplatRenderSystem.Instance.InitSorter(ComputeShader);
             m_prevComputeShader = ComputeShader;
+
+            CreateMeshInstance();
+            m_prevSplatInstanceSize = SplatInstanceSize;
         }
+
+        static readonly int k_splatInstanceSize = Shader.PropertyToID("_SplatInstanceSize");
     }
 }

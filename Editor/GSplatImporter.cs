@@ -78,7 +78,8 @@ namespace Gsplat.Editor
                 gsplatAsset.SHBands = (byte)(Math.Sqrt((propertyCount - 14) / 3) - 1);
                 gsplatAsset.Positions = new Vector3[vertexCount];
                 gsplatAsset.Colors = new Vector4[vertexCount];
-                gsplatAsset.Shs = new Vector3[vertexCount * shCoeffs];
+                if (shCoeffs > 0)
+                    gsplatAsset.SHs = new Vector3[vertexCount * shCoeffs];
                 gsplatAsset.Scales = new Vector3[vertexCount];
                 gsplatAsset.Rotations = new Vector4[vertexCount];
 
@@ -95,7 +96,7 @@ namespace Gsplat.Editor
                     gsplatAsset.Colors[i] = new Vector4(properties[6], properties[7], properties[8],
                         Sigmoid(properties[propertyCount - 8]));
                     for (int j = 0; j < shCoeffs; j++)
-                        gsplatAsset.Shs[i * shCoeffs + j] = new Vector3(properties[j + 9], properties[j + 9 + shCoeffs],
+                        gsplatAsset.SHs[i * shCoeffs + j] = new Vector3(properties[j + 9], properties[j + 9 + shCoeffs],
                             properties[j + 9 + shCoeffs * 2]);
                     gsplatAsset.Scales[i] = new Vector3(Mathf.Exp(properties[propertyCount - 7]),
                         Mathf.Exp(properties[propertyCount - 6]),

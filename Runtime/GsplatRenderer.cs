@@ -17,6 +17,7 @@ namespace Gsplat
         GraphicsBuffer m_scaleBuffer;
         GraphicsBuffer m_rotationBuffer;
         GraphicsBuffer m_colorBuffer;
+        GraphicsBuffer m_shBuffer;
         GraphicsBuffer m_distanceBuffer;
         GraphicsBuffer m_orderBuffer;
         GpuSorting.Args m_sorterArgs;
@@ -26,7 +27,8 @@ namespace Gsplat
             m_positionBuffer != null &&
             m_scaleBuffer != null &&
             m_rotationBuffer != null &&
-            m_colorBuffer != null;
+            m_colorBuffer != null &&
+            (GsplatAsset.SHBands == 0 || m_shBuffer != null);
 
         public GpuSorting.Args SorterArgs => m_sorterArgs;
 
@@ -35,6 +37,7 @@ namespace Gsplat
         static readonly int k_scaleBuffer = Shader.PropertyToID("_ScaleBuffer");
         static readonly int k_rotationBuffer = Shader.PropertyToID("_RotationBuffer");
         static readonly int k_colorBuffer = Shader.PropertyToID("_ColorBuffer");
+        static readonly int k_shBuffer = Shader.PropertyToID("_SHBuffer");
         static readonly int k_matrixM = Shader.PropertyToID("_MATRIX_M");
         static readonly int k_splatInstanceSize = Shader.PropertyToID("_SplatInstanceSize");
 
@@ -54,14 +57,20 @@ namespace Gsplat
                 System.Runtime.InteropServices.Marshal.SizeOf(typeof(Vector4)));
             m_colorBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)GsplatAsset.SplatCount,
                 System.Runtime.InteropServices.Marshal.SizeOf(typeof(Vector4)));
-            m_distanceBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)GsplatAsset.SplatCount, 4);
-            m_orderBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)GsplatAsset.SplatCount, 4);
-
+            if (GsplatAsset.SHBands > 0)
+                m_shBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, GsplatAsset.SHs.Length,
+                    System.Runtime.InteropServices.Marshal.SizeOf(typeof(Vector3)));
+            m_distanceBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)GsplatAsset.SplatCount,
+                System.Runtime.InteropServices.Marshal.SizeOf(typeof(float)));
+            m_orderBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)GsplatAsset.SplatCount,
+                System.Runtime.InteropServices.Marshal.SizeOf(typeof(uint)));
 
             m_positionBuffer.SetData(GsplatAsset.Positions);
             m_scaleBuffer.SetData(GsplatAsset.Scales);
             m_rotationBuffer.SetData(GsplatAsset.Rotations);
             m_colorBuffer.SetData(GsplatAsset.Colors);
+            if (GsplatAsset.SHBands > 0)
+                m_shBuffer.SetData(GsplatAsset.SHs);
 
             m_sorterArgs.PositionBuffer = m_positionBuffer;
             m_sorterArgs.InputKeys = m_distanceBuffer;
@@ -69,13 +78,14 @@ namespace Gsplat
             m_sorterArgs.Count = GsplatAsset.SplatCount;
             m_sorterArgs.Resources = GpuSorting.SupportResources.Load(GsplatAsset.SplatCount);
 
-            //material ??= new Material(GsplatSettings.Instance.shader);
             m_propertyBlock ??= new MaterialPropertyBlock();
             m_propertyBlock.SetBuffer(k_orderBuffer, m_orderBuffer);
             m_propertyBlock.SetBuffer(k_positionBuffer, m_positionBuffer);
             m_propertyBlock.SetBuffer(k_scaleBuffer, m_scaleBuffer);
             m_propertyBlock.SetBuffer(k_rotationBuffer, m_rotationBuffer);
             m_propertyBlock.SetBuffer(k_colorBuffer, m_colorBuffer);
+            if (GsplatAsset.SHBands > 0)
+                m_propertyBlock.SetBuffer(k_shBuffer, m_shBuffer);
         }
 
         void DisposeResourcesForAsset()
@@ -84,6 +94,7 @@ namespace Gsplat
             m_scaleBuffer?.Dispose();
             m_rotationBuffer?.Dispose();
             m_colorBuffer?.Dispose();
+            m_shBuffer?.Dispose();
 
             m_distanceBuffer?.Dispose();
             m_orderBuffer?.Dispose();
@@ -94,6 +105,7 @@ namespace Gsplat
             m_scaleBuffer = null;
             m_rotationBuffer = null;
             m_colorBuffer = null;
+            m_shBuffer = null;
 
             m_distanceBuffer = null;
             m_orderBuffer = null;
@@ -125,6 +137,7 @@ namespace Gsplat
                 Debug.Log("!GsplatRenderSystem.Instance.Valid");
             if (!GsplatSettings.Instance.Material)
                 Debug.Log("!GsplatSettings.Instance.material");*/
+            //Debug.Log($"SplatInstanceSize={GsplatSettings.Instance.SplatInstanceSize}");
 
             if (!GsplatAsset || !GsplatSettings.Instance.Valid || !GsplatRenderSystem.Instance.Valid)
             {
@@ -132,16 +145,15 @@ namespace Gsplat
                 return;
             }
 
-            m_propertyBlock.SetInt(k_splatInstanceSize, (int)GsplatSettings.Instance.SplatInstanceSize);
+            m_propertyBlock.SetInteger(k_splatInstanceSize, (int)GsplatSettings.Instance.SplatInstanceSize);
             m_propertyBlock.SetMatrix(k_matrixM, transform.localToWorldMatrix);
-            var rp = new RenderParams(GsplatSettings.Instance.Material)
+            var rp = new RenderParams(GsplatSettings.Instance.Materials[GsplatAsset.SHBands])
             {
                 worldBounds = CalcWorldBounds(),
                 matProps = m_propertyBlock,
                 layer = gameObject.layer
             };
 
-            //Graphics.RenderMeshPrimitives(rp, GsplatSettings.Instance.Mesh, 0, (int)GsplatAsset.NumInstances);
             Graphics.RenderMeshPrimitives(rp, GsplatSettings.Instance.Mesh, 0,
                 (int)Math.Ceiling(GsplatAsset.SplatCount / (double)GsplatSettings.Instance.SplatInstanceSize));
         }

@@ -1,8 +1,6 @@
 Shader "Gsplat/Standard"
 {
-    Properties
-    {
-    }
+    Properties {}
     SubShader
     {
         Tags
@@ -23,6 +21,7 @@ Shader "Gsplat/Standard"
             #pragma require compute
             #pragma use_dxc
             #pragma enable_d3d11_debug_symbols
+            #pragma multi_compile SH_BANDS_0 SH_BANDS_1 SH_BANDS_2 SH_BANDS_3
 
             #include "UnityCG.cginc"
 
@@ -33,6 +32,10 @@ Shader "Gsplat/Standard"
             StructuredBuffer<float3> _ScaleBuffer;
             StructuredBuffer<float4> _RotationBuffer;
             StructuredBuffer<float4> _ColorBuffer;
+
+            #ifndef SH_BANDS_0
+            StructuredBuffer<float3> _SHBuffer;
+            #endif
 
             struct appdata
             {
@@ -214,9 +217,21 @@ Shader "Gsplat/Standard"
                 corner.uv *= clip;
             }
 
+            // spherical Harmonics
+            #ifdef SH_BANDS_1
+            #define SH_COEFFS 3
+            #elif defined(SH_BANDS_2)
+            #define SH_COEFFS 8
+            #elif defined(SH_BANDS_3)
             #define SH_COEFFS 15
+            #else
+            #define SH_COEFFS 0
+            #endif
+
 
             #define SH_C0 0.28209479177387814f
+
+            #ifndef SH_BANDS_0
             #define SH_C1 0.4886025119029199f
             #define SH_C2_0 1.0925484305920792f
             #define SH_C2_1 -1.0925484305920792f
@@ -231,6 +246,57 @@ Shader "Gsplat/Standard"
             #define SH_C3_5 1.445305721320277f
             #define SH_C3_6 -0.5900435899266435f
 
+            // see https://github.com/graphdeco-inria/gaussian-splatting/blob/main/utils/sh_utils.py
+            float3 evalSH(SplatSource source, float3 dir)
+            {
+                float3 sh[SH_COEFFS];
+
+                for (int i = 0; i < SH_COEFFS; i++)
+                {
+                    sh[i] = _SHBuffer[source.id * SH_COEFFS + i];
+                }
+
+                float x = dir.x;
+                float y = dir.y;
+                float z = dir.z;
+
+                // 1st degree
+                float3 result = SH_C1 * (-sh[0] * y + sh[1] * z - sh[2] * x);
+
+            #if defined(SH_BANDS_2) || defined(SH_BANDS_3)
+                // 2nd degree
+                float xx = x * x;
+                float yy = y * y;
+                float zz = z * z;
+                float xy = x * y;
+                float yz = y * z;
+                float xz = x * z;
+
+                result = result + (
+                    sh[3] * (SH_C2_0 * xy) +
+                    sh[4] * (SH_C2_1 * yz) +
+                    sh[5] * (SH_C2_2 * (2.0 * zz - xx - yy)) +
+                    sh[6] * (SH_C2_3 * xz) +
+                    sh[7] * (SH_C2_4 * (xx - yy))
+                );
+            #endif
+
+            #ifdef SH_BANDS_3
+                // 3rd degree
+                result = result + (
+                    sh[8] * (SH_C3_0 * y * (3.0 * xx - yy)) +
+                    sh[9] * (SH_C3_1 * xy * z) +
+                    sh[10] * (SH_C3_2 * y * (4.0 * zz - xx - yy)) +
+                    sh[11] * (SH_C3_3 * z * (2.0 * zz - 3.0 * xx - 3.0 * yy)) +
+                    sh[12] * (SH_C3_4 * x * (4.0 * zz - xx - yy)) +
+                    sh[13] * (SH_C3_5 * z * (xx - yy)) +
+                    sh[14] * (SH_C3_6 * x * (xx - 3.0 * yy))
+                );
+            #endif
+
+                return result;
+            }
+            #endif
 
             struct v2f
             {
@@ -270,8 +336,14 @@ Shader "Gsplat/Standard"
                 float4 color = _ColorBuffer[source.id];
                 color.rgb = color.rgb * SH_C0 + float3(0.5, 0.5, 0.5);
 
+                #ifndef SH_BANDS_0
+                // calculate the model-space view direction
+                float3 dir = normalize(mul((float3x3)center.modelView, center.view));
+                color.rgb += evalSH(source, dir);
+                #endif
+
                 clipCorner(corner, color.w);
-                
+
                 o.vertex = center.proj + float4(corner.offset.x, _ProjectionParams.x * corner.offset.y, 0, 0);
                 o.color = float4(max(color.rgb, float3(0, 0, 0)), color.a);
                 o.uv = corner.uv;

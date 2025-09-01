@@ -3,8 +3,6 @@
 // DeviceRadixSort
 #define KEY_FLOAT
 #define PAYLOAD_UINT
-//#pragma multi_compile __ KEY_UINT KEY_INT KEY_FLOAT
-//#pragma multi_compile __ PAYLOAD_UINT PAYLOAD_INT PAYLOAD_FLOAT
 #pragma multi_compile __ SHOULD_ASCEND
 #pragma multi_compile __ SORT_PAIRS
 #pragma multi_compile __ VULKAN
@@ -28,6 +26,7 @@
 StructuredBuffer<float3> _PositionBuffer;
 float4x4 _MatrixMV;
 
+// TODO
 /*[numthreads(GROUP_SIZE,1,1)]
 void InitPayload(uint3 id : SV_DispatchThreadID)
 {

@@ -77,7 +77,7 @@ namespace Gsplat
                 name = "GsplatMeshInstance",
                 vertices = meshPositions,
                 triangles = meshIndices,
-                hideFlags = HideFlags.DontSave
+                hideFlags = HideFlags.HideAndDontSave
             };
         }
 
@@ -105,16 +105,13 @@ namespace Gsplat
         {
             if (Shader != m_prevShader)
             {
-                //DestroyImmediate(Material);
-                //Material = Shader ? new Material(Shader) { hideFlags = HideFlags.DontSave } : null;
-                //Material?.SetInt(k_splatInstanceSize, (int)SplatInstanceSize);
                 CreateMaterials();
                 m_prevShader = Shader;
             }
 
             if (ComputeShader != m_prevComputeShader)
             {
-                GsplatRenderSystem.Instance.InitSorter(ComputeShader);
+                GsplatSorter.Instance.InitSorter(ComputeShader);
                 m_prevComputeShader = ComputeShader;
             }
 
@@ -128,18 +125,13 @@ namespace Gsplat
 
         void OnEnable()
         {
-            Debug.Log("GsplatSettings OnEnable");
-            // Material = Shader ? new Material(Shader) { hideFlags = HideFlags.DontSave } : null;
-            // Material?.SetInt(k_splatInstanceSize, (int)SplatInstanceSize);
             CreateMaterials();
             m_prevShader = Shader;
-            GsplatRenderSystem.Instance.InitSorter(ComputeShader);
+            GsplatSorter.Instance.InitSorter(ComputeShader);
             m_prevComputeShader = ComputeShader;
 
             CreateMeshInstance();
             m_prevSplatInstanceSize = SplatInstanceSize;
         }
-
-        static readonly int k_splatInstanceSize = Shader.PropertyToID("_SplatInstanceSize");
     }
 }

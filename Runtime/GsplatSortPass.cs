@@ -8,7 +8,7 @@ namespace Gsplat
     // Copyright Thomas Smith 2024, MIT license
     // https://github.com/b0nes164/GPUSorting
 
-    public class GpuSorting
+    public class GsplatSortPass
     {
         static readonly int k_positionBuffer = Shader.PropertyToID("_PositionBuffer");
         static readonly int k_matrixMv = Shader.PropertyToID("_MatrixMV");
@@ -95,7 +95,7 @@ namespace Gsplat
 
         public bool Valid => m_Valid;
 
-        public GpuSorting(ComputeShader cs)
+        public GsplatSortPass(ComputeShader cs)
         {
             m_CS = cs;
             if (cs)

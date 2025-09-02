@@ -7,13 +7,12 @@
 #pragma multi_compile __ SORT_PAIRS
 #pragma multi_compile __ VULKAN
 
-//#pragma kernel InitPayload
+#pragma kernel InitPayload
 #pragma kernel CalcDistance
 #pragma kernel InitDeviceRadixSort
 #pragma kernel Upsweep
 #pragma kernel Scan
 #pragma kernel Downsweep
-
 
 // GPU sorting needs wave ops
 #pragma require wavebasic
@@ -22,20 +21,18 @@
 
 #include "DeviceRadixSort.hlsl"
 
-//uint _SplatCount;
 StructuredBuffer<float3> _PositionBuffer;
 float4x4 _MatrixMV;
 
-// TODO
-/*[numthreads(GROUP_SIZE,1,1)]
+[numthreads(GROUP_SIZE,1,1)]
 void InitPayload(uint3 id : SV_DispatchThreadID)
 {
     uint idx = id.x;
-    if (idx >= _SplatCount)
+    if (idx >= e_numKeys)
         return;
 
     b_sortPayload[idx] = idx;
-}*/
+}
 
 [numthreads(GROUP_SIZE,1,1)]
 void CalcDistance(uint3 id : SV_DispatchThreadID)
@@ -44,8 +41,7 @@ void CalcDistance(uint3 id : SV_DispatchThreadID)
     if (idx >= e_numKeys)
         return;
 
-    float3 pos = _PositionBuffer[idx];
+    float3 pos = _PositionBuffer[b_sortPayload[idx]];
     pos = mul(_MatrixMV, float4(pos.xyz, 1)).xyz;
     b_sort[idx] = pos.z;
-    b_sortPayload[idx] = idx;
 }

@@ -85,6 +85,7 @@ namespace Gsplat
         }
 
         readonly ComputeShader m_CS;
+        readonly int m_kernelInitPayload = -1;
         readonly int m_kernelCalcDistance = -1;
         readonly int m_kernelInitDeviceRadixSort = -1;
         readonly int m_kernelUpsweep = -1;
@@ -100,6 +101,7 @@ namespace Gsplat
             m_CS = cs;
             if (cs)
             {
+                m_kernelInitPayload = cs.FindKernel("InitPayload");
                 m_kernelCalcDistance = cs.FindKernel("CalcDistance");
                 m_kernelInitDeviceRadixSort = cs.FindKernel("InitDeviceRadixSort");
                 m_kernelUpsweep = cs.FindKernel("Upsweep");
@@ -107,14 +109,16 @@ namespace Gsplat
                 m_kernelDownsweep = cs.FindKernel("Downsweep");
             }
 
-            m_Valid = m_kernelCalcDistance >= 0 &&
+            m_Valid = m_kernelInitPayload >= 0 &&
+                      m_kernelCalcDistance >= 0 &&
                       m_kernelInitDeviceRadixSort >= 0 &&
                       m_kernelUpsweep >= 0 &&
                       m_kernelScan >= 0 &&
                       m_kernelDownsweep >= 0;
             if (m_Valid)
             {
-                if (!cs.IsSupported(m_kernelCalcDistance) ||
+                if (!cs.IsSupported(m_kernelInitPayload) ||
+                    !cs.IsSupported(m_kernelCalcDistance) ||
                     !cs.IsSupported(m_kernelInitDeviceRadixSort) ||
                     !cs.IsSupported(m_kernelUpsweep) ||
                     !cs.IsSupported(m_kernelScan) ||
@@ -137,6 +141,15 @@ namespace Gsplat
         }
 
         static uint DivRoundUp(uint x, uint y) => (x + y - 1) / y;
+
+        // fill the payload buffer with 0, 1, 2, ..., count-1
+        public void InitPayload(CommandBuffer cmd, GraphicsBuffer payloadBuffer, uint count)
+        {
+            Assert.IsTrue(Valid);
+            cmd.SetComputeIntParam(m_CS, k_eNumKeys, (int)count);
+            cmd.SetComputeBufferParam(m_CS, m_kernelInitPayload, k_bSortPayload, payloadBuffer);
+            cmd.DispatchCompute(m_CS, m_kernelInitPayload, (int)DivRoundUp(count, 1024), 1, 1);
+        }
 
         public void Dispatch(CommandBuffer cmd, Args args)
         {

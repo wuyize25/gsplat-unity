@@ -18,9 +18,8 @@ namespace Gsplat
         GraphicsBuffer m_rotationBuffer;
         GraphicsBuffer m_colorBuffer;
         GraphicsBuffer m_shBuffer;
-        GraphicsBuffer m_distanceBuffer;
         GraphicsBuffer m_orderBuffer;
-        SorterResource m_sorterResource;
+        ISorterResource m_sorterResource;
 
         public bool Valid =>
             GsplatAsset &&
@@ -31,7 +30,7 @@ namespace Gsplat
             (GsplatAsset.SHBands == 0 || m_shBuffer != null);
 
         public uint SplatCount => GsplatAsset ? GsplatAsset.SplatCount : 0;
-        public SorterResource SorterResource => m_sorterResource;
+        public ISorterResource SorterResource => m_sorterResource;
 
         static readonly int k_orderBuffer = Shader.PropertyToID("_OrderBuffer");
         static readonly int k_positionBuffer = Shader.PropertyToID("_PositionBuffer");
@@ -61,11 +60,9 @@ namespace Gsplat
             if (GsplatAsset.SHBands > 0)
                 m_shBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, GsplatAsset.SHs.Length,
                     System.Runtime.InteropServices.Marshal.SizeOf(typeof(Vector3)));
-            m_distanceBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)GsplatAsset.SplatCount,
-                sizeof(float));
             m_orderBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)GsplatAsset.SplatCount,
                 sizeof(uint));
-            
+
 
             m_positionBuffer.SetData(GsplatAsset.Positions);
             m_scaleBuffer.SetData(GsplatAsset.Scales);
@@ -74,8 +71,9 @@ namespace Gsplat
             if (GsplatAsset.SHBands > 0)
                 m_shBuffer.SetData(GsplatAsset.SHs);
 
-            m_sorterResource = new SorterResource(GsplatAsset.SplatCount, m_positionBuffer, m_orderBuffer);
-
+            m_sorterResource =
+                GsplatSorter.Instance.CreateSorterResource(GsplatAsset.SplatCount, m_positionBuffer, m_orderBuffer);
+            
             m_propertyBlock ??= new MaterialPropertyBlock();
             m_propertyBlock.SetBuffer(k_orderBuffer, m_orderBuffer);
             m_propertyBlock.SetBuffer(k_positionBuffer, m_positionBuffer);
@@ -93,8 +91,6 @@ namespace Gsplat
             m_rotationBuffer?.Dispose();
             m_colorBuffer?.Dispose();
             m_shBuffer?.Dispose();
-
-            m_distanceBuffer?.Dispose();
             m_orderBuffer?.Dispose();
             m_sorterResource?.Dispose();
 
@@ -103,8 +99,6 @@ namespace Gsplat
             m_rotationBuffer = null;
             m_colorBuffer = null;
             m_shBuffer = null;
-
-            m_distanceBuffer = null;
             m_orderBuffer = null;
         }
 

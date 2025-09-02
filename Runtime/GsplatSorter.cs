@@ -11,41 +11,49 @@ namespace Gsplat
     {
         public Transform transform { get; }
         public uint SplatCount { get; }
-        public SorterResource SorterResource { get; }
+        public ISorterResource SorterResource { get; }
         public bool isActiveAndEnabled { get; }
         public bool Valid { get; }
     }
 
-    public class SorterResource
+    public interface ISorterResource
     {
-        public GraphicsBuffer PositionBuffer;
-        public GraphicsBuffer OrderBuffer;
-
-        internal GraphicsBuffer InputKeys;
-        internal GsplatSortPass.SupportResources Resources;
-
-        public SorterResource(uint count, GraphicsBuffer positionBuffer, GraphicsBuffer orderBuffer)
-        {
-            PositionBuffer = positionBuffer;
-            OrderBuffer = orderBuffer;
-
-            InputKeys = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)count, sizeof(uint));
-            Resources = GsplatSortPass.SupportResources.Load(count);
-        }
-
-        public void Dispose()
-        {
-            InputKeys?.Dispose();
-            Resources.Dispose();
-
-            PositionBuffer = null;
-            OrderBuffer = null;
-            InputKeys = null;
-        }
+        public GraphicsBuffer PositionBuffer { get; }
+        public GraphicsBuffer OrderBuffer { get; }
+        public void Dispose();
     }
+
 
     public class GsplatSorter
     {
+        class Resource : ISorterResource
+        {
+            public GraphicsBuffer PositionBuffer { get; }
+            public GraphicsBuffer OrderBuffer { get; }
+
+            public GraphicsBuffer InputKeys { get; private set; }
+            public GsplatSortPass.SupportResources Resources { get; }
+            public bool Initialized;
+
+            public Resource(uint count, GraphicsBuffer positionBuffer, GraphicsBuffer orderBuffer)
+            {
+                PositionBuffer = positionBuffer;
+                OrderBuffer = orderBuffer;
+
+                InputKeys = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)count, sizeof(uint));
+                Resources = GsplatSortPass.SupportResources.Load(count);
+            }
+
+            public void Dispose()
+            {
+                InputKeys?.Dispose();
+                Resources.Dispose();
+
+                InputKeys = null;
+            }
+        }
+
+
         public static GsplatSorter Instance => s_instance ??= new GsplatSorter();
         static GsplatSorter s_instance;
         CommandBuffer m_commandBuffer;
@@ -70,7 +78,6 @@ namespace Gsplat
             }
 
             m_gsplats.Add(gsplat);
-            // TODO: InitPayload here
         }
 
         public void UnregisterGsplat(IGsplat gsplat)
@@ -126,17 +133,30 @@ namespace Gsplat
 
             foreach (var gs in m_activeGsplats)
             {
+                var res = (Resource)gs.SorterResource;
+                if (!res.Initialized)
+                {
+                    m_sortPass.InitPayload(m_commandBuffer, res.OrderBuffer, gs.SplatCount);
+                    res.Initialized = true;
+                }
+
                 var sorterArgs = new GsplatSortPass.Args
                 {
                     Count = gs.SplatCount,
                     MatrixMv = camera.worldToCameraMatrix * gs.transform.localToWorldMatrix,
-                    PositionBuffer = gs.SorterResource.PositionBuffer,
-                    InputKeys = gs.SorterResource.InputKeys,
-                    InputValues = gs.SorterResource.OrderBuffer,
-                    Resources = gs.SorterResource.Resources
+                    PositionBuffer = res.PositionBuffer,
+                    InputKeys = res.InputKeys,
+                    InputValues = res.OrderBuffer,
+                    Resources = res.Resources
                 };
                 m_sortPass.Dispatch(m_commandBuffer, sorterArgs);
             }
+        }
+
+        public ISorterResource CreateSorterResource(uint count, GraphicsBuffer positionBuffer,
+            GraphicsBuffer orderBuffer)
+        {
+            return new Resource(count, positionBuffer, orderBuffer);
         }
     }
 }

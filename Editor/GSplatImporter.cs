@@ -7,7 +7,6 @@ using Unity.Collections;
 using UnityEditor;
 using UnityEditor.AssetImporters;
 using UnityEngine;
-using UnityEngine.Rendering;
 
 namespace Gsplat.Editor
 {

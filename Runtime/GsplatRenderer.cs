@@ -40,6 +40,7 @@ namespace Gsplat
         static readonly int k_shBuffer = Shader.PropertyToID("_SHBuffer");
         static readonly int k_matrixM = Shader.PropertyToID("_MATRIX_M");
         static readonly int k_splatInstanceSize = Shader.PropertyToID("_SplatInstanceSize");
+        static readonly int k_splatCount = Shader.PropertyToID("_SplatCount");
 
         void CreateResourcesForAsset()
         {
@@ -73,8 +74,9 @@ namespace Gsplat
 
             m_sorterResource =
                 GsplatSorter.Instance.CreateSorterResource(GsplatAsset.SplatCount, m_positionBuffer, m_orderBuffer);
-            
+
             m_propertyBlock ??= new MaterialPropertyBlock();
+            m_propertyBlock.SetInt(k_splatCount, (int)GsplatAsset.SplatCount);
             m_propertyBlock.SetBuffer(k_orderBuffer, m_orderBuffer);
             m_propertyBlock.SetBuffer(k_positionBuffer, m_positionBuffer);
             m_propertyBlock.SetBuffer(k_scaleBuffer, m_scaleBuffer);

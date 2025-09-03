@@ -25,6 +25,7 @@ Shader "Gsplat/Standard"
 
             #include "UnityCG.cginc"
 
+            int _SplatCount;
             int _SplatInstanceSize;
             float4x4 _MATRIX_M;
             StructuredBuffer<uint> _OrderBuffer;
@@ -54,6 +55,9 @@ Shader "Gsplat/Standard"
             bool initSource(appdata v, out SplatSource source)
             {
                 source.order = v.instanceID * _SplatInstanceSize + asuint(v.vertex.z);
+                if (source.order >= _SplatCount)
+                    return false;
+
                 source.id = _OrderBuffer[source.order];
                 source.cornerUV = float2(v.vertex.x, v.vertex.y);
                 return true;

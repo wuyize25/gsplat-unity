@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using Unity.Collections;
+using UnityEditor;
 using UnityEditor.AssetImporters;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -37,7 +38,7 @@ namespace Gsplat.Editor
             return Encoding.UTF8.GetString(byteBuffer.ToArray());
         }
 
-        static void ReadPlyHeader(FileStream fs, out uint vertexCount, out int propertyCount)
+        public static void ReadPlyHeader(FileStream fs, out uint vertexCount, out int propertyCount)
         {
             vertexCount = 0;
             propertyCount = 0;
@@ -53,7 +54,7 @@ namespace Gsplat.Editor
             }
         }
 
-        static float Sigmoid(float x)
+        public static float Sigmoid(float x)
         {
             return 1.0f / (1.0f + Mathf.Exp(-x));
         }
@@ -67,15 +68,25 @@ namespace Gsplat.Editor
             {
                 // C# arrays and NativeArrays make it hard to have a "byte" array larger than 2GB :/
                 if (fs.Length >= 2 * 1024 * 1024 * 1024L)
-                    throw new IOException(
-                        $"{ctx.assetPath} read error: currently files larger than 2GB are not supported");
+                {
+                    Debug.Log($"{ctx.assetPath} read error: currently files larger than 2GB are not supported");
+                    return;
+                }
 
-                ReadPlyHeader(fs, out uint vertexCount, out int propertyCount);
+                ReadPlyHeader(fs, out var vertexCount, out var propertyCount);
 
                 var shCoeffs = (propertyCount - 17) / 3;
 
                 gsplatAsset.SplatCount = vertexCount;
                 gsplatAsset.SHBands = (byte)(Math.Sqrt((propertyCount - 14) / 3) - 1);
+
+                if (gsplatAsset.SHBands > 3 ||
+                    (gsplatAsset.SHBands + 1) * (gsplatAsset.SHBands + 1) * 3 + 14 != propertyCount)
+                {
+                    Debug.Log($"{ctx.assetPath} read error: unexpected property count {propertyCount}");
+                    return;
+                }
+
                 gsplatAsset.Positions = new Vector3[vertexCount];
                 gsplatAsset.Colors = new Vector4[vertexCount];
                 if (shCoeffs > 0)
@@ -106,6 +117,8 @@ namespace Gsplat.Editor
 
                     if (i == 0) bounds = new Bounds(gsplatAsset.Positions[i], Vector3.zero);
                     else bounds.Encapsulate(gsplatAsset.Positions[i]);
+                    EditorUtility.DisplayProgressBar("Importing Gsplat Asset", "Reading vertices",
+                        i / (float)vertexCount);
                 }
 
                 buffer.Dispose();

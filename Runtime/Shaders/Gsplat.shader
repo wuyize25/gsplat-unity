@@ -20,7 +20,6 @@ Shader "Gsplat/Standard"
             #pragma fragment frag
             #pragma require compute
             #pragma use_dxc
-            #pragma enable_d3d11_debug_symbols
             #pragma multi_compile SH_BANDS_0 SH_BANDS_1 SH_BANDS_2 SH_BANDS_3
 
             #include "UnityCG.cginc"

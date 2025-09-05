@@ -126,52 +126,20 @@ namespace Gsplat
                 CreateResourcesForAsset();
             }
 
-            /*if (!GsplatRenderSystem.Instance.Valid)
-                Debug.Log("!GsplatRenderSystem.Instance.Valid");
-            if (!GsplatSettings.Instance.Material)
-                Debug.Log("!GsplatSettings.Instance.material");*/
-            //Debug.Log($"SplatInstanceSize={GsplatSettings.Instance.SplatInstanceSize}");
-
-            if (!GsplatAsset || !GsplatSettings.Instance.Valid || !GsplatSorter.Instance.Valid)
-            {
-                //Debug.Log("!gsplatAsset || !material || !GsplatRenderSystem.Instance.Valid");
+            if (!Valid || !GsplatSettings.Instance.Valid || !GsplatSorter.Instance.Valid)
                 return;
-            }
-
+            
             m_propertyBlock.SetInteger(k_splatInstanceSize, (int)GsplatSettings.Instance.SplatInstanceSize);
             m_propertyBlock.SetMatrix(k_matrixM, transform.localToWorldMatrix);
             var rp = new RenderParams(GsplatSettings.Instance.Materials[GsplatAsset.SHBands])
             {
-                worldBounds = CalcWorldBounds(),
+                worldBounds = GsplatUtils.CalcWorldBounds(GsplatAsset.Bounds, transform),
                 matProps = m_propertyBlock,
                 layer = gameObject.layer
             };
 
             Graphics.RenderMeshPrimitives(rp, GsplatSettings.Instance.Mesh, 0,
                 (int)Math.Ceiling(GsplatAsset.SplatCount / (double)GsplatSettings.Instance.SplatInstanceSize));
-        }
-
-        Bounds CalcWorldBounds()
-        {
-            var localBounds = GsplatAsset.Bounds;
-            var localCenter = localBounds.center;
-            var localExtents = localBounds.extents;
-
-            var localCorners = new Vector3[8];
-            localCorners[0] = localCenter + new Vector3(localExtents.x, localExtents.y, localExtents.z);
-            localCorners[1] = localCenter + new Vector3(localExtents.x, localExtents.y, -localExtents.z);
-            localCorners[2] = localCenter + new Vector3(localExtents.x, -localExtents.y, localExtents.z);
-            localCorners[3] = localCenter + new Vector3(localExtents.x, -localExtents.y, -localExtents.z);
-            localCorners[4] = localCenter + new Vector3(-localExtents.x, localExtents.y, localExtents.z);
-            localCorners[5] = localCenter + new Vector3(-localExtents.x, localExtents.y, -localExtents.z);
-            localCorners[6] = localCenter + new Vector3(-localExtents.x, -localExtents.y, localExtents.z);
-            localCorners[7] = localCenter + new Vector3(-localExtents.x, -localExtents.y, -localExtents.z);
-
-            var worldBounds = new Bounds(transform.TransformPoint(localCorners[0]), Vector3.zero);
-            for (var i = 1; i < 8; i++)
-                worldBounds.Encapsulate(transform.TransformPoint(localCorners[i]));
-
-            return worldBounds;
         }
     }
 }

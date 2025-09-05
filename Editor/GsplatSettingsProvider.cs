@@ -24,6 +24,7 @@ namespace Gsplat.Editor
             EditorGUILayout.PropertyField(m_gsplatSettings.FindProperty(nameof(GsplatSettings.Shader)));
             EditorGUILayout.PropertyField(m_gsplatSettings.FindProperty(nameof(GsplatSettings.ComputeShader)));
             EditorGUILayout.PropertyField(m_gsplatSettings.FindProperty(nameof(GsplatSettings.SplatInstanceSize)));
+            EditorGUILayout.PropertyField(m_gsplatSettings.FindProperty(nameof(GsplatSettings.ShowImportErrors)));
             m_gsplatSettings.ApplyModifiedProperties();
         }
 

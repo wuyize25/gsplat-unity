@@ -32,6 +32,13 @@ namespace Gsplat
                         Directory.CreateDirectory(assetPath);
 
                     settings = CreateInstance<GsplatSettings>();
+                    settings.Shader =
+                        AssetDatabase.LoadAssetAtPath<Shader>(GsplatUtils.k_PackagePath +
+                                                              "Runtime/Shaders/Gsplat.shader");
+                    settings.ComputeShader =
+                        AssetDatabase.LoadAssetAtPath<ComputeShader>(GsplatUtils.k_PackagePath +
+                                                                     "Runtime/Shaders/Gsplat.compute");
+                    settings.OnValidate();
                     AssetDatabase.CreateAsset(settings, k_gsplatSettingsPath);
                     AssetDatabase.SaveAssets();
                 }
@@ -45,10 +52,11 @@ namespace Gsplat
         public Shader Shader;
         public ComputeShader ComputeShader;
         public uint SplatInstanceSize = 128;
+        public bool ShowImportErrors = true;
         public Material[] Materials { get; private set; }
         public Mesh Mesh { get; private set; }
 
-        public bool Valid => Materials.Length != 0 && Mesh && SplatInstanceSize > 0;
+        public bool Valid => Materials?.Length != 0 && Mesh && SplatInstanceSize > 0;
 
         Shader m_prevShader;
         ComputeShader m_prevComputeShader;
@@ -94,7 +102,7 @@ namespace Gsplat
             }
 
             Materials = new Material[4];
-            for (int i = 0; i < 4; ++i)
+            for (var i = 0; i < 4; ++i)
             {
                 Materials[i] = new Material(Shader) { hideFlags = HideFlags.HideAndDontSave };
                 Materials[i].EnableKeyword($"SH_BANDS_{i}");

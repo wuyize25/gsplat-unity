@@ -10,6 +10,8 @@ namespace Gsplat
     public class GsplatRenderer : MonoBehaviour, IGsplat
     {
         public GsplatAsset GsplatAsset;
+        public bool GammaToLinear;
+
         GsplatAsset m_prevAsset;
 
         MaterialPropertyBlock m_propertyBlock;
@@ -41,6 +43,7 @@ namespace Gsplat
         static readonly int k_matrixM = Shader.PropertyToID("_MATRIX_M");
         static readonly int k_splatInstanceSize = Shader.PropertyToID("_SplatInstanceSize");
         static readonly int k_splatCount = Shader.PropertyToID("_SplatCount");
+        static readonly int k_gammaToLinear = Shader.PropertyToID("_GammaToLinear");
 
         void CreateResourcesForAsset()
         {
@@ -128,7 +131,8 @@ namespace Gsplat
 
             if (!Valid || !GsplatSettings.Instance.Valid || !GsplatSorter.Instance.Valid)
                 return;
-            
+
+            m_propertyBlock.SetInteger(k_gammaToLinear, GammaToLinear ? 1 : 0);
             m_propertyBlock.SetInteger(k_splatInstanceSize, (int)GsplatSettings.Instance.SplatInstanceSize);
             m_propertyBlock.SetMatrix(k_matrixM, transform.localToWorldMatrix);
             var rp = new RenderParams(GsplatSettings.Instance.Materials[GsplatAsset.SHBands])

@@ -24,7 +24,7 @@ Shader "Gsplat/Standard"
 
             #include "UnityCG.cginc"
             #include "Gsplat.hlsl"
-
+            bool _GammaToLinear;
             int _SplatCount;
             int _SplatInstanceSize;
             float4x4 _MATRIX_M;
@@ -46,7 +46,7 @@ Shader "Gsplat/Standard"
                 #endif
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
-            
+
             bool InitSource(appdata v, out SplatSource source)
             {
                 #if !defined(UNITY_INSTANCING_ENABLED) && !defined(UNITY_PROCEDURAL_INSTANCING_ENABLED) && !defined(UNITY_STEREO_INSTANCING_ENABLED)
@@ -117,7 +117,7 @@ Shader "Gsplat/Standard"
                     o.vertex = discardVec;
                     return o;
                 }
-                
+
                 SplatCovariance cov = ReadCovariance(source);
                 SplatCorner corner;
                 if (!initCorner(source, cov, center, corner))
@@ -152,6 +152,8 @@ Shader "Gsplat/Standard"
                 if (A > 1.0) discard;
                 float alpha = exp(-A * 4.0) * i.color.a;
                 if (alpha < 1.0 / 255.0) discard;
+                if (_GammaToLinear)
+                    return float4(GammaToLinearSpace(i.color.rgb) * alpha, alpha);
                 return float4(i.color.rgb * alpha, alpha);
             }
             ENDHLSL

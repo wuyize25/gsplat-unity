@@ -61,6 +61,7 @@ namespace Gsplat
         readonly HashSet<Camera> m_camerasInjected = new();
         readonly List<IGsplat> m_activeGsplats = new();
         GsplatSortPass m_sortPass;
+        public const string k_PassName = "SortGsplats";
 
         public bool Valid => m_sortPass is { Valid: true };
 
@@ -100,7 +101,7 @@ namespace Gsplat
             Camera.onPreCull -= OnPreCullCamera;
         }
 
-        bool GatherSplatsForCamera(Camera cam)
+        public bool GatherGsplatsForCamera(Camera cam)
         {
             if (cam.cameraType == CameraType.Preview)
                 return false;
@@ -113,7 +114,7 @@ namespace Gsplat
 
         void InitialClearCmdBuffer(Camera cam)
         {
-            m_commandBuffer ??= new CommandBuffer { name = "SortGsplats" };
+            m_commandBuffer ??= new CommandBuffer { name = k_PassName };
             if (!GraphicsSettings.currentRenderPipeline && cam &&
                 !m_camerasInjected.Contains(cam))
             {
@@ -126,17 +127,21 @@ namespace Gsplat
 
         void OnPreCullCamera(Camera camera)
         {
-            if (!Valid || !GsplatSettings.Instance.Valid || !GatherSplatsForCamera(camera))
+            if (!Valid || !GsplatSettings.Instance.Valid || !GatherGsplatsForCamera(camera))
                 return;
 
             InitialClearCmdBuffer(camera);
+            DispatchSort(m_commandBuffer, camera);
+        }
 
+        public void DispatchSort(CommandBuffer cmd, Camera camera)
+        {
             foreach (var gs in m_activeGsplats)
             {
                 var res = (Resource)gs.SorterResource;
                 if (!res.Initialized)
                 {
-                    m_sortPass.InitPayload(m_commandBuffer, res.OrderBuffer, gs.SplatCount);
+                    m_sortPass.InitPayload(cmd, res.OrderBuffer, gs.SplatCount);
                     res.Initialized = true;
                 }
 
@@ -149,7 +154,7 @@ namespace Gsplat
                     InputValues = res.OrderBuffer,
                     Resources = res.Resources
                 };
-                m_sortPass.Dispatch(m_commandBuffer, sorterArgs);
+                m_sortPass.Dispatch(cmd, sorterArgs);
             }
         }
 

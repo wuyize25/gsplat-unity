@@ -1,8 +1,5 @@
 ﻿using System;
-using Unity.Collections;
 using UnityEngine;
-using UnityEngine.Rendering;
-using UnityEngine.Serialization;
 
 namespace Gsplat
 {
@@ -48,10 +45,7 @@ namespace Gsplat
         void CreateResourcesForAsset()
         {
             if (!GsplatAsset)
-            {
-                //Debug.LogError("GsplatAsset or shader is not assigned.");
                 return;
-            }
 
             m_positionBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)GsplatAsset.SplatCount,
                 System.Runtime.InteropServices.Marshal.SizeOf(typeof(Vector3)));

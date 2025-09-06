@@ -1,6 +1,4 @@
-﻿using System.ComponentModel;
-using UnityEngine;
-using UnityEngine.Serialization;
+﻿using UnityEngine;
 
 namespace Gsplat
 {
@@ -13,6 +11,6 @@ namespace Gsplat
         [HideInInspector] public Vector4[] Colors; // RGB, Opacity
         [HideInInspector] public Vector3[] SHs;
         [HideInInspector] public Vector3[] Scales;
-        [HideInInspector] public Vector4[] Rotations;
+        [HideInInspector] public Vector4[] Rotations; // Quaternion, wxyz
     }
 }

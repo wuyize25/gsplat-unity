@@ -35,10 +35,7 @@ namespace Gsplat
 
         public override void Create()
         {
-            m_pass = new GsplatRenderPass
-            {
-                renderPassEvent = RenderPassEvent.BeforeRenderingTransparents
-            };
+            m_pass = new GsplatRenderPass { renderPassEvent = RenderPassEvent.BeforeRenderingTransparents };
         }
 
         public override void OnCameraPreCull(ScriptableRenderer renderer, in CameraData cameraData)

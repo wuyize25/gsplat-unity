@@ -1,4 +1,4 @@
-﻿#if GSPLAT_ENABLE_URP
+﻿#if GSPLAT_ENABLE_URP && UNITY_6000_0_OR_NEWER
 
 using UnityEngine;
 using UnityEngine.Experimental.Rendering;

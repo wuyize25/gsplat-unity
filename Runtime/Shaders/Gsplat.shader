@@ -1,3 +1,6 @@
+// Copyright (c) 2025 Yize Wu
+// SPDX-License-Identifier: MIT
+
 Shader "Gsplat/Standard"
 {
     Properties {}

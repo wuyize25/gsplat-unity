@@ -1,4 +1,7 @@
-﻿using System;
+﻿// Copyright (c) 2025 Yize Wu
+// SPDX-License-Identifier: MIT
+
+using System;
 using System.IO;
 using UnityEditor;
 using UnityEngine;

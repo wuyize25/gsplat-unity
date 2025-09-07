@@ -1,13 +1,16 @@
-﻿using UnityEngine;
+﻿// GPU (float key, uint payload) 8 bit-LSD radix sort, using reduce-then-scan
+// Copyright Thomas Smith 2024, MIT license
+// https://github.com/b0nes164/GPUSorting
+// Modified by Yize Wu for Gsplat
+// Copyright (c) 2025 Yize Wu
+// SPDX-License-Identifier: MIT
+
+using UnityEngine;
 using UnityEngine.Assertions;
 using UnityEngine.Rendering;
 
 namespace Gsplat
 {
-    // GPU (float key, uint payload) 8 bit-LSD radix sort, using reduce-then-scan
-    // Copyright Thomas Smith 2024, MIT license
-    // https://github.com/b0nes164/GPUSorting
-
     public class GsplatSortPass
     {
         static readonly int k_positionBuffer = Shader.PropertyToID("_PositionBuffer");

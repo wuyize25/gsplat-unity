@@ -1,3 +1,10 @@
+// Originated from aras-p/UnityGaussianSplatting by Aras Pranckevičius
+// https://github.com/aras-p/UnityGaussianSplatting/blob/main/package/Shaders/SplatUtilities.compute
+// Copyright (c) 2023 Aras Pranckevičius
+// Modified by Yize Wu
+// Copyright (c) 2025 Yize Wu
+// SPDX-License-Identifier: MIT
+
 #define GROUP_SIZE 1024
 
 // DeviceRadixSort

@@ -1,5 +1,8 @@
 // Gaussian Splatting helper functions & structs
 // most of these are from https://github.com/playcanvas/engine/tree/main/src/scene/shader-lib/glsl/chunks/gsplat
+// Copyright (c) 2011-2024 PlayCanvas Ltd
+// Copyright (c) 2025 Yize Wu
+// SPDX-License-Identifier: MIT
 
 struct SplatSource
 {

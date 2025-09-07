@@ -1,4 +1,7 @@
-﻿#if GSPLAT_ENABLE_HDRP
+﻿// Copyright (c) 2025 Yize Wu
+// SPDX-License-Identifier: MIT
+
+#if GSPLAT_ENABLE_HDRP
 
 using UnityEngine.Rendering.HighDefinition;
 

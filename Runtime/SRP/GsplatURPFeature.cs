@@ -1,4 +1,11 @@
-﻿#if GSPLAT_ENABLE_URP && UNITY_6000_0_OR_NEWER
+﻿// Originated from the GaussianSplatHDRPPass in aras-p/UnityGaussianSplatting by Aras Pranckevičius
+// https://github.com/aras-p/UnityGaussianSplatting/blob/main/package/Runtime/GaussianSplatHDRPPass.cs
+// Copyright (c) 2023 Aras Pranckevičius
+// Modified by Yize Wu
+// Copyright (c) 2025 Yize Wu
+// SPDX-License-Identifier: MIT
+
+#if GSPLAT_ENABLE_URP && UNITY_6000_0_OR_NEWER
 
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.RenderGraphModule;

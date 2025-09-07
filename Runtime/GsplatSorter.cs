@@ -1,4 +1,7 @@
-﻿using System.Collections.Generic;
+﻿// Copyright (c) 2025 Yize Wu
+// SPDX-License-Identifier: MIT
+
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -20,8 +23,9 @@ namespace Gsplat
         public GraphicsBuffer OrderBuffer { get; }
         public void Dispose();
     }
-
-
+    
+    // some codes of this class originated from the GaussianSplatRenderSystem in aras-p/UnityGaussianSplatting by Aras Pranckevičius
+    // https://github.com/aras-p/UnityGaussianSplatting/blob/main/package/Runtime/GaussianSplatRenderer.cs
     public class GsplatSorter
     {
         class Resource : ISorterResource
@@ -50,8 +54,7 @@ namespace Gsplat
                 InputKeys = null;
             }
         }
-
-
+        
         public static GsplatSorter Instance => s_instance ??= new GsplatSorter();
         static GsplatSorter s_instance;
         CommandBuffer m_commandBuffer;

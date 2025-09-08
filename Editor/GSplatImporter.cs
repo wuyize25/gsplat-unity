@@ -74,13 +74,14 @@ namespace Gsplat.Editor
 
                 ReadPlyHeader(fs, out var vertexCount, out var propertyCount);
 
-                var shCoeffs = (propertyCount - 17) / 3;
+                var shCoeffs = (propertyCount - GsplatUtils.k_PlyPropertyCountNoSH) / 3;
 
                 gsplatAsset.SplatCount = vertexCount;
-                gsplatAsset.SHBands = (byte)(Math.Sqrt((propertyCount - 14) / 3) - 1);
+                gsplatAsset.SHBands = GsplatUtils.CalcSHBandsFromPropertyCount(propertyCount);
 
                 if (gsplatAsset.SHBands > 3 ||
-                    (gsplatAsset.SHBands + 1) * (gsplatAsset.SHBands + 1) * 3 + 14 != propertyCount)
+                    GsplatUtils.SHBandsToCoefficientCount(gsplatAsset.SHBands) * 3 +
+                    GsplatUtils.k_PlyPropertyCountNoSH != propertyCount)
                 {
                     if (GsplatSettings.Instance.ShowImportErrors)
                         Debug.LogError($"{ctx.assetPath} import error: unexpected property count {propertyCount}");

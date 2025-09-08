@@ -1,6 +1,7 @@
 ﻿// Copyright (c) 2025 Yize Wu
 // SPDX-License-Identifier: MIT
 
+using System;
 using UnityEngine;
 
 namespace Gsplat
@@ -12,6 +13,18 @@ namespace Gsplat
         public static float Sigmoid(float x)
         {
             return 1.0f / (1.0f + Mathf.Exp(-x));
+        }
+
+        public const int k_PlyPropertyCountNoSH = 17;
+
+        public static byte CalcSHBandsFromPropertyCount(int propertyCount)
+        {
+            return (byte)(Math.Sqrt((propertyCount - k_PlyPropertyCountNoSH + 3) / 3) - 1);
+        }
+
+        public static int SHBandsToCoefficientCount(byte shBands)
+        {
+            return (shBands + 1) * (shBands + 1) - 1;
         }
 
         public static Bounds CalcWorldBounds(Bounds localBounds, Transform transform)

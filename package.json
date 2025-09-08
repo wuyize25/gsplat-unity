@@ -3,7 +3,7 @@
   "description": "3D Gaussian Splatting renderer",
   "displayName": "Gsplat",
   "name": "wu.yize.gsplat",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "license": "MIT",
   "repository": "github:wuyize25/gsplat-unity"
 }

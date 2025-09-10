@@ -10,6 +10,7 @@ namespace Gsplat
     public class GsplatRenderer : MonoBehaviour, IGsplat
     {
         public GsplatAsset GsplatAsset;
+        [Range(0, 3)] public int SHDegree = 3;
         public bool GammaToLinear;
 
         GsplatAsset m_prevAsset;
@@ -62,7 +63,7 @@ namespace Gsplat
 
             if (Valid)
                 m_renderer.Render(GsplatAsset.SplatCount, transform, GsplatAsset.Bounds, gameObject.layer,
-                    GammaToLinear);
+                    GammaToLinear, SHDegree);
         }
     }
 }

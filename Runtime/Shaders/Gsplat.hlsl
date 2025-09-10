@@ -77,7 +77,7 @@ SplatCovariance CalcCovariance(float4 quat, float3 scale)
 }
 
 // calculate the clip-space offset from the center for this gaussian
-bool initCorner(SplatSource source, SplatCovariance covariance, SplatCenter center, out SplatCorner corner)
+bool InitCorner(SplatSource source, SplatCovariance covariance, SplatCenter center, out SplatCorner corner)
 {
     float3 covA = covariance.covA;
     float3 covB = covariance.covB;
@@ -150,7 +150,7 @@ bool initCorner(SplatSource source, SplatCovariance covariance, SplatCenter cent
     return true;
 }
 
-void clipCorner(inout SplatCorner corner, float alpha)
+void ClipCorner(inout SplatCorner corner, float alpha)
 {
     float clip = min(1.0, sqrt(-log(1.0 / 255.0 / alpha)) / 2.0);
     corner.offset *= clip;
@@ -186,14 +186,19 @@ void clipCorner(inout SplatCorner corner, float alpha)
 #define SH_C3_6 -0.5900435899266435f
 
 // see https://github.com/graphdeco-inria/gaussian-splatting/blob/main/utils/sh_utils.py
-float3 evalSH(const inout float3 sh[SH_COEFFS], float3 dir)
+float3 EvalSH(const inout float3 sh[SH_COEFFS], float3 dir, int degree = 3)
 {
+    if (degree == 0)
+        return float3(0, 0, 0);
+    
     float x = dir.x;
     float y = dir.y;
     float z = dir.z;
 
     // 1st degree
     float3 result = SH_C1 * (-sh[0] * y + sh[1] * z - sh[2] * x);
+    if (degree == 1)
+        return result;
 
 #if defined(SH_BANDS_2) || defined(SH_BANDS_3)
     // 2nd degree
@@ -211,6 +216,9 @@ float3 evalSH(const inout float3 sh[SH_COEFFS], float3 dir)
         sh[6] * (SH_C2_3 * xz) +
         sh[7] * (SH_C2_4 * (xx - yy))
     );
+
+    if (degree == 2)
+        return result;
 #endif
 
 #ifdef SH_BANDS_3

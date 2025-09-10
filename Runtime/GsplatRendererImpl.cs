@@ -25,7 +25,7 @@ namespace Gsplat
             RotationBuffer != null &&
             ColorBuffer != null &&
             (SHBands == 0 || SHBuffer != null);
-        
+
         static readonly int k_orderBuffer = Shader.PropertyToID("_OrderBuffer");
         static readonly int k_positionBuffer = Shader.PropertyToID("_PositionBuffer");
         static readonly int k_scaleBuffer = Shader.PropertyToID("_ScaleBuffer");
@@ -36,6 +36,7 @@ namespace Gsplat
         static readonly int k_splatInstanceSize = Shader.PropertyToID("_SplatInstanceSize");
         static readonly int k_splatCount = Shader.PropertyToID("_SplatCount");
         static readonly int k_gammaToLinear = Shader.PropertyToID("_GammaToLinear");
+        static readonly int k_shDegree = Shader.PropertyToID("_SHDegree");
 
         public GsplatRendererImpl(uint splatCount, byte shBands)
         {
@@ -116,14 +117,15 @@ namespace Gsplat
         /// <param name="layer">Layer used for rendering.</param>
         /// <param name="gammaToLinear"></param>
         public void Render(uint splatCount, Transform transform, Bounds localBounds, int layer,
-            bool gammaToLinear = false)
+            bool gammaToLinear = false, int shDegree = 3)
         {
             if (!Valid || !GsplatSettings.Instance.Valid || !GsplatSorter.Instance.Valid)
                 return;
 
-            m_propertyBlock.SetInt(k_splatCount, (int)splatCount);
+            m_propertyBlock.SetInteger(k_splatCount, (int)splatCount);
             m_propertyBlock.SetInteger(k_gammaToLinear, gammaToLinear ? 1 : 0);
             m_propertyBlock.SetInteger(k_splatInstanceSize, (int)GsplatSettings.Instance.SplatInstanceSize);
+            m_propertyBlock.SetInteger(k_shDegree, shDegree);
             m_propertyBlock.SetMatrix(k_matrixM, transform.localToWorldMatrix);
             var rp = new RenderParams(GsplatSettings.Instance.Materials[SHBands])
             {

@@ -30,6 +30,7 @@ Shader "Gsplat/Standard"
             bool _GammaToLinear;
             int _SplatCount;
             int _SplatInstanceSize;
+            int _SHDegree;
             float4x4 _MATRIX_M;
             StructuredBuffer<uint> _OrderBuffer;
             StructuredBuffer<float3> _PositionBuffer;
@@ -123,25 +124,24 @@ Shader "Gsplat/Standard"
 
                 SplatCovariance cov = ReadCovariance(source);
                 SplatCorner corner;
-                if (!initCorner(source, cov, center, corner))
+                if (!InitCorner(source, cov, center, corner))
                 {
                     o.vertex = discardVec;
                     return o;
                 }
 
                 float4 color = _ColorBuffer[source.id];
-                color.rgb = color.rgb * SH_C0 + float3(0.5, 0.5, 0.5);
-
+                color.rgb = color.rgb * SH_C0 + 0.5;
                 #ifndef SH_BANDS_0
                 // calculate the model-space view direction
-                float3 dir = normalize(mul((float3x3)center.modelView, center.view));
+                float3 dir = normalize(mul(center.view, (float3x3)center.modelView));
                 float3 sh[SH_COEFFS];
                 for (int i = 0; i < SH_COEFFS; i++)
                     sh[i] = _SHBuffer[source.id * SH_COEFFS + i];
-                color.rgb += evalSH(sh, dir);
+                color.rgb += EvalSH(sh, dir, _SHDegree);
                 #endif
 
-                clipCorner(corner, color.w);
+                ClipCorner(corner, color.w);
 
                 o.vertex = center.proj + float4(corner.offset.x, _ProjectionParams.x * corner.offset.y, 0, 0);
                 o.color = float4(max(color.rgb, float3(0, 0, 0)), color.a);

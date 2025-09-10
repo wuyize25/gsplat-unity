@@ -112,10 +112,11 @@ namespace Gsplat
         /// Render the splats.
         /// </summary>
         /// <param name="splatCount">It can be less than or equal to the SplatCount property.</param> 
-        /// <param name="transform"></param>
-        /// <param name="localBounds"></param>
+        /// <param name="transform">Object transform.</param>
+        /// <param name="localBounds">Bounding box in object space.</param>
         /// <param name="layer">Layer used for rendering.</param>
-        /// <param name="gammaToLinear"></param>
+        /// <param name="gammaToLinear">Covert color space from Gamma to Linear.</param>
+        /// <param name="shDegree">Order of SH coefficients used for rendering. The final value is capped by the SHBands property.</param>
         public void Render(uint splatCount, Transform transform, Bounds localBounds, int layer,
             bool gammaToLinear = false, int shDegree = 3)
         {

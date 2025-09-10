@@ -39,11 +39,15 @@ After cloning or downloading this repository, open your Unity project (or create
 
 ### Setup
 
+First, ensure your project is using a supported Graphics API. For Windows: in `Edit > Project Settings > Player > Other Settings`, uncheck `Auto Graphics API for Windows`. Then, in the `Graphics APIs for Windows` list, add `Vulkan` or `Direct3D12` and remove any other options. Unity will require a restart to switch the Graphics API. You may need to perform similar steps for other platforms.
+
+The next steps depend on the Render Pipeline you are using:
+
 - BiRP: Does not need any extra setup.
 - URP: Add `Gsplat URP Feature` to the URP renderer settings.
   - Find the `Universal Renderer Data` your project is using, click the `Add Renderer Feature` button, and choose `Gsplat URP Feature.`
   - Requires Unity 6 or later, and Render Graph "Compatibility Mode" in URP settings must be turned off!
-- HDRP: add `Custom Pass` volume object in your scene and a `Gsplat HDRP Pass` entry to it. The injection Point should be set to `Before Transparent`.
+- HDRP: Add `Custom Pass` volume object in your scene and a `Gsplat HDRP Pass` entry to it. The injection Point should be set to `Before Transparent`.
 
 ### Import Assets
 
@@ -56,6 +60,14 @@ Create or choose a game object in your scene, and add the `Gsplat Renderer` comp
 The `SH Degree` option sets the order of SH coefficients used for rendering. The final value is capped by the Gsplat Asset's `SH Bands`.
 
 The `Gamma To Linear` option is offered as a workaround to render Gamma Space Gsplat Assets in a project using the Linear Space. This will degrade the rendering quality, so changing the color space of the project or retraining the 3DGS asset is the recommended approach. If your project uses a linear color space and you do not wish to retrain your 3DGS assets, it is recommended to use [aras-p/UnityGaussianSplatting](https://github.com/aras-p/UnityGaussianSplatting).
+
+## Additional Documentation
+
+- [Implementation Details](/Documentation~/Implementation%20Details.md)
+
+## Project Using Gsplat
+
+- [HiFi-Human/DynGsplat-unity](https://github.com/HiFi-Human/DynGsplat-unity) - A Unity package for rendering and playing dynamic gaussian splatting sequences
 
 ## License
 

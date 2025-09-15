@@ -69,13 +69,11 @@ namespace Gsplat
                 System.Runtime.InteropServices.Marshal.SizeOf(typeof(Vector4)));
             if (SHBands > 0)
                 SHBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured,
-                    GsplatUtils.SHBandsToCoefficientCount(SHBands) * (int)splatCount * 3,
+                    GsplatUtils.SHBandsToCoefficientCount(SHBands) * (int)splatCount,
                     System.Runtime.InteropServices.Marshal.SizeOf(typeof(Vector3)));
-            OrderBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)splatCount,
-                sizeof(uint));
+            OrderBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)splatCount, sizeof(uint));
 
-            SorterResource =
-                GsplatSorter.Instance.CreateSorterResource(splatCount, PositionBuffer, OrderBuffer);
+            SorterResource = GsplatSorter.Instance.CreateSorterResource(splatCount, PositionBuffer, OrderBuffer);
         }
 
         void CreatePropertyBlock()

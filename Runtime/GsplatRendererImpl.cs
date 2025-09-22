@@ -115,7 +115,7 @@ namespace Gsplat
         /// <param name="layer">Layer used for rendering.</param>
         /// <param name="gammaToLinear">Covert color space from Gamma to Linear.</param>
         /// <param name="shDegree">Order of SH coefficients used for rendering. The final value is capped by the SHBands property.</param>
-        public void Render(uint splatCount, Transform transform, Bounds localBounds, int layer,
+        public void Render(uint splatCount, Transform transform, Bounds worldBounds, int layer,
             bool gammaToLinear = false, int shDegree = 3)
         {
             if (!Valid || !GsplatSettings.Instance.Valid || !GsplatSorter.Instance.Valid)
@@ -125,10 +125,10 @@ namespace Gsplat
             m_propertyBlock.SetInteger(k_gammaToLinear, gammaToLinear ? 1 : 0);
             m_propertyBlock.SetInteger(k_splatInstanceSize, (int)GsplatSettings.Instance.SplatInstanceSize);
             m_propertyBlock.SetInteger(k_shDegree, shDegree);
-            m_propertyBlock.SetMatrix(k_matrixM, transform.localToWorldMatrix);
+            m_propertyBlock.SetMatrix(k_matrixM, Matrix4x4.identity);
             var rp = new RenderParams(GsplatSettings.Instance.Materials[SHBands])
             {
-                worldBounds = GsplatUtils.CalcWorldBounds(localBounds, transform),
+                worldBounds = worldBounds,
                 matProps = m_propertyBlock,
                 layer = layer
             };

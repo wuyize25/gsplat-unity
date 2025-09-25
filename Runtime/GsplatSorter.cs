@@ -10,7 +10,7 @@ namespace Gsplat
 {
     public interface IGsplat
     {
-        public Transform transform { get; }
+        public Matrix4x4 LocalToWorldMatrix { get; }
         public uint SplatCount { get; }
         public ISorterResource SorterResource { get; }
         public bool isActiveAndEnabled { get; }
@@ -149,7 +149,7 @@ namespace Gsplat
                 var sorterArgs = new GsplatSortPass.Args
                 {
                     Count = gs.SplatCount,
-                    MatrixMv = camera.worldToCameraMatrix * gs.transform.localToWorldMatrix,
+                    MatrixMv = camera.worldToCameraMatrix * gs.LocalToWorldMatrix,
                     PositionBuffer = res.PositionBuffer,
                     InputKeys = res.InputKeys,
                     InputValues = res.OrderBuffer,

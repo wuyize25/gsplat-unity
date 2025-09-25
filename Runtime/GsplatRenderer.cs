@@ -2,85 +2,42 @@
 // SPDX-License-Identifier: MIT
 
 using System;
-using System.Linq;
 using UnityEngine;
 
 namespace Gsplat
 {
-    [Serializable]
-    public class GsplatAssetData
-    {
-        public GsplatAsset Asset;
-        public Transform Transform;
-    }
-
     [ExecuteAlways]
     public class GsplatRenderer : MonoBehaviour, IGsplat
     {
-        public GsplatAssetData[] GsplatAssets;
+        public GsplatAsset GsplatAsset;
         [Range(0, 3)] public int SHDegree = 3;
         public bool GammaToLinear;
 
-        GsplatAssetData[] m_prevAssets;
+        GsplatAsset m_prevAsset;
         GsplatRendererImpl m_renderer;
-        uint m_splatCount;
-        private bool m_dataDirty = true;
 
-        public bool Valid => GsplatAssets != null && GsplatAssets.Length > 0 && m_splatCount > 0;
-        public uint SplatCount => m_splatCount;
-        public ISorterResource SorterResource => m_renderer?.SorterResource;
-
-        void RecalculateSplatCount()
-        {
-            m_splatCount = 0;
-            if (GsplatAssets == null) return;
-            foreach (var assetData in GsplatAssets)
-            {
-                if (assetData?.Asset != null)
-                {
-                    m_splatCount += assetData.Asset.SplatCount;
-                }
-            }
-        }
+        public bool Valid => GsplatAsset;
+        public uint SplatCount => GsplatAsset ? GsplatAsset.SplatCount : 0;
+        public ISorterResource SorterResource => m_renderer.SorterResource;
+        public Matrix4x4 LocalToWorldMatrix => transform.localToWorldMatrix;
 
         void SetBufferData()
         {
-            if (m_renderer == null || GsplatAssets == null) return;
-
-            uint offset = 0;
-            foreach (var assetData in GsplatAssets)
-            {
-                if (assetData?.Asset == null) continue;
-                var asset = assetData.Asset;
-                var transform = assetData.Transform ? assetData.Transform : this.transform;
-
-                var positions = new Vector3[asset.SplatCount];
-                var rotations = new Vector4[asset.SplatCount];
-
-                for (int i = 0; i < asset.SplatCount; i++)
-                {
-                    positions[i] = transform.TransformPoint(asset.Positions[i]);
-                    var worldRot = transform.rotation * asset.Rotations[i].ToQuaternion();
-                    rotations[i] = worldRot.ToVector4();
-                }
-
-                m_renderer.PositionBuffer.SetData(positions, 0, (int)offset, positions.Length);
-                m_renderer.ScaleBuffer.SetData(asset.Scales, 0, (int)offset, asset.Scales.Length);
-                m_renderer.RotationBuffer.SetData(rotations, 0, (int)offset, rotations.Length);
-                m_renderer.ColorBuffer.SetData(asset.Colors, 0, (int)offset, asset.Colors.Length);
-                if (asset.SHBands > 0)
-                {
-                    m_renderer.SHBuffer.SetData(asset.SHs, 0, (int)(offset * GsplatUtils.SHBandsToCoefficientCount(asset.SHBands)), asset.SHs.Length);
-                }
-                offset += asset.SplatCount;
-            }
-            m_dataDirty = false;
+            m_renderer.PositionBuffer.SetData(GsplatAsset.Positions);
+            m_renderer.ScaleBuffer.SetData(GsplatAsset.Scales);
+            m_renderer.RotationBuffer.SetData(GsplatAsset.Rotations);
+            m_renderer.ColorBuffer.SetData(GsplatAsset.Colors);
+            if (GsplatAsset.SHBands > 0)
+                m_renderer.SHBuffer.SetData(GsplatAsset.SHs);
         }
 
         void OnEnable()
         {
             GsplatSorter.Instance.RegisterGsplat(this);
-            CheckForAssetChanges();
+            if (!GsplatAsset)
+                return;
+            m_renderer = new GsplatRendererImpl(GsplatAsset.SplatCount, GsplatAsset.SHBands);
+            SetBufferData();
         }
 
         void OnDisable()
@@ -88,84 +45,26 @@ namespace Gsplat
             GsplatSorter.Instance.UnregisterGsplat(this);
             m_renderer?.Dispose();
             m_renderer = null;
-            m_prevAssets = null;
         }
 
         void Update()
         {
-            CheckForAssetChanges();
-
-            if (Valid && m_renderer != null)
+            if (m_prevAsset != GsplatAsset)
             {
-                for (int i = 0; i < GsplatAssets.Length; i++)
-                {
-                    if (GsplatAssets[i] == null) continue;
-                    var t = GsplatAssets[i].Transform ? GsplatAssets[i].Transform : transform;
-                    if (t.hasChanged)
-                    {
-                        m_dataDirty = true;
-                        t.hasChanged = false;
-                    }
-                }
-                if (m_dataDirty)
-                {
-                    SetBufferData();
-                }
-
-                var bounds = new Bounds(transform.position, Vector3.one * 10000); // Simplified bounds for rendering
-                m_renderer.Render(m_splatCount, transform, bounds, gameObject.layer,
-                    GammaToLinear, SHDegree);
-            }
-        }
-
-        void CheckForAssetChanges()
-        {
-            bool changed = false;
-            if (m_prevAssets == null && GsplatAssets != null)
-            {
-                changed = true;
-            }
-            else if (m_prevAssets != null && GsplatAssets == null)
-            {
-                changed = true;
-            }
-            else if (m_prevAssets != null && GsplatAssets != null && !m_prevAssets.SequenceEqual(GsplatAssets))
-            {
-                changed = true;
-            }
-
-            if (changed)
-            {
-                RecalculateSplatCount();
-
-                byte maxShBands = 0;
-                if (GsplatAssets != null)
-                {
-                    foreach (var assetData in GsplatAssets)
-                    {
-                        if (assetData?.Asset != null && assetData.Asset.SHBands > maxShBands)
-                        {
-                            maxShBands = assetData.Asset.SHBands;
-                        }
-                    }
-                }
-
-                if (m_splatCount > 0)
+                m_prevAsset = GsplatAsset;
+                if (GsplatAsset)
                 {
                     if (m_renderer == null)
-                        m_renderer = new GsplatRendererImpl(m_splatCount, maxShBands);
+                        m_renderer = new GsplatRendererImpl(GsplatAsset.SplatCount, GsplatAsset.SHBands);
                     else
-                        m_renderer.RecreateResources(m_splatCount, maxShBands);
+                        m_renderer.RecreateResources(GsplatAsset.SplatCount, GsplatAsset.SHBands);
+                    SetBufferData();
                 }
-                else
-                {
-                    m_renderer?.Dispose();
-                    m_renderer = null;
-                }
-
-                m_prevAssets = GsplatAssets != null ? (GsplatAssetData[])GsplatAssets.Clone() : null;
-                m_dataDirty = true;
             }
+
+            if (Valid)
+                m_renderer.Render(GsplatAsset.SplatCount, transform, GsplatAsset.Bounds, gameObject.layer,
+                    GammaToLinear, SHDegree);
         }
     }
 }

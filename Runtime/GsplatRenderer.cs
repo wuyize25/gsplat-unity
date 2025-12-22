@@ -25,6 +25,7 @@ namespace Gsplat
         public bool Valid => RenderBeforeUploadComplete ? SplatCount > 0 : SplatCount == GsplatAsset.SplatCount;
         public uint SplatCount => GsplatAsset ? GsplatAsset.SplatCount - m_pendingSplatCount : 0;
         public ISorterResource SorterResource => m_renderer.SorterResource;
+        public Matrix4x4 LocalToWorldMatrix => transform.localToWorldMatrix;
 
         uint m_pendingSplatCount;
 

@@ -136,5 +136,26 @@ namespace Gsplat
             Graphics.RenderMeshPrimitives(rp, GsplatSettings.Instance.Mesh, 0,
                 Mathf.CeilToInt(splatCount / (float)GsplatSettings.Instance.SplatInstanceSize));
         }
+
+        public void Render(uint splatCount, Bounds worldBounds, int layer, bool gammaToLinear = false, int shDegree = 3)
+        {
+            if (!Valid || !GsplatSettings.Instance.Valid || !GsplatSorter.Instance.Valid)
+                return;
+
+            m_propertyBlock.SetInteger(k_splatCount, (int)splatCount);
+            m_propertyBlock.SetInteger(k_gammaToLinear, gammaToLinear ? 1 : 0);
+            m_propertyBlock.SetInteger(k_splatInstanceSize, (int)GsplatSettings.Instance.SplatInstanceSize);
+            m_propertyBlock.SetInteger(k_shDegree, shDegree);
+            m_propertyBlock.SetMatrix(k_matrixM, Matrix4x4.identity);
+            var rp = new RenderParams(GsplatSettings.Instance.Materials[SHBands])
+            {
+                worldBounds = worldBounds,
+                matProps = m_propertyBlock,
+                layer = layer
+            };
+
+            Graphics.RenderMeshPrimitives(rp, GsplatSettings.Instance.Mesh, 0,
+                Mathf.CeilToInt(splatCount / (float)GsplatSettings.Instance.SplatInstanceSize));
+        }
     }
 }

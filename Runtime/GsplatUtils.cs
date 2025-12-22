@@ -55,5 +55,15 @@ namespace Gsplat
 
             return worldBounds;
         }
+
+        public static Quaternion ToQuaternion(this Vector4 v)
+        {
+            return new Quaternion(v.y, v.z, v.w, v.x);
+        }
+
+        public static Vector4 ToVector4(this Quaternion q)
+        {
+            return new Vector4(q.w, q.x, q.y, q.z);
+        }
     }
 }

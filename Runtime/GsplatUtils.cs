@@ -10,6 +10,22 @@ namespace Gsplat
     {
         public const string k_PackagePath = "Packages/wu.yize.gsplat/";
 
+        /// <summary>
+        /// Convert float ranging between -1..1 to a -127..127 sint8
+        /// </summary>
+        public static sbyte FloatToSByte(float x)
+        {
+            return (sbyte)Math.Max(-127, Math.Min(127, Math.Round(x * 127)));
+        }
+
+        /// <summary>
+        /// Convert float ranging between 0..1 to a 0..255 uint8
+        /// </summary>
+        public static byte FloatToByte(float x)
+        {
+            return (byte)Math.Max(0, Math.Min(255, Math.Round(x * 255)));
+        }
+
         public static float Sigmoid(float x)
         {
             return 1.0f / (1.0f + Mathf.Exp(-x));

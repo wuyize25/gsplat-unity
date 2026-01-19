@@ -34,6 +34,7 @@ namespace Gsplat
             m_renderer.ScaleBuffer.SetData(GsplatAsset.Scales);
             m_renderer.RotationBuffer.SetData(GsplatAsset.Rotations);
             m_renderer.ColorBuffer.SetData(GsplatAsset.Colors);
+            m_renderer.PackedSplatsBuffer.SetData(GsplatAsset.PackedSplats);
             if (GsplatAsset.SHBands > 0)
                 m_renderer.SHBuffer.SetData(GsplatAsset.SHs);
         }
@@ -53,6 +54,7 @@ namespace Gsplat
             m_renderer.ScaleBuffer.SetData(GsplatAsset.Scales, offset, offset, count);
             m_renderer.RotationBuffer.SetData(GsplatAsset.Rotations, offset, offset, count);
             m_renderer.ColorBuffer.SetData(GsplatAsset.Colors, offset, offset, count);
+            m_renderer.PackedSplatsBuffer.SetData(GsplatAsset.PackedSplats, offset, offset, count);
             if (GsplatAsset.SHBands <= 0) return;
             var coefficientCount = GsplatUtils.SHBandsToCoefficientCount(GsplatAsset.SHBands);
             m_renderer.SHBuffer.SetData(GsplatAsset.SHs, coefficientCount * offset,

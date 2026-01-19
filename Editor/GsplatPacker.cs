@@ -83,12 +83,14 @@ namespace Gsplat.Editor
             return (byte)Math.Min(255, Math.Max(1, Math.Round(encoded)));
         }
 
+        const float shC0 = 0.28209479177387814f;
+
         public static uint[] PackSplat(Vector4 color, Vector3 position, Vector3 scale, Vector4 rotation)
         {
-            byte uR = GsplatUtils.FloatToByte(color.x);
-            byte uG = GsplatUtils.FloatToByte(color.y);
-            byte uB = GsplatUtils.FloatToByte(color.z);
-            byte uA = GsplatUtils.FloatToByte(color.w);
+            byte uR = GsplatUtils.FloatToByte(color.x * shC0 + 0.5f);
+            byte uG = GsplatUtils.FloatToByte(color.y * shC0 + 0.5f);
+            byte uB = GsplatUtils.FloatToByte(color.z * shC0 + 0.5f);
+            byte uA = GsplatUtils.FloatToByte(GsplatUtils.Sigmoid(color.w));
 
             ushort uPosX = Mathf.FloatToHalf(position.x);
             ushort uPosY = Mathf.FloatToHalf(position.y);

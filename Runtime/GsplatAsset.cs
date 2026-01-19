@@ -15,6 +15,6 @@ namespace Gsplat
         [HideInInspector] public Vector3[] SHs;
         [HideInInspector] public Vector3[] Scales;
         [HideInInspector] public Vector4[] Rotations; // Quaternion, wxyz
-        [HideInInspector] public uint[] PackedSplat;
+        [HideInInspector] public uint[] PackedSplats;
     }
 }

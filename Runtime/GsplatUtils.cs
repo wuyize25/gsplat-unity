@@ -15,7 +15,7 @@ namespace Gsplat
         /// </summary>
         public static sbyte FloatToSByte(float x)
         {
-            return (sbyte)Math.Max(-127, Math.Min(127, Math.Round(x * 127)));
+            return (sbyte)Math.Max(-127.0, Math.Min(127.0, Math.Round(x * 127.0)));
         }
 
         /// <summary>
@@ -23,7 +23,7 @@ namespace Gsplat
         /// </summary>
         public static byte FloatToByte(float x)
         {
-            return (byte)Math.Max(0, Math.Min(255, Math.Round(x * 255)));
+            return (byte)Math.Max(0.0, Math.Min(255.0, Math.Round(x * 255.0)));
         }
 
         public static float Sigmoid(float x)

@@ -155,7 +155,7 @@ namespace Gsplat.Editor
                     gsplatAsset.SHs = new Vector3[plyInfo.VertexCount * shCoeffs];
                 gsplatAsset.Scales = new Vector3[plyInfo.VertexCount];
                 gsplatAsset.Rotations = new Vector4[plyInfo.VertexCount];
-                gsplatAsset.PackedSplat = new uint[plyInfo.VertexCount * 4];
+                gsplatAsset.PackedSplats = new uint[plyInfo.VertexCount * 4];
 
                 var buffer = new byte[plyInfo.PropertyCount * sizeof(float)];
                 for (uint i = 0; i < plyInfo.VertexCount; i++)
@@ -220,7 +220,7 @@ namespace Gsplat.Editor
 
                     uint[] packedSplat = GsplatPacker.PackSplat(color, position, scale, rotation);
 
-                    Array.Copy(packedSplat, 0, gsplatAsset.PackedSplat, i * 4, 4);
+                    Array.Copy(packedSplat, 0, gsplatAsset.PackedSplats, i * 4, 4);
 
                     EditorUtility.DisplayProgressBar("Importing Gsplat Asset", "Reading vertices",
                         i / (float)plyInfo.VertexCount);

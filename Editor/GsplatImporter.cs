@@ -7,7 +7,6 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using Unity.Collections;
 using UnityEditor;
 using UnityEditor.AssetImporters;
 using UnityEngine;
@@ -150,11 +149,8 @@ namespace Gsplat.Editor
                 }
 
                 gsplatAsset.Positions = new Vector3[plyInfo.VertexCount];
-                gsplatAsset.Colors = new Vector4[plyInfo.VertexCount];
                 if (shCoeffs > 0)
                     gsplatAsset.SHs = new Vector3[plyInfo.VertexCount * shCoeffs];
-                gsplatAsset.Scales = new Vector3[plyInfo.VertexCount];
-                gsplatAsset.Rotations = new Vector4[plyInfo.VertexCount];
                 gsplatAsset.PackedSplats = new uint[plyInfo.VertexCount * 4];
 
                 var buffer = new byte[plyInfo.PropertyCount * sizeof(float)];
@@ -174,25 +170,11 @@ namespace Gsplat.Editor
                         properties[plyInfo.PositionOffset],
                         properties[plyInfo.PositionOffset + 1],
                         properties[plyInfo.PositionOffset + 2]);
-                    gsplatAsset.Colors[i] = new Vector4(
-                        properties[plyInfo.ColorOffset],
-                        properties[plyInfo.ColorOffset + 1],
-                        properties[plyInfo.ColorOffset + 2],
-                        GsplatUtils.Sigmoid(properties[plyInfo.OpacityOffset]));
                     for (int j = 0; j < shCoeffs; j++)
                         gsplatAsset.SHs[i * shCoeffs + j] = new Vector3(
                             properties[j + plyInfo.SHOffset],
                             properties[j + plyInfo.SHOffset + shCoeffs],
                             properties[j + plyInfo.SHOffset + shCoeffs * 2]);
-                    gsplatAsset.Scales[i] = new Vector3(
-                        Mathf.Exp(properties[plyInfo.ScaleOffset]),
-                        Mathf.Exp(properties[plyInfo.ScaleOffset + 1]),
-                        Mathf.Exp(properties[plyInfo.ScaleOffset + 2]));
-                    gsplatAsset.Rotations[i] = new Vector4(
-                        properties[plyInfo.RotationOffset],
-                        properties[plyInfo.RotationOffset + 1],
-                        properties[plyInfo.RotationOffset + 2],
-                        properties[plyInfo.RotationOffset + 3]).normalized;
 
                     if (i == 0) bounds = new Bounds(gsplatAsset.Positions[i], Vector3.zero);
                     else bounds.Encapsulate(gsplatAsset.Positions[i]);

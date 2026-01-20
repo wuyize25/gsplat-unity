@@ -12,9 +12,6 @@ namespace Gsplat
 
         MaterialPropertyBlock m_propertyBlock;
         public GraphicsBuffer PositionBuffer { get; private set; }
-        public GraphicsBuffer ScaleBuffer { get; private set; }
-        public GraphicsBuffer RotationBuffer { get; private set; }
-        public GraphicsBuffer ColorBuffer { get; private set; }
         public GraphicsBuffer SHBuffer { get; private set; }
         public GraphicsBuffer OrderBuffer { get; private set; }
         public GraphicsBuffer PackedSplatsBuffer { get; private set; }
@@ -22,17 +19,11 @@ namespace Gsplat
 
         public bool Valid =>
             PositionBuffer != null &&
-            ScaleBuffer != null &&
-            RotationBuffer != null &&
-            ColorBuffer != null &&
             PackedSplatsBuffer != null &&
             (SHBands == 0 || SHBuffer != null);
 
         static readonly int k_orderBuffer = Shader.PropertyToID("_OrderBuffer");
         static readonly int k_positionBuffer = Shader.PropertyToID("_PositionBuffer");
-        static readonly int k_scaleBuffer = Shader.PropertyToID("_ScaleBuffer");
-        static readonly int k_rotationBuffer = Shader.PropertyToID("_RotationBuffer");
-        static readonly int k_colorBuffer = Shader.PropertyToID("_ColorBuffer");
         static readonly int k_packedSplatsBuffer = Shader.PropertyToID("_PackedSplatsBuffer");
         static readonly int k_shBuffer = Shader.PropertyToID("_SHBuffer");
         static readonly int k_matrixM = Shader.PropertyToID("_MATRIX_M");
@@ -64,12 +55,6 @@ namespace Gsplat
         {
             PositionBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)splatCount,
                 System.Runtime.InteropServices.Marshal.SizeOf(typeof(Vector3)));
-            ScaleBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)splatCount,
-                System.Runtime.InteropServices.Marshal.SizeOf(typeof(Vector3)));
-            RotationBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)splatCount,
-                System.Runtime.InteropServices.Marshal.SizeOf(typeof(Vector4)));
-            ColorBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)splatCount,
-                System.Runtime.InteropServices.Marshal.SizeOf(typeof(Vector4)));
             PackedSplatsBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)splatCount * 4,
                 System.Runtime.InteropServices.Marshal.SizeOf(typeof(uint)));
             if (SHBands > 0)
@@ -86,9 +71,6 @@ namespace Gsplat
             m_propertyBlock ??= new MaterialPropertyBlock();
             m_propertyBlock.SetBuffer(k_orderBuffer, OrderBuffer);
             m_propertyBlock.SetBuffer(k_positionBuffer, PositionBuffer);
-            m_propertyBlock.SetBuffer(k_scaleBuffer, ScaleBuffer);
-            m_propertyBlock.SetBuffer(k_rotationBuffer, RotationBuffer);
-            m_propertyBlock.SetBuffer(k_colorBuffer, ColorBuffer);
             m_propertyBlock.SetBuffer(k_packedSplatsBuffer, PackedSplatsBuffer);
             if (SHBands > 0)
                 m_propertyBlock.SetBuffer(k_shBuffer, SHBuffer);
@@ -97,18 +79,12 @@ namespace Gsplat
         public void Dispose()
         {
             PositionBuffer?.Dispose();
-            ScaleBuffer?.Dispose();
-            RotationBuffer?.Dispose();
-            ColorBuffer?.Dispose();
             SHBuffer?.Dispose();
             OrderBuffer?.Dispose();
             PackedSplatsBuffer?.Dispose();
             SorterResource?.Dispose();
 
             PositionBuffer = null;
-            ScaleBuffer = null;
-            RotationBuffer = null;
-            ColorBuffer = null;
             SHBuffer = null;
             OrderBuffer = null;
             PackedSplatsBuffer = null;

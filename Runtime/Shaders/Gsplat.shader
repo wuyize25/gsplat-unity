@@ -32,10 +32,6 @@ Shader "Gsplat/Standard"
             int _SHDegree;
             float4x4 _MATRIX_M;
             StructuredBuffer<uint> _OrderBuffer;
-            StructuredBuffer<float3> _PositionBuffer;
-            StructuredBuffer<float3> _ScaleBuffer;
-            StructuredBuffer<float4> _RotationBuffer;
-            StructuredBuffer<float4> _ColorBuffer;
             StructuredBuffer<uint> _PackedSplatsBuffer;
             #ifndef SH_BANDS_0
             StructuredBuffer<float3> _SHBuffer;
@@ -83,6 +79,18 @@ Shader "Gsplat/Standard"
                 return true;
             }
 
+            float4 decodeQuatXyz888(uint encoded) {
+                int3 iQuat3 = int3(
+                    int(encoded << 24) >> 24,
+                    int(encoded << 16) >> 24,
+                    int(encoded << 8) >> 24
+                );
+                float4 quat = float4(float3(iQuat3) / 127.0, 0.0);
+                quat.w = sqrt(max(0.0, 1.0 - dot(quat.xyz, quat.xyz)));
+                return quat;
+            }
+
+
             struct v2f
             {
                 float2 uv : TEXCOORD0;
@@ -110,9 +118,8 @@ Shader "Gsplat/Standard"
                 uint word2 = _PackedSplatsBuffer[source.id * 4 + 2];
                 uint word3 = _PackedSplatsBuffer[source.id * 4 + 3];
                 
-                float3 modelCenter = float3(f16tof32(word1 & 0xffff), f16tof32((word1 >> 16) & 0xffff), f16tof32(word2 & 0xffff)); 
+                float3 modelCenter = float3(f16tof32(word1 & 0xffffu), f16tof32((word1 >> 16u) & 0xffffu), f16tof32(word2 & 0xffffu)); 
 
-                //float3 modelCenter = _PositionBuffer[source.id];
                 SplatCenter center;
                 if (!InitCenter(modelCenter, center))
                 {
@@ -120,8 +127,19 @@ Shader "Gsplat/Standard"
                     return o;
                 }
 
-                float4 quat = _RotationBuffer[source.id];
-                float3 scale = _ScaleBuffer[source.id];
+                uint3 uScale = uint3(word3 & 0xffu, (word3 >> 8u) & 0xffu, (word3 >> 16u) & 0xffu);
+                float lnScaleMin = -12.0;
+                float lnScaleMax = 9.0;
+                float lnScaleScale = (lnScaleMax - lnScaleMin) / 254.0;
+                float3 scale = float3(
+                    (uScale.x == 0u) ? 0.0 : exp(lnScaleMin + float(uScale.x - 1u) * lnScaleScale),
+                    (uScale.y == 0u) ? 0.0 : exp(lnScaleMin + float(uScale.y - 1u) * lnScaleScale),
+                    (uScale.z == 0u) ? 0.0 : exp(lnScaleMin + float(uScale.z - 1u) * lnScaleScale)
+                );
+
+                uint uQuat = ((word2 >> 16u) & 0xFFFFu) | ((word3 >> 8u) & 0xFF0000u);
+                float4 quat = decodeQuatXyz888(uQuat);
+
                 SplatCovariance cov = CalcCovariance(quat, scale);
                 SplatCorner corner;
                 if (!InitCorner(source, cov, center, corner))
@@ -133,9 +151,6 @@ Shader "Gsplat/Standard"
                 uint4 uColor = uint4(word0 & 0xff, (word0 >> 8) & 0xff, (word0 >> 16) & 0xff, (word0 >> 24) & 0xff);
                 float4 color = (float4(uColor) / 255.0);
 
-                /////float4 color = _ColorBuffer[source.id];
-                /////color.rgb = color.rgb * SH_C0 + 0.5;
-                
                 #ifndef SH_BANDS_0
                 // calculate the model-space view direction
                 float3 dir = normalize(mul(center.view, (float3x3)center.modelView));

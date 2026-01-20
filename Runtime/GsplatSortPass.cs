@@ -66,9 +66,9 @@ namespace Gsplat
                     AltBuffer = new GraphicsBuffer(target, (int)count, 4) { name = "DeviceRadixAlt" },
                     AltPayloadBuffer = new GraphicsBuffer(target, (int)count, 4) { name = "DeviceRadixAltPayload" },
                     PassHistBuffer = new GraphicsBuffer(target, (int)scratchBufferSize, 4)
-                        { name = "DeviceRadixPassHistogram" },
+                    { name = "DeviceRadixPassHistogram" },
                     GlobalHistBuffer = new GraphicsBuffer(target, (int)reducedScratchBufferSize, 4)
-                        { name = "DeviceRadixGlobalHistogram" },
+                    { name = "DeviceRadixGlobalHistogram" },
                 };
                 return resources;
             }

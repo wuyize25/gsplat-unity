@@ -98,9 +98,9 @@ namespace Gsplat.Editor
 
             (byte uQuatX, byte uQuatY, byte uQuatZ) = EncodeQuatXyz888(rotation.normalized);
 
-            byte uScaleX = EncodeScaleOnLogScale(scale.x);
-            byte uScaleY = EncodeScaleOnLogScale(scale.y);
-            byte uScaleZ = EncodeScaleOnLogScale(scale.z);
+            byte uScaleX = EncodeScaleOnLogScale(Mathf.Exp(scale.x));
+            byte uScaleY = EncodeScaleOnLogScale(Mathf.Exp(scale.y));
+            byte uScaleZ = EncodeScaleOnLogScale(Mathf.Exp(scale.z));
 
             uint[] packedSplat = new uint[]
             {

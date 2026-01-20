@@ -31,9 +31,6 @@ namespace Gsplat
         void SetBufferData()
         {
             m_renderer.PositionBuffer.SetData(GsplatAsset.Positions);
-            m_renderer.ScaleBuffer.SetData(GsplatAsset.Scales);
-            m_renderer.RotationBuffer.SetData(GsplatAsset.Rotations);
-            m_renderer.ColorBuffer.SetData(GsplatAsset.Colors);
             m_renderer.PackedSplatsBuffer.SetData(GsplatAsset.PackedSplats);
             if (GsplatAsset.SHBands > 0)
                 m_renderer.SHBuffer.SetData(GsplatAsset.SHs);
@@ -51,9 +48,6 @@ namespace Gsplat
             var count = (int)Math.Min(UploadBatchSize, m_pendingSplatCount);
             m_pendingSplatCount -= (uint)count;
             m_renderer.PositionBuffer.SetData(GsplatAsset.Positions, offset, offset, count);
-            m_renderer.ScaleBuffer.SetData(GsplatAsset.Scales, offset, offset, count);
-            m_renderer.RotationBuffer.SetData(GsplatAsset.Rotations, offset, offset, count);
-            m_renderer.ColorBuffer.SetData(GsplatAsset.Colors, offset, offset, count);
             m_renderer.PackedSplatsBuffer.SetData(GsplatAsset.PackedSplats, offset, offset, count);
             if (GsplatAsset.SHBands <= 0) return;
             var coefficientCount = GsplatUtils.SHBandsToCoefficientCount(GsplatAsset.SHBands);

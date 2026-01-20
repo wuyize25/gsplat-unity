@@ -32,7 +32,7 @@ Shader "Gsplat/Standard"
             int _SHDegree;
             float4x4 _MATRIX_M;
             StructuredBuffer<uint> _OrderBuffer;
-            StructuredBuffer<uint> _PackedSplatsBuffer;
+            StructuredBuffer<uint4> _PackedSplatsBuffer;
             #ifndef SH_BANDS_0
             StructuredBuffer<float3> _SHBuffer;
             #endif
@@ -113,10 +113,11 @@ Shader "Gsplat/Standard"
                     return o;
                 }
                 
-                uint word0 = _PackedSplatsBuffer[source.id * 4];
-                uint word1 = _PackedSplatsBuffer[source.id * 4 + 1];
-                uint word2 = _PackedSplatsBuffer[source.id * 4 + 2];
-                uint word3 = _PackedSplatsBuffer[source.id * 4 + 3];
+                uint4 word = _PackedSplatsBuffer[source.id];
+                uint word0 = word.x;
+                uint word1 = word.y;
+                uint word2 = word.z;
+                uint word3 = word.w;
                 
                 float3 modelCenter = float3(f16tof32(word1 & 0xffffu), f16tof32((word1 >> 16u) & 0xffffu), f16tof32(word2 & 0xffffu)); 
 

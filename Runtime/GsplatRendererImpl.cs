@@ -55,8 +55,8 @@ namespace Gsplat
         {
             PositionBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)splatCount,
                 System.Runtime.InteropServices.Marshal.SizeOf(typeof(Vector3)));
-            PackedSplatsBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)splatCount * 4,
-                System.Runtime.InteropServices.Marshal.SizeOf(typeof(uint)));
+            PackedSplatsBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)splatCount,
+                System.Runtime.InteropServices.Marshal.SizeOf(typeof(uint)) * 4);
             if (SHBands > 0)
                 SHBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured,
                     GsplatUtils.SHBandsToCoefficientCount(SHBands) * (int)splatCount,

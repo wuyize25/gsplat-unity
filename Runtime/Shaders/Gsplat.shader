@@ -79,46 +79,6 @@ Shader "Gsplat/Standard"
                 return true;
             }
 
-            // Implementation taken from spark.js
-            // Decode a 24‐bit encoded uint into a quaternion (vec4) using the folded octahedral inverse.
-            float4 decodeQuatOctXyz88R8(uint encoded) {
-                // Extract the fields.
-                uint quantU = encoded & 0xFF;               // bits 0–7
-                uint quantV = (encoded >> 8) & 0xFF;        // bits 8–15
-                uint angleInt = encoded >> 16;              // bits 16–23
-
-                // Recover u and v in [0,1], then map to [-1,1].
-                float u_f = float(quantU) / 255.0;
-                float v_f = float(quantV) / 255.0;
-                float2 f = float2(u_f * 2.0 - 1.0, v_f * 2.0 - 1.0);
-
-                float3 axis = float3(f.xy, 1.0 - abs(f.x) - abs(f.y));
-                float t = max(-axis.z, 0.0);
-                axis.x += (axis.x >= 0.0) ? -t : t;
-                axis.y += (axis.y >= 0.0) ? -t : t;
-                axis = normalize(axis);
-
-                // Decode the angle θ ∈ [0,π].
-                float theta = (float(angleInt) / 255.0) * UNITY_PI;
-                float halfTheta = theta * 0.5;
-                float s = sin(halfTheta);
-                float w = cos(halfTheta);
-
-                return float4(axis * s, w);
-            }
-
-            // Implementation taken from spark.js
-            // float4 decodeQuatXyz888(uint encoded) {
-            //     int3 iQuat3 = int3(
-            //         int(encoded << 24) >> 24,
-            //         int(encoded << 16) >> 24,
-            //         int(encoded << 8) >> 24
-            //     );
-            //     float4 quat = float4(float3(iQuat3) / 127.0, 0.0);
-            //     quat.w = sqrt(max(0.0, 1.0 - dot(quat.xyz, quat.xyz)));
-            //     return quat;
-            // }
-
             struct v2f
             {
                 float2 uv : TEXCOORD0;
@@ -141,13 +101,11 @@ Shader "Gsplat/Standard"
                     return o;
                 }
 
-                uint4 word = _PackedSplatsBuffer[source.id];
-                uint word0 = word.x;
-                uint word1 = word.y;
-                uint word2 = word.z;
-                uint word3 = word.w;
+                uint4 packedSplat = _PackedSplatsBuffer[source.id];
 
-                float3 modelCenter = float3(f16tof32(word1 & 0xffffu), f16tof32((word1 >> 16u) & 0xffffu), f16tof32(word2 & 0xffffu));
+                float3 modelCenter, scale;
+                float4 color, quat;
+                UpackSplat(packedSplat, color, modelCenter, scale, quat);
 
                 SplatCenter center;
                 if (!InitCenter(modelCenter, center))
@@ -156,19 +114,6 @@ Shader "Gsplat/Standard"
                     return o;
                 }
 
-                uint3 uScale = uint3(word3 & 0xffu, (word3 >> 8u) & 0xffu, (word3 >> 16u) & 0xffu);
-                float lnScaleMin = -12.0;
-                float lnScaleMax = 9.0;
-                float lnScaleScale = (lnScaleMax - lnScaleMin) / 254.0;
-                float3 scale = float3(
-                    (uScale.x == 0u) ? 0.0 : exp(lnScaleMin + float(uScale.x - 1u) * lnScaleScale),
-                    (uScale.y == 0u) ? 0.0 : exp(lnScaleMin + float(uScale.y - 1u) * lnScaleScale),
-                    (uScale.z == 0u) ? 0.0 : exp(lnScaleMin + float(uScale.z - 1u) * lnScaleScale)
-                );
-
-                uint uQuat = ((word2 >> 16u) & 0xFFFFu) | ((word3 >> 8u) & 0xFF0000u);
-                float4 quat = decodeQuatOctXyz88R8(uQuat);
-
                 SplatCovariance cov = CalcCovariance(quat, scale);
                 SplatCorner corner;
                 if (!InitCorner(source, cov, center, corner))
@@ -176,9 +121,6 @@ Shader "Gsplat/Standard"
                     o.vertex = discardVec;
                     return o;
                 }
-
-                uint4 uColor = uint4(word0 & 0xff, (word0 >> 8) & 0xff, (word0 >> 16) & 0xff, (word0 >> 24) & 0xff);
-                float4 color = (float4(uColor) / 255.0);
 
                 #ifndef SH_BANDS_0
                 // calculate the model-space view direction

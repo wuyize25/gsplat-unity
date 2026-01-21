@@ -14,7 +14,7 @@ namespace Gsplat.Editor
 
             DrawPropertiesExcluding(serializedObject, "m_Script", nameof(GsplatRenderer.UploadBatchSize),
                 nameof(GsplatRenderer.RenderBeforeUploadComplete));
-            
+
             if (serializedObject.FindProperty(nameof(GsplatRenderer.AsyncUpload)).boolValue)
             {
                 EditorGUI.indentLevel++;

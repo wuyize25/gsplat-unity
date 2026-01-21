@@ -58,7 +58,7 @@ float3x3 QuatToMat3(float4 R)
     );
 }
 
-// quat format: w, x, y, z 
+// quat format: w, x, y, z
 SplatCovariance CalcCovariance(float4 quat, float3 scale)
 {
     float3x3 rot = QuatToMat3(quat);
@@ -190,7 +190,7 @@ float3 EvalSH(const inout float3 sh[SH_COEFFS], float3 dir, int degree = 3)
 {
     if (degree == 0)
         return float3(0, 0, 0);
-    
+
     float x = dir.x;
     float y = dir.y;
     float z = dir.z;

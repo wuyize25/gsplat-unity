@@ -93,7 +93,7 @@ namespace Gsplat
         /// <summary>
         /// Render the splats.
         /// </summary>
-        /// <param name="splatCount">It can be less than or equal to the SplatCount property.</param> 
+        /// <param name="splatCount">It can be less than or equal to the SplatCount property.</param>
         /// <param name="transform">Object transform.</param>
         /// <param name="localBounds">Bounding box in object space.</param>
         /// <param name="layer">Layer used for rendering.</param>

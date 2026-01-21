@@ -78,7 +78,7 @@ Shader "Gsplat/Standard"
                 center.modelView = modelView;
                 return true;
             }
-            
+
             // Implementation taken from spark.js
             // Decode a 24‐bit encoded uint into a quaternion (vec4) using the folded octahedral inverse.
             float4 decodeQuatOctXyz88R8(uint encoded) {
@@ -91,7 +91,7 @@ Shader "Gsplat/Standard"
                 float u_f = float(quantU) / 255.0;
                 float v_f = float(quantV) / 255.0;
                 float2 f = float2(u_f * 2.0 - 1.0, v_f * 2.0 - 1.0);
-                
+
                 float3 axis = float3(f.xy, 1.0 - abs(f.x) - abs(f.y));
                 float t = max(-axis.z, 0.0);
                 axis.x += (axis.x >= 0.0) ? -t : t;
@@ -103,7 +103,7 @@ Shader "Gsplat/Standard"
                 float halfTheta = theta * 0.5;
                 float s = sin(halfTheta);
                 float w = cos(halfTheta);
-                
+
                 return float4(axis * s, w);
             }
 
@@ -133,21 +133,21 @@ Shader "Gsplat/Standard"
                 UNITY_SETUP_INSTANCE_ID(v);
                 UNITY_INITIALIZE_OUTPUT(v2f, o);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
-                
+
                 SplatSource source;
                 if (!InitSource(v, source))
                 {
                     o.vertex = discardVec;
                     return o;
                 }
-                
+
                 uint4 word = _PackedSplatsBuffer[source.id];
                 uint word0 = word.x;
                 uint word1 = word.y;
                 uint word2 = word.z;
                 uint word3 = word.w;
-                
-                float3 modelCenter = float3(f16tof32(word1 & 0xffffu), f16tof32((word1 >> 16u) & 0xffffu), f16tof32(word2 & 0xffffu)); 
+
+                float3 modelCenter = float3(f16tof32(word1 & 0xffffu), f16tof32((word1 >> 16u) & 0xffffu), f16tof32(word2 & 0xffffu));
 
                 SplatCenter center;
                 if (!InitCenter(modelCenter, center))

@@ -11,19 +11,16 @@ namespace Gsplat
         public byte SHBands { get; private set; }
 
         MaterialPropertyBlock m_propertyBlock;
-        public GraphicsBuffer PositionBuffer { get; private set; }
         public GraphicsBuffer SHBuffer { get; private set; }
         public GraphicsBuffer OrderBuffer { get; private set; }
         public GraphicsBuffer PackedSplatsBuffer { get; private set; }
         public ISorterResource SorterResource { get; private set; }
 
         public bool Valid =>
-            PositionBuffer != null &&
             PackedSplatsBuffer != null &&
             (SHBands == 0 || SHBuffer != null);
 
         static readonly int k_orderBuffer = Shader.PropertyToID("_OrderBuffer");
-        static readonly int k_positionBuffer = Shader.PropertyToID("_PositionBuffer");
         static readonly int k_packedSplatsBuffer = Shader.PropertyToID("_PackedSplatsBuffer");
         static readonly int k_shBuffer = Shader.PropertyToID("_SHBuffer");
         static readonly int k_matrixM = Shader.PropertyToID("_MATRIX_M");
@@ -53,8 +50,6 @@ namespace Gsplat
 
         void CreateResources(uint splatCount)
         {
-            PositionBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)splatCount,
-                System.Runtime.InteropServices.Marshal.SizeOf(typeof(Vector3)));
             PackedSplatsBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)splatCount,
                 System.Runtime.InteropServices.Marshal.SizeOf(typeof(uint)) * 4);
             if (SHBands > 0)
@@ -63,14 +58,13 @@ namespace Gsplat
                     System.Runtime.InteropServices.Marshal.SizeOf(typeof(Vector3)));
             OrderBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)splatCount, sizeof(uint));
 
-            SorterResource = GsplatSorter.Instance.CreateSorterResource(splatCount, PositionBuffer, OrderBuffer);
+            SorterResource = GsplatSorter.Instance.CreateSorterResource(splatCount, PackedSplatsBuffer, OrderBuffer);
         }
 
         void CreatePropertyBlock()
         {
             m_propertyBlock ??= new MaterialPropertyBlock();
             m_propertyBlock.SetBuffer(k_orderBuffer, OrderBuffer);
-            m_propertyBlock.SetBuffer(k_positionBuffer, PositionBuffer);
             m_propertyBlock.SetBuffer(k_packedSplatsBuffer, PackedSplatsBuffer);
             if (SHBands > 0)
                 m_propertyBlock.SetBuffer(k_shBuffer, SHBuffer);
@@ -78,13 +72,11 @@ namespace Gsplat
 
         public void Dispose()
         {
-            PositionBuffer?.Dispose();
             SHBuffer?.Dispose();
             OrderBuffer?.Dispose();
             PackedSplatsBuffer?.Dispose();
             SorterResource?.Dispose();
 
-            PositionBuffer = null;
             SHBuffer = null;
             OrderBuffer = null;
             PackedSplatsBuffer = null;

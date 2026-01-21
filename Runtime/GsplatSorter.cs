@@ -19,7 +19,7 @@ namespace Gsplat
 
     public interface ISorterResource
     {
-        public GraphicsBuffer PositionBuffer { get; }
+        public GraphicsBuffer PackedSplatsBuffer { get; }
         public GraphicsBuffer OrderBuffer { get; }
         public void Dispose();
     }
@@ -30,16 +30,16 @@ namespace Gsplat
     {
         class Resource : ISorterResource
         {
-            public GraphicsBuffer PositionBuffer { get; }
+            public GraphicsBuffer PackedSplatsBuffer { get; }
             public GraphicsBuffer OrderBuffer { get; }
 
             public GraphicsBuffer InputKeys { get; private set; }
             public GsplatSortPass.SupportResources Resources { get; }
             public bool Initialized;
 
-            public Resource(uint count, GraphicsBuffer positionBuffer, GraphicsBuffer orderBuffer)
+            public Resource(uint count, GraphicsBuffer packedSplatsBuffer, GraphicsBuffer orderBuffer)
             {
-                PositionBuffer = positionBuffer;
+                PackedSplatsBuffer = packedSplatsBuffer;
                 OrderBuffer = orderBuffer;
 
                 InputKeys = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)count, sizeof(uint));
@@ -150,7 +150,7 @@ namespace Gsplat
                 {
                     Count = gs.SplatCount,
                     MatrixMv = camera.worldToCameraMatrix * gs.transform.localToWorldMatrix,
-                    PositionBuffer = res.PositionBuffer,
+                    PackedSplatsBuffer = res.PackedSplatsBuffer,
                     InputKeys = res.InputKeys,
                     InputValues = res.OrderBuffer,
                     Resources = res.Resources
@@ -159,10 +159,10 @@ namespace Gsplat
             }
         }
 
-        public ISorterResource CreateSorterResource(uint count, GraphicsBuffer positionBuffer,
+        public ISorterResource CreateSorterResource(uint count, GraphicsBuffer packedSplatsBuffer,
             GraphicsBuffer orderBuffer)
         {
-            return new Resource(count, positionBuffer, orderBuffer);
+            return new Resource(count, packedSplatsBuffer, orderBuffer);
         }
     }
 }

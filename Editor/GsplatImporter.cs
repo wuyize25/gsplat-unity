@@ -148,7 +148,6 @@ namespace Gsplat.Editor
                     return;
                 }
 
-                gsplatAsset.Positions = new Vector3[plyInfo.VertexCount];
                 if (shCoeffs > 0)
                     gsplatAsset.SHs = new Vector3[plyInfo.VertexCount * shCoeffs];
                 gsplatAsset.PackedSplats = new uint[plyInfo.VertexCount * 4];
@@ -166,18 +165,12 @@ namespace Gsplat.Editor
                     }
 
                     var properties = MemoryMarshal.Cast<byte, float>(buffer);
-                    gsplatAsset.Positions[i] = new Vector3(
-                        properties[plyInfo.PositionOffset],
-                        properties[plyInfo.PositionOffset + 1],
-                        properties[plyInfo.PositionOffset + 2]);
                     for (int j = 0; j < shCoeffs; j++)
                         gsplatAsset.SHs[i * shCoeffs + j] = new Vector3(
                             properties[j + plyInfo.SHOffset],
                             properties[j + plyInfo.SHOffset + shCoeffs],
                             properties[j + plyInfo.SHOffset + shCoeffs * 2]);
 
-                    if (i == 0) bounds = new Bounds(gsplatAsset.Positions[i], Vector3.zero);
-                    else bounds.Encapsulate(gsplatAsset.Positions[i]);
 
                     var color = new Vector4(
                         properties[plyInfo.ColorOffset],
@@ -189,6 +182,9 @@ namespace Gsplat.Editor
                         properties[plyInfo.PositionOffset],
                         properties[plyInfo.PositionOffset + 1],
                         properties[plyInfo.PositionOffset + 2]);
+
+                    if (i == 0) bounds = new Bounds(position, Vector3.zero);
+                    else bounds.Encapsulate(position);
 
                     var scale = new Vector3(
                         properties[plyInfo.ScaleOffset],

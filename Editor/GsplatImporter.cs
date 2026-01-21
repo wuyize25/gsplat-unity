@@ -195,10 +195,10 @@ namespace Gsplat.Editor
                         properties[plyInfo.ScaleOffset + 1],
                         properties[plyInfo.ScaleOffset + 2]);
 
-                    var rotation = new Vector4(properties[plyInfo.RotationOffset],
+                    var rotation = new Quaternion(properties[plyInfo.RotationOffset],
                         properties[plyInfo.RotationOffset + 1],
                         properties[plyInfo.RotationOffset + 2],
-                        properties[plyInfo.RotationOffset + 3]).normalized;
+                        properties[plyInfo.RotationOffset + 3]);
 
                     uint[] packedSplat = GsplatPacker.PackSplat(color, position, scale, rotation);
 

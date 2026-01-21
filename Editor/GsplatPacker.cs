@@ -40,7 +40,7 @@ namespace Gsplat.Editor
         /// to signed 8-bit integers (w can be derived from xyz), and flipping the sign
         /// of the quaternion if necessary to make this possible (q == -q for quaternions).
         /// </summary>
-        private static (byte, byte, byte) EncodeQuatXyz888(Vector4 quaternion)
+        private static (byte, byte, byte) EncodeQuatXyz888(Quaternion quaternion)
         {
             bool negQuat = quaternion.w < 0.0;
             sbyte iQuatX = GsplatUtils.FloatToSByte(negQuat ? -quaternion.x : quaternion.x);
@@ -56,7 +56,7 @@ namespace Gsplat.Editor
         /// Copied from SparkJs decodeQuatXyz888 implementation
         /// Decode a 24-bit integer of the quaternion's xyz coordinates into a THREE.Quaternion.
         /// </summary>
-        public static Quaternion DecodeQuatXyz888(uint encoded)
+        private static Quaternion DecodeQuatXyz888(uint encoded)
         {
             uint iQuatX = (encoded << 24) >> 24;
             uint iQuatY = (encoded << 16) >> 24;
@@ -65,6 +65,62 @@ namespace Gsplat.Editor
             float dotSelf = quat.x * quat.x + quat.y * quat.y + quat.z * quat.z;
             quat.w = (float)Math.Sqrt(Math.Max(0.0f, 1.0f - dotSelf));
             return quat;
+        }
+
+        /// <summary>
+        /// Copied from SparkJs decodeQuatXyz888 implementation
+        /// Encodes a THREE.Quaternion into a 24‐bit integer.
+        ///
+        /// Bit layout (LSB → MSB):
+        ///   - Bits  0–7:  quantized U (8 bits)
+        ///   - Bits  8–15: quantized V (8 bits)
+        ///   - Bits 16–23: quantized angle θ (8 bits) from [0,π]
+        ///
+        /// This version uses folded octahedral mapping (all inline).
+        /// </summary>
+        public static (byte, byte, byte) EncodeQuatOctXy88R8(Quaternion quat)
+        {
+            // Force the minimal representation (quat.w >= 0)
+            quat.Normalize();
+            if (quat.w < 0)
+            {
+                quat.Set(-quat.x, -quat.y, -quat.z, -quat.w);
+            }
+
+            // Compute the rotation angle θ in [0, π]
+            double theta = 2.0 * Math.Acos(quat.w);
+
+            // Recover the rotation axis (default to (1,0,0) for near-zero rotation)
+            float xyz_norm = (float)Math.Sqrt(quat.x * quat.x + quat.y * quat.y + quat.z * quat.z);
+            Vector3 axis = xyz_norm < 1e-6 ? new Vector3(1, 0, 0) : (new Vector3(quat.x, quat.y, quat.z) / xyz_norm);
+
+            // --- Folded Octahedral Mapping (inline) ---
+            // Compute p = (axis.x, axis.y) / (|axis.x|+|axis.y|+|axis.z|)
+            float sum = Math.Abs(axis.x) + Math.Abs(axis.y) + Math.Abs(axis.z);
+            float p_x = axis.x / sum;
+            float p_y = axis.y / sum;
+
+            // Fold the lower hemisphere.
+            if (axis.z < 0)
+            {
+                float tmp = p_x;
+                p_x = (1.0f - Math.Abs(p_y)) * (p_x > 0.0f ? 1.0f : -1.0f);
+                p_y = (1.0f - Math.Abs(tmp)) * (p_y > 0.0f ? 1.0f : -1.0f);
+            }
+
+            // Remap from [-1,1] to [0,1]
+            float u_f = p_x * 0.5f + 0.5f;
+            float v_f = p_y * 0.5f + 0.5f;
+
+            // Quantize to 7 bits (0..127)
+            byte quantU = (byte)((uint)Math.Round(u_f * 255.0f) & 0xff);
+            byte quantV = (byte)((uint)Math.Round(v_f * 255.0f) & 0xff);
+
+            // --- Angle Quantization: Quantize θ ∈ [0,π] to 10 bits (0..1023) ---
+            byte angleInt = (byte)((uint)Math.Round(theta * (255 / Math.PI)) & 0xff);
+
+            // Pack into 24 bits: bits [0–7]: quantU, [8–15]: quantV, [16–23]: angleInt.
+            return (quantU, quantV, angleInt);
         }
 
         const float LN_SCALE_MIN = -12.0f;
@@ -85,7 +141,7 @@ namespace Gsplat.Editor
 
         const float shC0 = 0.28209479177387814f;
 
-        public static uint[] PackSplat(Vector4 color, Vector3 position, Vector3 scale, Vector4 rotation)
+        public static uint[] PackSplat(Vector4 color, Vector3 position, Vector3 scale, Quaternion rotation)
         {
             byte uR = GsplatUtils.FloatToByte(color.x * shC0 + 0.5f);
             byte uG = GsplatUtils.FloatToByte(color.y * shC0 + 0.5f);
@@ -96,7 +152,7 @@ namespace Gsplat.Editor
             ushort uPosY = Mathf.FloatToHalf(position.y);
             ushort uPosZ = Mathf.FloatToHalf(position.z);
 
-            (byte uQuatX, byte uQuatY, byte uQuatZ) = EncodeQuatXyz888(rotation.normalized);
+            (byte quantU, byte quantV, byte angleInt) = EncodeQuatOctXy88R8(rotation);
 
             byte uScaleX = EncodeScaleOnLogScale(Mathf.Exp(scale.x));
             byte uScaleY = EncodeScaleOnLogScale(Mathf.Exp(scale.y));
@@ -106,8 +162,8 @@ namespace Gsplat.Editor
             {
                 uR | (uint)(uG << 8) | (uint)(uB << 16) | (uint)(uA << 24),
                 uPosX | (uint)(uPosY << 16),
-                uPosZ | (uint)(uQuatX << 16) | (uint)(uQuatY << 24),
-                uScaleX | (uint)(uScaleY << 8) | (uint)(uScaleZ << 16) | (uint)(uQuatZ << 24),
+                uPosZ | (uint)(quantU << 16) | (uint)(quantV << 24),
+                uScaleX | (uint)(uScaleY << 8) | (uint)(uScaleZ << 16) | (uint)(angleInt << 24),
             };
 
             return packedSplat;

@@ -8,14 +8,14 @@ namespace Gsplat.Editor
 {
     /// <summary>
     /// Implementation taken from SparkJs
-    /// 
+    ///
     /// A PackedSplats is a collection of Gaussian splats, packed into a format that
     /// takes exactly 16 bytes per Gsplat to maximize memory and cache efficiency.
     /// The center xyz coordinates are encoded as float16 (3 x 2 bytes), scale xyz
     /// as 3 x uint8 that encode a log scale from e^-12 to e^9, rgba as 4 x uint8,
-    /// and quaternion encoded via axis+angle using 2 x uint8 for quat encoding
+    /// and quaternion encoded via axis+angle using 2 x uint8 for Octahedral encoding
     /// of the axis direction and a uint8 to encode rotation amount from 0..Pi.
-    /// 
+    ///
     /// | Offset (bytes) | Field           | Size (bytes) | Description                                                |
     /// |----------------|-----------------|--------------|------------------------------------------------------------|
     /// | 0              | R               | 1            | Red color channel (uint8 0–255 → 0.0–1.0)                  |
@@ -68,7 +68,7 @@ namespace Gsplat.Editor
         }
 
         /// <summary>
-        /// Copied from SparkJs decodeQuatXyz888 implementation
+        /// Copied from SparkJs encodeQuatOctXy88R8 implementation
         /// Encodes a THREE.Quaternion into a 24‐bit integer.
         ///
         /// Bit layout (LSB → MSB):

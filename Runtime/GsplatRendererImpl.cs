@@ -11,9 +11,9 @@ namespace Gsplat
         public byte SHBands { get; private set; }
 
         MaterialPropertyBlock m_propertyBlock;
+        public GraphicsBuffer PackedSplatsBuffer { get; private set; }
         public GraphicsBuffer SHBuffer { get; private set; }
         public GraphicsBuffer OrderBuffer { get; private set; }
-        public GraphicsBuffer PackedSplatsBuffer { get; private set; }
         public ISorterResource SorterResource { get; private set; }
 
         public bool Valid =>
@@ -64,22 +64,22 @@ namespace Gsplat
         void CreatePropertyBlock()
         {
             m_propertyBlock ??= new MaterialPropertyBlock();
-            m_propertyBlock.SetBuffer(k_orderBuffer, OrderBuffer);
             m_propertyBlock.SetBuffer(k_packedSplatsBuffer, PackedSplatsBuffer);
+            m_propertyBlock.SetBuffer(k_orderBuffer, OrderBuffer);
             if (SHBands > 0)
                 m_propertyBlock.SetBuffer(k_shBuffer, SHBuffer);
         }
 
         public void Dispose()
         {
+            PackedSplatsBuffer?.Dispose();
             SHBuffer?.Dispose();
             OrderBuffer?.Dispose();
-            PackedSplatsBuffer?.Dispose();
             SorterResource?.Dispose();
 
+            PackedSplatsBuffer = null;
             SHBuffer = null;
             OrderBuffer = null;
-            PackedSplatsBuffer = null;
         }
 
         /// <summary>

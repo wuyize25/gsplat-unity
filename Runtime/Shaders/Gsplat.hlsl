@@ -244,9 +244,9 @@ float3 EvalSH(const inout float3 sh[SH_COEFFS], float3 dir, int degree = 3)
 // Decode a 24‐bit encoded uint into a quaternion (float4) using the folded octahedral inverse.
 float4 DecodeQuatOctXyz88R8(uint encoded) {
     // Extract the fields.
-    uint quantU = encoded & 0xFF;               // bits 0–7
-    uint quantV = (encoded >> 8) & 0xFF;        // bits 8–15
-    uint angleInt = encoded >> 16;              // bits 16–23
+    uint quantU = encoded & 0xFFU;              // bits 0–7
+    uint quantV = (encoded >> 8u) & 0xFFU;       // bits 8–15
+    uint angleInt = encoded >> 16u;              // bits 16–23
 
     // Recover u and v in [0,1], then map to [-1,1].
     float u_f = float(quantU) / 255.0;
@@ -281,27 +281,28 @@ float4 DecodeQuatOctXyz88R8(uint encoded) {
 //     return quat;
 // }
 
+#define LN_SCALE_MIN -12.0
+#define LN_SCALE_MAX 9.0
+
 void UpackSplat(uint4 packedData, out float4 color, out float3 modelCenter, out float3 scale, out float4 quat) {
     uint word0 = packedData.x;
     uint word1 = packedData.y;
     uint word2 = packedData.z;
     uint word3 = packedData.w;
 
-    uint4 uColor = uint4(word0 & 0xff, (word0 >> 8) & 0xff, (word0 >> 16) & 0xff, (word0 >> 24) & 0xff);
+    uint4 uColor = uint4(word0 & 0xFFU, (word0 >> 8u) & 0xFFU, (word0 >> 16u) & 0xFFU, (word0 >> 24u) & 0xFFU);
     color = (float4(uColor) / 255.0);
 
-    modelCenter = float3(f16tof32(word1 & 0xffffu), f16tof32((word1 >> 16u) & 0xffffu), f16tof32(word2 & 0xffffu));
+    modelCenter = float3(f16tof32(word1 & 0xFFFFU), f16tof32((word1 >> 16u) & 0xFFFFU), f16tof32(word2 & 0xFFFFU));
 
-    uint3 uScale = uint3(word3 & 0xffu, (word3 >> 8u) & 0xffu, (word3 >> 16u) & 0xffu);
-    float lnScaleMin = -12.0;
-    float lnScaleMax = 9.0;
-    float lnScaleScale = (lnScaleMax - lnScaleMin) / 254.0;
+    uint3 uScale = uint3(word3 & 0xFFU, (word3 >> 8u) & 0xFFU, (word3 >> 16u) & 0xFFU);
+    float lnScaleScale = (LN_SCALE_MAX - LN_SCALE_MIN) / 254.0;
     scale = float3(
-        (uScale.x == 0u) ? 0.0 : exp(lnScaleMin + float(uScale.x - 1u) * lnScaleScale),
-        (uScale.y == 0u) ? 0.0 : exp(lnScaleMin + float(uScale.y - 1u) * lnScaleScale),
-        (uScale.z == 0u) ? 0.0 : exp(lnScaleMin + float(uScale.z - 1u) * lnScaleScale)
+        (uScale.x == 0u) ? 0.0 : exp(LN_SCALE_MIN + float(uScale.x - 1u) * lnScaleScale),
+        (uScale.y == 0u) ? 0.0 : exp(LN_SCALE_MIN + float(uScale.y - 1u) * lnScaleScale),
+        (uScale.z == 0u) ? 0.0 : exp(LN_SCALE_MIN + float(uScale.z - 1u) * lnScaleScale)
     );
 
-    uint uQuat = ((word2 >> 16u) & 0xFFFFu) | ((word3 >> 8u) & 0xFF0000u);
+    uint uQuat = ((word2 >> 16u) & 0xFFFFU) | ((word3 >> 8u) & 0xFF0000U);
     quat = DecodeQuatOctXyz88R8(uQuat);
 }

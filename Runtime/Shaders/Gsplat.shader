@@ -29,7 +29,6 @@ Shader "Gsplat/Standard"
             bool _GammaToLinear;
             int _SplatCount;
             int _SplatInstanceSize;
-            int _SHDegree;
             float4x4 _MATRIX_M;
             StructuredBuffer<uint> _OrderBuffer;
             StructuredBuffer<uint4> _PackedSplatsBuffer;
@@ -128,7 +127,7 @@ Shader "Gsplat/Standard"
                 float3 sh[SH_COEFFS];
                 for (int i = 0; i < SH_COEFFS; i++)
                     sh[i] = _SHBuffer[source.id * SH_COEFFS + i];
-                color.rgb += EvalSH(sh, dir, _SHDegree);
+                color.rgb += EvalSH(sh, dir);
                 #endif
 
                 ClipCorner(corner, color.w);

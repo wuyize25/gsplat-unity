@@ -1,6 +1,7 @@
 ﻿// Copyright (c) 2025 Yize Wu
 // SPDX-License-Identifier: MIT
 
+using System;
 using UnityEngine;
 
 namespace Gsplat
@@ -27,7 +28,6 @@ namespace Gsplat
         static readonly int k_splatInstanceSize = Shader.PropertyToID("_SplatInstanceSize");
         static readonly int k_splatCount = Shader.PropertyToID("_SplatCount");
         static readonly int k_gammaToLinear = Shader.PropertyToID("_GammaToLinear");
-        static readonly int k_shDegree = Shader.PropertyToID("_SHDegree");
 
         public GsplatRendererImpl(uint splatCount, byte shBands)
         {
@@ -100,9 +100,8 @@ namespace Gsplat
             m_propertyBlock.SetInteger(k_splatCount, (int)splatCount);
             m_propertyBlock.SetInteger(k_gammaToLinear, gammaToLinear ? 1 : 0);
             m_propertyBlock.SetInteger(k_splatInstanceSize, (int)GsplatSettings.Instance.SplatInstanceSize);
-            m_propertyBlock.SetInteger(k_shDegree, shDegree);
             m_propertyBlock.SetMatrix(k_matrixM, transform.localToWorldMatrix);
-            var rp = new RenderParams(GsplatSettings.Instance.Materials[SHBands])
+            var rp = new RenderParams(GsplatSettings.Instance.Materials[Math.Min(SHBands, shDegree)])
             {
                 worldBounds = GsplatUtils.CalcWorldBounds(localBounds, transform),
                 matProps = m_propertyBlock,

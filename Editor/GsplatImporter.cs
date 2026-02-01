@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using Unity.Mathematics;
 using UnityEditor;
 using UnityEditor.AssetImporters;
 using UnityEngine;
@@ -55,6 +56,8 @@ namespace Gsplat.Editor
                     propertyCount++;
             }
         }
+
+        public CompressionMode Compression = CompressionMode.Spark;
 
         public class PlyHeaderInfo
         {
@@ -112,7 +115,10 @@ namespace Gsplat.Editor
         public override void OnImportAsset(AssetImportContext ctx)
         {
             var gsplatAsset = ScriptableObject.CreateInstance<GsplatAsset>();
+            var gsplatData = ScriptableObject.CreateInstance<GsplatDataSpark>();
+            gsplatData.name = "Data";
             var bounds = new Bounds();
+            gsplatAsset.Compression = Compression;
 
             using (var fs = new FileStream(ctx.assetPath, FileMode.Open, FileAccess.Read))
             {
@@ -148,9 +154,10 @@ namespace Gsplat.Editor
                     return;
                 }
 
+
                 if (shCoeffs > 0)
-                    gsplatAsset.SHs = new Vector3[plyInfo.VertexCount * shCoeffs];
-                gsplatAsset.PackedSplats = new uint[plyInfo.VertexCount * 4];
+                    gsplatData.SHs = new Vector3[plyInfo.VertexCount * shCoeffs];
+                gsplatData.PackedSplats = new uint4[plyInfo.VertexCount];
 
                 var buffer = new byte[plyInfo.PropertyCount * sizeof(float)];
                 for (uint i = 0; i < plyInfo.VertexCount; i++)
@@ -165,8 +172,8 @@ namespace Gsplat.Editor
                     }
 
                     var properties = MemoryMarshal.Cast<byte, float>(buffer);
-                    for (int j = 0; j < shCoeffs; j++)
-                        gsplatAsset.SHs[i * shCoeffs + j] = new Vector3(
+                    for (var j = 0; j < shCoeffs; j++)
+                        gsplatData.SHs[i * shCoeffs + j] = new Vector3(
                             properties[j + plyInfo.SHOffset],
                             properties[j + plyInfo.SHOffset + shCoeffs],
                             properties[j + plyInfo.SHOffset + shCoeffs * 2]);
@@ -196,17 +203,18 @@ namespace Gsplat.Editor
                         properties[plyInfo.RotationOffset + 2],
                         properties[plyInfo.RotationOffset + 3]);
 
-                    uint[] packedSplat = GsplatPacker.PackSplat(color, position, scale, rotation);
-
-                    Array.Copy(packedSplat, 0, gsplatAsset.PackedSplats, i * 4, 4);
+                    gsplatData.PackedSplats[i] = GsplatPacker.PackSplat(color, position, scale, rotation);
 
                     EditorUtility.DisplayProgressBar("Importing Gsplat Asset", "Reading vertices",
                         i / (float)plyInfo.VertexCount);
                 }
             }
 
+            ctx.AddObjectToAsset("gsplatData", gsplatData);
+            gsplatAsset.Data = gsplatData;
             gsplatAsset.Bounds = bounds;
             ctx.AddObjectToAsset("gsplatAsset", gsplatAsset);
+            ctx.SetMainObject(gsplatAsset);
         }
     }
 }

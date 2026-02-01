@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 using System;
+using Unity.Mathematics;
 using UnityEngine;
 
 namespace Gsplat.Editor
@@ -135,13 +136,14 @@ namespace Gsplat.Editor
             {
                 return 0;
             }
+
             var encoded = ((Math.Log(scale) - LN_SCALE_MIN) * LN_SCALE_SCALE) + 1;
             return (byte)Math.Min(255, Math.Max(1, Math.Round(encoded)));
         }
 
         const float shC0 = 0.28209479177387814f;
 
-        public static uint[] PackSplat(Vector4 color, Vector3 position, Vector3 scale, Quaternion rotation)
+        public static uint4 PackSplat(Vector4 color, Vector3 position, Vector3 scale, Quaternion rotation)
         {
             byte uR = GsplatUtils.FloatToByte(color.x * shC0 + 0.5f);
             byte uG = GsplatUtils.FloatToByte(color.y * shC0 + 0.5f);
@@ -158,15 +160,13 @@ namespace Gsplat.Editor
             byte uScaleY = EncodeScaleOnLogScale(Mathf.Exp(scale.y));
             byte uScaleZ = EncodeScaleOnLogScale(Mathf.Exp(scale.z));
 
-            uint[] packedSplat = new uint[]
-            {
+            return new uint4
+            (
                 uR | (uint)(uG << 8) | (uint)(uB << 16) | (uint)(uA << 24),
                 uPosX | (uint)(uPosY << 16),
                 uPosZ | (uint)(quantU << 16) | (uint)(quantV << 24),
-                uScaleX | (uint)(uScaleY << 8) | (uint)(uScaleZ << 16) | (uint)(angleInt << 24),
-            };
-
-            return packedSplat;
+                uScaleX | (uint)(uScaleY << 8) | (uint)(uScaleZ << 16) | (uint)(angleInt << 24)
+            );
         }
     }
 }

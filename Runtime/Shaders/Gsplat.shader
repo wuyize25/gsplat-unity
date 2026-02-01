@@ -23,16 +23,24 @@ Shader "Gsplat/Standard"
             #pragma fragment frag
             #pragma require compute
             #pragma multi_compile SH_BANDS_0 SH_BANDS_1 SH_BANDS_2 SH_BANDS_3
+            #pragma multi_compile SPARK UNCOMPRESSED
 
             #include "UnityCG.cginc"
             #include "Gsplat.hlsl"
+            #ifdef UNCOMPRESSED
+            #include "GsplatUncompressed.hlsl"
+            #endif
+            #ifdef SPARK
+            #include "GsplatSpark.hlsl"
+            #endif
+
+
             bool _GammaToLinear;
             int _SplatCount;
             int _SplatInstanceSize;
             int _SHDegree;
             float4x4 _MATRIX_M;
             StructuredBuffer<uint> _OrderBuffer;
-            StructuredBuffer<uint4> _PackedSplatsBuffer;
             #ifndef SH_BANDS_0
             StructuredBuffer<float3> _SHBuffer;
             #endif
@@ -62,23 +70,6 @@ Shader "Gsplat/Standard"
                 return true;
             }
 
-            bool InitCenter(float3 modelCenter, out SplatCenter center)
-            {
-                float4x4 modelView = mul(UNITY_MATRIX_V, _MATRIX_M);
-                float4 centerView = mul(modelView, float4(modelCenter, 1.0));
-                if (centerView.z > 0.0)
-                {
-                    return false;
-                }
-                float4 centerProj = mul(UNITY_MATRIX_P, centerView);
-                centerProj.z = clamp(centerProj.z, -abs(centerProj.w), abs(centerProj.w));
-                center.view = centerView.xyz / centerView.w;
-                center.proj = centerProj;
-                center.projMat00 = UNITY_MATRIX_P[0][0];
-                center.modelView = modelView;
-                return true;
-            }
-
             struct v2f
             {
                 float2 uv : TEXCOORD0;
@@ -93,34 +84,17 @@ Shader "Gsplat/Standard"
                 UNITY_SETUP_INSTANCE_ID(v);
                 UNITY_INITIALIZE_OUTPUT(v2f, o);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+                o.vertex = discardVec;
 
                 SplatSource source;
                 if (!InitSource(v, source))
-                {
-                    o.vertex = discardVec;
                     return o;
-                }
-
-                uint4 packedSplat = _PackedSplatsBuffer[source.id];
-
-                float3 modelCenter, scale;
-                float4 color, quat;
-                UnpackSplat(packedSplat, color, modelCenter, scale, quat);
 
                 SplatCenter center;
-                if (!InitCenter(modelCenter, center))
-                {
-                    o.vertex = discardVec;
-                    return o;
-                }
-
-                SplatCovariance cov = CalcCovariance(quat, scale);
                 SplatCorner corner;
-                if (!InitCorner(source, cov, center, corner))
-                {
-                    o.vertex = discardVec;
+                float4 color;
+                if (!InitSplatData(source, mul(UNITY_MATRIX_V, _MATRIX_M), center, corner, color))
                     return o;
-                }
 
                 #ifndef SH_BANDS_0
                 // calculate the model-space view direction

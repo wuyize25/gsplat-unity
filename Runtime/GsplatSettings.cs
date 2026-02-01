@@ -116,6 +116,7 @@ namespace Gsplat
             {
                 Materials[i] = new Material(Shader) { hideFlags = HideFlags.HideAndDontSave };
                 Materials[i].EnableKeyword($"SH_BANDS_{i}");
+                Materials[i].EnableKeyword("SPARK");
             }
         }
 

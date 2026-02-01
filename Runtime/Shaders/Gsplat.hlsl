@@ -4,6 +4,9 @@
 // Copyright (c) 2025 Yize Wu
 // SPDX-License-Identifier: MIT
 
+#ifndef GSPLAT_INCLUDED
+#define GSPLAT_INCLUDED
+
 struct SplatSource
 {
     uint order;
@@ -36,6 +39,22 @@ struct SplatCorner
 };
 
 const float4 discardVec = float4(0.0, 0.0, 2.0, 1.0);
+
+bool InitCenter(float4x4 modelView, float3 modelCenter, out SplatCenter center)
+{
+    float4 centerView = mul(modelView, float4(modelCenter, 1.0));
+    if (centerView.z > 0.0)
+    {
+        return false;
+    }
+    float4 centerProj = mul(UNITY_MATRIX_P, centerView);
+    centerProj.z = clamp(centerProj.z, -abs(centerProj.w), abs(centerProj.w));
+    center.view = centerView.xyz / centerView.w;
+    center.proj = centerProj;
+    center.projMat00 = UNITY_MATRIX_P[0][0];
+    center.modelView = modelView;
+    return true;
+}
 
 float3x3 QuatToMat3(float4 R)
 {
@@ -104,10 +123,10 @@ bool InitCorner(SplatSource source, SplatCovariance covariance, SplatCenter cent
     float3x3 cov = mul(mul(T, Vrk), transpose(T));
 
     #if GSPLAT_AA
-        // calculate AA factor
-        float detOrig = cov[0][0] * cov[1][1] - cov[0][1] * cov[0][1];
-        float detBlur = (cov[0][0] + 0.3) * (cov[1][1] + 0.3) - cov[0][1] * cov[0][1];
-        corner.aaFactor = sqrt(max(detOrig / detBlur, 0.0));
+    // calculate AA factor
+    float detOrig = cov[0][0] * cov[1][1] - cov[0][1] * cov[0][1];
+    float detBlur = (cov[0][0] + 0.3) * (cov[1][1] + 0.3) - cov[0][1] * cov[0][1];
+    corner.aaFactor = sqrt(max(detOrig / detBlur, 0.0));
     #endif
 
     float diagonal1 = cov[0][0] + 0.3;
@@ -201,108 +220,41 @@ float3 EvalSH(const inout float3 sh[SH_COEFFS], float3 dir, int degree = 3)
         return result;
 
 #if defined(SH_BANDS_2) || defined(SH_BANDS_3)
-    // 2nd degree
-    float xx = x * x;
-    float yy = y * y;
-    float zz = z * z;
-    float xy = x * y;
-    float yz = y * z;
-    float xz = x * z;
+// 2nd degree
+float xx = x * x;
+float yy = y * y;
+float zz = z * z;
+float xy = x * y;
+float yz = y * z;
+float xz = x * z;
 
-    result = result + (
-        sh[3] * (SH_C2_0 * xy) +
-        sh[4] * (SH_C2_1 * yz) +
-        sh[5] * (SH_C2_2 * (2.0 * zz - xx - yy)) +
-        sh[6] * (SH_C2_3 * xz) +
-        sh[7] * (SH_C2_4 * (xx - yy))
+result= result+ (
+    sh[3]* (SH_C2_0 *xy)+
+sh [4]* (SH_C2_1 *yz)+
+sh [5]* (SH_C2_2 *(2.0 * zz- xx- yy))+
+sh [6]* (SH_C2_3 *xz)+
+sh [7]* (SH_C2_4 *(xx- yy))
     );
 
-    if (degree == 2)
+    if (degree== 2)
         return result;
 #endif
 
 #ifdef SH_BANDS_3
-    // 3rd degree
-    result = result + (
-        sh[8] * (SH_C3_0 * y * (3.0 * xx - yy)) +
-        sh[9] * (SH_C3_1 * xy * z) +
-        sh[10] * (SH_C3_2 * y * (4.0 * zz - xx - yy)) +
-        sh[11] * (SH_C3_3 * z * (2.0 * zz - 3.0 * xx - 3.0 * yy)) +
-        sh[12] * (SH_C3_4 * x * (4.0 * zz - xx - yy)) +
-        sh[13] * (SH_C3_5 * z * (xx - yy)) +
-        sh[14] * (SH_C3_6 * x * (xx - 3.0 * yy))
+// 3rd degree
+result= result+ (
+    sh[8]* (SH_C3_0 * y *(3.0 * xx- yy))+
+sh [9]* (SH_C3_1 * xy *z)+
+sh [10]* (SH_C3_2 * y *(4.0 * zz- xx- yy))+
+sh [11]* (SH_C3_3 * z *(2.0 * zz- 3.0 * xx- 3.0 * yy))+
+sh [12]* (SH_C3_4 * x *(4.0 * zz- xx- yy))+
+sh [13]* (SH_C3_5 * z *(xx- yy))+
+sh [14]* (SH_C3_6 * x *(xx- 3.0 * yy))
     );
 #endif
 
-    return result;
+return result;
 }
 #endif
 
-// Packing
-
-// Implementation taken from spark.js
-// Decode a 24‐bit encoded uint into a quaternion (float4) using the folded octahedral inverse.
-float4 DecodeQuatOctXyz88R8(uint encoded) {
-    // Extract the fields.
-    uint quantU = encoded & 0xFFU;              // bits 0–7
-    uint quantV = (encoded >> 8u) & 0xFFU;       // bits 8–15
-    uint angleInt = encoded >> 16u;              // bits 16–23
-
-    // Recover u and v in [0,1], then map to [-1,1].
-    float u_f = float(quantU) / 255.0;
-    float v_f = float(quantV) / 255.0;
-    float2 f = float2(u_f * 2.0 - 1.0, v_f * 2.0 - 1.0);
-
-    float3 axis = float3(f.xy, 1.0 - abs(f.x) - abs(f.y));
-    float t = max(-axis.z, 0.0);
-    axis.x += (axis.x >= 0.0) ? -t : t;
-    axis.y += (axis.y >= 0.0) ? -t : t;
-    axis = normalize(axis);
-
-    // Decode the angle θ ∈ [0,π].
-    float theta = (float(angleInt) / 255.0) * UNITY_PI;
-    float halfTheta = theta * 0.5;
-    float s = sin(halfTheta);
-    float w = cos(halfTheta);
-
-    return float4(axis * s, w);
-}
-
-// Implementation taken from spark.js
-// Decode a 24‐bit encoded uint into a quaternion (float4)
-// float4 decodeQuatXyz888(uint encoded) {
-//     int3 iQuat3 = int3(
-//         int(encoded << 24) >> 24,
-//         int(encoded << 16) >> 24,
-//         int(encoded << 8) >> 24
-//     );
-//     float4 quat = float4(float3(iQuat3) / 127.0, 0.0);
-//     quat.w = sqrt(max(0.0, 1.0 - dot(quat.xyz, quat.xyz)));
-//     return quat;
-// }
-
-#define LN_SCALE_MIN -12.0
-#define LN_SCALE_MAX 9.0
-
-void UnpackSplat(uint4 packedData, out float4 color, out float3 modelCenter, out float3 scale, out float4 quat) {
-    uint word0 = packedData.x;
-    uint word1 = packedData.y;
-    uint word2 = packedData.z;
-    uint word3 = packedData.w;
-
-    uint4 uColor = uint4(word0 & 0xFFU, (word0 >> 8u) & 0xFFU, (word0 >> 16u) & 0xFFU, (word0 >> 24u) & 0xFFU);
-    color = (float4(uColor) / 255.0);
-
-    modelCenter = float3(f16tof32(word1 & 0xFFFFU), f16tof32((word1 >> 16u) & 0xFFFFU), f16tof32(word2 & 0xFFFFU));
-
-    uint3 uScale = uint3(word3 & 0xFFU, (word3 >> 8u) & 0xFFU, (word3 >> 16u) & 0xFFU);
-    float lnScaleScale = (LN_SCALE_MAX - LN_SCALE_MIN) / 254.0;
-    scale = float3(
-        (uScale.x == 0u) ? 0.0 : exp(LN_SCALE_MIN + float(uScale.x - 1u) * lnScaleScale),
-        (uScale.y == 0u) ? 0.0 : exp(LN_SCALE_MIN + float(uScale.y - 1u) * lnScaleScale),
-        (uScale.z == 0u) ? 0.0 : exp(LN_SCALE_MIN + float(uScale.z - 1u) * lnScaleScale)
-    );
-
-    uint uQuat = ((word2 >> 16u) & 0xFFFFU) | ((word3 >> 8u) & 0xFF0000U);
-    quat = DecodeQuatOctXyz88R8(uQuat);
-}
+#endif

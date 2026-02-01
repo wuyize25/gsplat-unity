@@ -71,5 +71,7 @@ namespace Gsplat
 
             return worldBounds;
         }
+
+        public static uint DivRoundUp(uint x, uint y) => (x + y - 1) / y;
     }
 }

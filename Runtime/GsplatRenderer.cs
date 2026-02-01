@@ -3,6 +3,7 @@
 
 using System;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace Gsplat
 {
@@ -25,15 +26,16 @@ namespace Gsplat
         public bool Valid => RenderBeforeUploadComplete ? SplatCount > 0 : SplatCount == GsplatAsset.SplatCount;
         public uint SplatCount => GsplatAsset ? GsplatAsset.SplatCount - m_pendingSplatCount : 0;
         public ISorterResource SorterResource => m_renderer.SorterResource;
+        public void ComputeDepth(CommandBuffer cmd, Matrix4x4 matrixMv) => m_renderer.ComputeDepth(cmd, matrixMv);
 
         uint m_pendingSplatCount;
 
         void SetBufferData()
         {
-            var data = (GsplatDataSpark)GsplatAsset.Data;
-            m_renderer.PackedSplatsBuffer.SetData(data.PackedSplats);
+            var asset = (GsplatAssetSpark)GsplatAsset;
+            m_renderer.PackedSplatsBuffer.SetData(asset.PackedSplats);
             if (GsplatAsset.SHBands > 0)
-                m_renderer.SHBuffer.SetData(data.SHs);
+                m_renderer.SHBuffer.SetData(asset.SHs);
         }
 
         void SetBufferDataAsync()
@@ -46,11 +48,11 @@ namespace Gsplat
             var offset = (int)(GsplatAsset.SplatCount - m_pendingSplatCount);
             var count = (int)Math.Min(UploadBatchSize, m_pendingSplatCount);
             m_pendingSplatCount -= (uint)count;
-            var data = (GsplatDataSpark)GsplatAsset.Data;
-            m_renderer.PackedSplatsBuffer.SetData(data.PackedSplats, offset, offset, count);
+            var asset = (GsplatAssetSpark)GsplatAsset;
+            m_renderer.PackedSplatsBuffer.SetData(asset.PackedSplats, offset, offset, count);
             if (GsplatAsset.SHBands <= 0) return;
             var coefficientCount = GsplatUtils.SHBandsToCoefficientCount(GsplatAsset.SHBands);
-            m_renderer.SHBuffer.SetData(data.SHs, coefficientCount * offset,
+            m_renderer.SHBuffer.SetData(asset.SHs, coefficientCount * offset,
                 coefficientCount * offset, coefficientCount * count);
         }
 
@@ -103,8 +105,7 @@ namespace Gsplat
             }
 
             if (Valid)
-                m_renderer.Render(SplatCount, transform, GsplatAsset.Bounds,
-                    gameObject.layer, GammaToLinear, SHDegree);
+                m_renderer.Render(SplatCount, transform, GsplatAsset.Bounds, gameObject.layer, GammaToLinear, SHDegree);
         }
     }
 }

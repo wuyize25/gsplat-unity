@@ -39,6 +39,13 @@ namespace Gsplat
                     settings.ComputeShader =
                         AssetDatabase.LoadAssetAtPath<ComputeShader>(GsplatUtils.k_PackagePath +
                                                                      "Runtime/Shaders/Gsplat.compute");
+                    settings.CalcDepthShader =
+                        AssetDatabase.LoadAssetAtPath<ComputeShader>(GsplatUtils.k_PackagePath +
+                                                                     "Runtime/Shaders/CalcDepth.compute");
+                    settings.CalcDepthSparkShader =
+                        AssetDatabase.LoadAssetAtPath<ComputeShader>(GsplatUtils.k_PackagePath +
+                                                                     "Runtime/Shaders/CalcDepthSpark.compute");
+
                     settings.OnValidate();
                     AssetDatabase.CreateAsset(settings, k_gsplatSettingsPath);
                     AssetDatabase.SaveAssets();
@@ -52,6 +59,8 @@ namespace Gsplat
 
         public Shader Shader;
         public ComputeShader ComputeShader;
+        public ComputeShader CalcDepthShader;
+        public ComputeShader CalcDepthSparkShader;
         public uint SplatInstanceSize = 128;
         public bool ShowImportErrors = true;
         public Material[] Materials { get; private set; }

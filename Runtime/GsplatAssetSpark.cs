@@ -1,11 +1,14 @@
-// Copyright (c) 2025 Arthur Aillet
+﻿// Copyright (c) 2026 Arthur Aillet, Yize Wu
 // SPDX-License-Identifier: MIT
 
 using System;
+using System.IO;
+using System.Runtime.InteropServices;
 using Unity.Mathematics;
 using UnityEngine;
 
-namespace Gsplat.Editor
+
+namespace Gsplat
 {
     /// <summary>
     /// Implementation taken from SparkJS
@@ -33,15 +36,91 @@ namespace Gsplat.Editor
     /// | 14             | scale.z         | 1            | Z scale, log-encoded to uint8                              |
     /// | 15             | quat angle (θ)  | 1            | Encoded quaternion rotation angle (uint8, θ/π·255)         |
     /// </summary>
-    public class GsplatPacker
+    public class GsplatAssetSpark : GsplatAsset
     {
+        public override CompressionMode Compression => CompressionMode.Spark;
+
+        [HideInInspector] public Vector3[] SHs;
+        [HideInInspector] public uint4[] PackedSplats;
+
+        public override void Allocate()
+        {
+            PackedSplats = new uint4[SplatCount];
+            if (SHBands > 0)
+                SHs = new Vector3[SplatCount * GsplatUtils.SHBandsToCoefficientCount(SHBands)];
+        }
+
+        public override void LoadFromPly(string plyPath, ProgressCallback progressCallback = null)
+        {
+            using var fs = new FileStream(plyPath, FileMode.Open, FileAccess.Read);
+            // C# arrays and NativeArrays make it hard to have a "byte" array larger than 2GB :/
+            if (fs.Length >= 2 * 1024 * 1024 * 1024L)
+                throw new NotSupportedException("currently files larger than 2GB are not supported");
+
+            var plyInfo = new PlyHeaderInfo(fs);
+            var shCoeffs = plyInfo.SHPropertyCount / 3;
+            SplatCount = plyInfo.VertexCount;
+            SHBands = GsplatUtils.CalcSHBandsFromSHPropertyCount(plyInfo.SHPropertyCount);
+
+            if (SHBands > 3 ||
+                GsplatUtils.SHBandsToCoefficientCount(SHBands) * 3 != plyInfo.SHPropertyCount)
+                throw new NotSupportedException($"unexpected SH property count {plyInfo.SHPropertyCount}");
+
+            if (plyInfo.PositionOffset == -1 || plyInfo.ColorOffset == -1 || plyInfo.OpacityOffset == -1 ||
+                plyInfo.ScaleOffset == -1 || plyInfo.RotationOffset == -1)
+                throw new NotSupportedException("missing required properties in PLY header");
+
+            Allocate();
+            var buffer = new byte[plyInfo.PropertyCount * sizeof(float)];
+            for (uint i = 0; i < plyInfo.VertexCount; i++)
+            {
+                var readBytes = fs.Read(buffer);
+                if (readBytes != buffer.Length)
+                    throw new EndOfStreamException($"unexpected end of file, got {readBytes} bytes at vertex {i}");
+
+                var properties = MemoryMarshal.Cast<byte, float>(buffer);
+                for (var j = 0; j < shCoeffs; j++)
+                    SHs[i * shCoeffs + j] = new Vector3(
+                        properties[j + plyInfo.SHOffset],
+                        properties[j + plyInfo.SHOffset + shCoeffs],
+                        properties[j + plyInfo.SHOffset + shCoeffs * 2]);
+
+                var color = new Vector4(
+                    properties[plyInfo.ColorOffset],
+                    properties[plyInfo.ColorOffset + 1],
+                    properties[plyInfo.ColorOffset + 2],
+                    properties[plyInfo.OpacityOffset]);
+
+                var position = new Vector3(
+                    properties[plyInfo.PositionOffset],
+                    properties[plyInfo.PositionOffset + 1],
+                    properties[plyInfo.PositionOffset + 2]);
+
+                if (i == 0) Bounds = new Bounds(position, Vector3.zero);
+                else Bounds.Encapsulate(position);
+
+                var scale = new Vector3(
+                    properties[plyInfo.ScaleOffset],
+                    properties[plyInfo.ScaleOffset + 1],
+                    properties[plyInfo.ScaleOffset + 2]);
+
+                var rotation = new Quaternion(properties[plyInfo.RotationOffset],
+                    properties[plyInfo.RotationOffset + 1],
+                    properties[plyInfo.RotationOffset + 2],
+                    properties[plyInfo.RotationOffset + 3]);
+
+                PackedSplats[i] = PackSplat(color, position, scale, rotation);
+                progressCallback?.Invoke("Reading vertices", i / (float)plyInfo.VertexCount);
+            }
+        }
+
         /// <summary>
         /// Copied from SparkJS encodeQuatXyz888 implementation
         /// Encode a Quaternion into 3 8-bit integer, converting the xyz coordinates
         /// to signed 8-bit integers (w can be derived from xyz), and flipping the sign
         /// of the quaternion if necessary to make this possible (q == -q for quaternions).
         /// </summary>
-        private static (byte, byte, byte) EncodeQuatXyz888(Quaternion quaternion)
+        static (byte, byte, byte) EncodeQuatXyz888(Quaternion quaternion)
         {
             bool negQuat = quaternion.w < 0.0;
             sbyte iQuatX = GsplatUtils.FloatToSByte(negQuat ? -quaternion.x : quaternion.x);
@@ -57,7 +136,7 @@ namespace Gsplat.Editor
         /// Copied from SparkJS decodeQuatXyz888 implementation
         /// Decode a 24-bit integer of the quaternion's xyz coordinates into a THREE.Quaternion.
         /// </summary>
-        private static Quaternion DecodeQuatXyz888(uint encoded)
+        static Quaternion DecodeQuatXyz888(uint encoded)
         {
             uint iQuatX = (encoded << 24) >> 24;
             uint iQuatY = (encoded << 16) >> 24;
@@ -130,7 +209,7 @@ namespace Gsplat.Editor
         const float LN_SCALE_SCALE = 254.0f / (LN_SCALE_MAX - LN_SCALE_MIN);
         static readonly float SCALE_ZERO = (float)Math.Exp(LN_SCALE_ZERO);
 
-        private static byte EncodeScaleOnLogScale(float scale)
+        static byte EncodeScaleOnLogScale(float scale)
         {
             if (scale < SCALE_ZERO)
             {

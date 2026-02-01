@@ -1,0 +1,25 @@
+// Copyright (c) 2026 Yize Wu
+// SPDX-License-Identifier: MIT
+
+#define GROUP_SIZE 1024
+
+#pragma kernel CalcDepthSpark
+
+uint _SplatCount;
+float4x4 _MatrixMV;
+StructuredBuffer<uint4> _PackedSplatsBuffer;
+StructuredBuffer<uint> _OrderBuffer;
+RWStructuredBuffer<float> _DepthBuffer;
+
+[numthreads(GROUP_SIZE,1,1)]
+void CalcDepthSpark(uint3 id : SV_DispatchThreadID)
+{
+    uint idx = id.x;
+    if (idx >= _SplatCount)
+        return;
+
+    uint4 word = _PackedSplatsBuffer[_OrderBuffer[idx]];
+    float3 pos = float3(f16tof32(word.y & 0xffffu), f16tof32((word.y >> 16u) & 0xffffu), f16tof32(word.z & 0xffffu));
+    pos = mul(_MatrixMV, float4(pos.xyz, 1)).xyz;
+    _DepthBuffer[idx] = pos.z;
+}

@@ -1,6 +1,7 @@
 ﻿// Copyright (c) 2025 Yize Wu
 // SPDX-License-Identifier: MIT
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -15,12 +16,14 @@ namespace Gsplat
         public ISorterResource SorterResource { get; }
         public bool isActiveAndEnabled { get; }
         public bool Valid { get; }
+        public void ComputeDepth(CommandBuffer cmd, Matrix4x4 matrixMv);
     }
 
     public interface ISorterResource
     {
-        public GraphicsBuffer PackedSplatsBuffer { get; }
+        //public GraphicsBuffer PackedSplatsBuffer { get; }
         public GraphicsBuffer OrderBuffer { get; }
+        public GraphicsBuffer InputKeys { get; }
         public void Dispose();
     }
 
@@ -30,16 +33,16 @@ namespace Gsplat
     {
         class Resource : ISorterResource
         {
-            public GraphicsBuffer PackedSplatsBuffer { get; }
+            //public GraphicsBuffer PackedSplatsBuffer { get; }
             public GraphicsBuffer OrderBuffer { get; }
 
             public GraphicsBuffer InputKeys { get; private set; }
             public GsplatSortPass.SupportResources Resources { get; }
             public bool Initialized;
 
-            public Resource(uint count, GraphicsBuffer packedSplatsBuffer, GraphicsBuffer orderBuffer)
+            public Resource(uint count, GraphicsBuffer orderBuffer)
             {
-                PackedSplatsBuffer = packedSplatsBuffer;
+                //PackedSplatsBuffer = packedSplatsBuffer;
                 OrderBuffer = orderBuffer;
 
                 InputKeys = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)count, sizeof(uint));
@@ -150,19 +153,20 @@ namespace Gsplat
                 {
                     Count = gs.SplatCount,
                     MatrixMv = camera.worldToCameraMatrix * gs.transform.localToWorldMatrix,
-                    PackedSplatsBuffer = res.PackedSplatsBuffer,
+                    //PackedSplatsBuffer = res.PackedSplatsBuffer,
                     InputKeys = res.InputKeys,
                     InputValues = res.OrderBuffer,
                     Resources = res.Resources
                 };
+
+                gs.ComputeDepth(cmd, camera.worldToCameraMatrix * gs.transform.localToWorldMatrix);
                 m_sortPass.Dispatch(cmd, sorterArgs);
             }
         }
 
-        public ISorterResource CreateSorterResource(uint count, GraphicsBuffer packedSplatsBuffer,
-            GraphicsBuffer orderBuffer)
+        public ISorterResource CreateSorterResource(uint count, GraphicsBuffer orderBuffer)
         {
-            return new Resource(count, packedSplatsBuffer, orderBuffer);
+            return new Resource(count, orderBuffer);
         }
     }
 }

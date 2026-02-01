@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace Gsplat
 {
@@ -28,6 +29,8 @@ namespace Gsplat
         static readonly int k_splatCount = Shader.PropertyToID("_SplatCount");
         static readonly int k_gammaToLinear = Shader.PropertyToID("_GammaToLinear");
         static readonly int k_shDegree = Shader.PropertyToID("_SHDegree");
+        static readonly int k_matrixMv = Shader.PropertyToID("_MatrixMV");
+        static readonly int k_depthBuffer = Shader.PropertyToID("_DepthBuffer");
 
         public GsplatRendererImpl(uint splatCount, byte shBands)
         {
@@ -58,7 +61,7 @@ namespace Gsplat
                     System.Runtime.InteropServices.Marshal.SizeOf(typeof(Vector3)));
             OrderBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)splatCount, sizeof(uint));
 
-            SorterResource = GsplatSorter.Instance.CreateSorterResource(splatCount, PackedSplatsBuffer, OrderBuffer);
+            SorterResource = GsplatSorter.Instance.CreateSorterResource(splatCount, OrderBuffer);
         }
 
         void CreatePropertyBlock()
@@ -111,6 +114,20 @@ namespace Gsplat
 
             Graphics.RenderMeshPrimitives(rp, GsplatSettings.Instance.Mesh, 0,
                 Mathf.CeilToInt(splatCount / (float)GsplatSettings.Instance.SplatInstanceSize));
+        }
+
+
+        public void ComputeDepth(CommandBuffer cmd, Matrix4x4 matrixMv)
+        {
+            var cs = GsplatSettings.Instance.CalcDepthSparkShader;
+            var kernelCalcDistanceSpark = 0;
+
+            cmd.SetComputeIntParam(cs, k_splatCount, (int)SplatCount);
+            cmd.SetComputeMatrixParam(cs, k_matrixMv, matrixMv);
+            cmd.SetComputeBufferParam(cs, kernelCalcDistanceSpark, k_packedSplatsBuffer, PackedSplatsBuffer);
+            cmd.SetComputeBufferParam(cs, kernelCalcDistanceSpark, k_depthBuffer, SorterResource.InputKeys);
+            cmd.SetComputeBufferParam(cs, kernelCalcDistanceSpark, k_orderBuffer, SorterResource.OrderBuffer);
+            cmd.DispatchCompute(cs, kernelCalcDistanceSpark, (int)GsplatUtils.DivRoundUp(SplatCount, 1024), 1, 1);
         }
     }
 }

@@ -12,18 +12,14 @@ namespace Gsplat
         public byte SHBands { get; private set; }
 
         MaterialPropertyBlock m_propertyBlock;
-        public GraphicsBuffer PackedSplatsBuffer { get; private set; }
-        public GraphicsBuffer SHBuffer { get; private set; }
+        GsplatAsset m_gsplatAsset;
+
         public GraphicsBuffer OrderBuffer { get; private set; }
         public ISorterResource SorterResource { get; private set; }
 
-        public bool Valid =>
-            PackedSplatsBuffer != null &&
-            (SHBands == 0 || SHBuffer != null);
+        public bool Valid => true;
 
         static readonly int k_orderBuffer = Shader.PropertyToID("_OrderBuffer");
-        static readonly int k_packedSplatsBuffer = Shader.PropertyToID("_PackedSplatsBuffer");
-        static readonly int k_shBuffer = Shader.PropertyToID("_SHBuffer");
         static readonly int k_matrixM = Shader.PropertyToID("_MATRIX_M");
         static readonly int k_splatInstanceSize = Shader.PropertyToID("_SplatInstanceSize");
         static readonly int k_splatCount = Shader.PropertyToID("_SplatCount");
@@ -51,38 +47,30 @@ namespace Gsplat
             CreatePropertyBlock();
         }
 
+        public void BindGsplatAsset(GsplatAsset gsplatAsset)
+        {
+            gsplatAsset.SetupMaterialPropertyBlock(m_propertyBlock);
+            m_gsplatAsset = gsplatAsset;
+        }
+
         void CreateResources(uint splatCount)
         {
-            PackedSplatsBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)splatCount,
-                System.Runtime.InteropServices.Marshal.SizeOf(typeof(uint)) * 4);
-            if (SHBands > 0)
-                SHBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured,
-                    GsplatUtils.SHBandsToCoefficientCount(SHBands) * (int)splatCount,
-                    System.Runtime.InteropServices.Marshal.SizeOf(typeof(Vector3)));
             OrderBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)splatCount, sizeof(uint));
-
             SorterResource = GsplatSorter.Instance.CreateSorterResource(splatCount, OrderBuffer);
         }
 
         void CreatePropertyBlock()
         {
             m_propertyBlock ??= new MaterialPropertyBlock();
-            m_propertyBlock.SetBuffer(k_packedSplatsBuffer, PackedSplatsBuffer);
             m_propertyBlock.SetBuffer(k_orderBuffer, OrderBuffer);
-            if (SHBands > 0)
-                m_propertyBlock.SetBuffer(k_shBuffer, SHBuffer);
         }
 
         public void Dispose()
         {
-            PackedSplatsBuffer?.Dispose();
-            SHBuffer?.Dispose();
             OrderBuffer?.Dispose();
             SorterResource?.Dispose();
-
-            PackedSplatsBuffer = null;
-            SHBuffer = null;
             OrderBuffer = null;
+            SorterResource = null;
         }
 
         /// <summary>
@@ -105,7 +93,8 @@ namespace Gsplat
             m_propertyBlock.SetInteger(k_splatInstanceSize, (int)GsplatSettings.Instance.SplatInstanceSize);
             m_propertyBlock.SetInteger(k_shDegree, shDegree);
             m_propertyBlock.SetMatrix(k_matrixM, transform.localToWorldMatrix);
-            var rp = new RenderParams(GsplatSettings.Instance.Materials[SHBands])
+            var rp = new RenderParams(GsplatSettings.Instance.Materials[(int)m_gsplatAsset.Compression]
+                .Materials[SHBands])
             {
                 worldBounds = GsplatUtils.CalcWorldBounds(localBounds, transform),
                 matProps = m_propertyBlock,
@@ -124,7 +113,7 @@ namespace Gsplat
 
             cmd.SetComputeIntParam(cs, k_splatCount, (int)SplatCount);
             cmd.SetComputeMatrixParam(cs, k_matrixMv, matrixMv);
-            cmd.SetComputeBufferParam(cs, kernelCalcDistanceSpark, k_packedSplatsBuffer, PackedSplatsBuffer);
+            //cmd.SetComputeBufferParam(cs, kernelCalcDistanceSpark, k_packedSplatsBuffer, PackedSplatsBuffer);
             cmd.SetComputeBufferParam(cs, kernelCalcDistanceSpark, k_depthBuffer, SorterResource.InputKeys);
             cmd.SetComputeBufferParam(cs, kernelCalcDistanceSpark, k_orderBuffer, SorterResource.OrderBuffer);
             cmd.DispatchCompute(cs, kernelCalcDistanceSpark, (int)GsplatUtils.DivRoundUp(SplatCount, 1024), 1, 1);

@@ -6,6 +6,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using Unity.Mathematics;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 
 namespace Gsplat
@@ -43,11 +44,59 @@ namespace Gsplat
         [HideInInspector] public Vector3[] SHs;
         [HideInInspector] public uint4[] PackedSplats;
 
+        public GraphicsBuffer PackedSplatsBuffer { get; private set; }
+        public GraphicsBuffer SHBuffer { get; private set; }
+
+        static readonly int k_packedSplatsBuffer = Shader.PropertyToID("_PackedSplatsBuffer");
+        static readonly int k_shBuffer = Shader.PropertyToID("_SHBuffer");
+        static readonly int k_splatCount = Shader.PropertyToID("_SplatCount");
+        static readonly int k_matrixMv = Shader.PropertyToID("_MatrixMV");
+        static readonly int k_depthBuffer = Shader.PropertyToID("_DepthBuffer");
+        static readonly int k_orderBuffer = Shader.PropertyToID("_OrderBuffer");
+
         public override void Allocate()
         {
             PackedSplats = new uint4[SplatCount];
             if (SHBands > 0)
                 SHs = new Vector3[SplatCount * GsplatUtils.SHBandsToCoefficientCount(SHBands)];
+        }
+
+        protected override void AllocateGPU()
+        {
+            PackedSplatsBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)SplatCount,
+                Marshal.SizeOf(typeof(uint)) * 4);
+            SHBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured,
+                GsplatUtils.SHBandsToCoefficientCount(SHBands) * (int)SplatCount, Marshal.SizeOf(typeof(Vector3)));
+            PackedSplatsBuffer.SetData(PackedSplats);
+            if (SHBands > 0)
+                SHBuffer.SetData(SHs);
+        }
+
+        protected override void ReleaseGPU()
+        {
+            PackedSplatsBuffer?.Dispose();
+            PackedSplatsBuffer = null;
+            SHBuffer?.Dispose();
+            SHBuffer = null;
+        }
+
+        public override void SetupMaterialPropertyBlock(MaterialPropertyBlock propertyBlock)
+        {
+            propertyBlock.SetBuffer(k_packedSplatsBuffer, PackedSplatsBuffer);
+            if (SHBands > 0)
+                propertyBlock.SetBuffer(k_shBuffer, SHBuffer);
+        }
+
+        public override void ComputeDepth(CommandBuffer cmd, Matrix4x4 matrixMv, ISorterResource sorterResource)
+        {
+            var cs = GsplatSettings.Instance.CalcDepthSparkShader;
+            var kernelCalcDistanceSpark = 0;
+            cmd.SetComputeIntParam(cs, k_splatCount, (int)SplatCount);
+            cmd.SetComputeMatrixParam(cs, k_matrixMv, matrixMv);
+            cmd.SetComputeBufferParam(cs, kernelCalcDistanceSpark, k_packedSplatsBuffer, PackedSplatsBuffer);
+            cmd.SetComputeBufferParam(cs, kernelCalcDistanceSpark, k_depthBuffer, sorterResource.InputKeys);
+            cmd.SetComputeBufferParam(cs, kernelCalcDistanceSpark, k_orderBuffer, sorterResource.OrderBuffer);
+            cmd.DispatchCompute(cs, kernelCalcDistanceSpark, (int)GsplatUtils.DivRoundUp(SplatCount, 1024), 1, 1);
         }
 
         public override void LoadFromPly(string plyPath, ProgressCallback progressCallback = null)
@@ -112,6 +161,8 @@ namespace Gsplat
                 PackedSplats[i] = PackSplat(color, position, scale, rotation);
                 progressCallback?.Invoke("Reading vertices", i / (float)plyInfo.VertexCount);
             }
+
+            AllocateGPU();
         }
 
         /// <summary>

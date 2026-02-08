@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7c727244cd14cfd896562aa99c958f3, type: 3}
+  m_Name: GsplatUncompressed
+  m_EditorClassIdentifier: 
+  Materials:
+  - {fileID: 2100000, guid: 0065a348838e5474f802212446cf1ddd, type: 2}
+  - {fileID: 2100000, guid: 0d9ed3d9ff1d8ef40b3a34d239fbe01b, type: 2}
+  - {fileID: 2100000, guid: 6891c4ed0fb75164c8f86fdd3ec98f07, type: 2}
+  - {fileID: 2100000, guid: b9a329e4e9d906a46bb80b9d30c0d3c1, type: 2}

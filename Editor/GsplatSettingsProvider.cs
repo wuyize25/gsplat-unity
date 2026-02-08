@@ -24,7 +24,6 @@ namespace Gsplat.Editor
 
         public override void OnGUI(string searchContext)
         {
-            EditorGUILayout.PropertyField(m_gsplatSettings.FindProperty(nameof(GsplatSettings.Shader)));
             EditorGUILayout.PropertyField(m_gsplatSettings.FindProperty(nameof(GsplatSettings.ComputeShader)));
             EditorGUILayout.PropertyField(m_gsplatSettings.FindProperty(nameof(GsplatSettings.SplatInstanceSize)));
             EditorGUILayout.PropertyField(m_gsplatSettings.FindProperty(nameof(GsplatSettings.ShowImportErrors)));
@@ -32,7 +31,7 @@ namespace Gsplat.Editor
         }
 
         [SettingsProvider]
-        public static SettingsProvider CreateMyCustomSettingsProvider()
+        public static SettingsProvider CreateGsplatSettingsProvider()
         {
             var provider = new GsplatSettingsProvider("Project/Gsplat");
             return provider;

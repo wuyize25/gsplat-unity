@@ -5,6 +5,7 @@ using System;
 using System.IO;
 using System.Runtime.InteropServices;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace Gsplat
 {
@@ -18,6 +19,22 @@ namespace Gsplat
         [HideInInspector] public Vector3[] Scales;
         [HideInInspector] public Vector4[] Rotations; // Quaternion, wxyz
 
+        public GraphicsBuffer PositionBuffer { get; private set; }
+        public GraphicsBuffer ScaleBuffer { get; private set; }
+        public GraphicsBuffer RotationBuffer { get; private set; }
+        public GraphicsBuffer ColorBuffer { get; private set; }
+        public GraphicsBuffer SHBuffer { get; private set; }
+
+        static readonly int k_positionBuffer = Shader.PropertyToID("_PositionBuffer");
+        static readonly int k_scaleBuffer = Shader.PropertyToID("_ScaleBuffer");
+        static readonly int k_rotationBuffer = Shader.PropertyToID("_RotationBuffer");
+        static readonly int k_colorBuffer = Shader.PropertyToID("_ColorBuffer");
+        static readonly int k_shBuffer = Shader.PropertyToID("_SHBuffer");
+        static readonly int k_splatCount = Shader.PropertyToID("_SplatCount");
+        static readonly int k_matrixMv = Shader.PropertyToID("_MatrixMV");
+        static readonly int k_depthBuffer = Shader.PropertyToID("_DepthBuffer");
+        static readonly int k_orderBuffer = Shader.PropertyToID("_OrderBuffer");
+
         public override void Allocate()
         {
             Positions = new Vector3[SplatCount];
@@ -26,6 +43,64 @@ namespace Gsplat
             Rotations = new Vector4[SplatCount];
             if (SHBands > 0)
                 SHs = new Vector3[SplatCount * GsplatUtils.SHBandsToCoefficientCount(SHBands)];
+        }
+
+        protected override void AllocateGPU()
+        {
+            PositionBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)SplatCount,
+                Marshal.SizeOf(typeof(Vector3)));
+            ScaleBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)SplatCount,
+                Marshal.SizeOf(typeof(Vector3)));
+            RotationBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)SplatCount,
+                Marshal.SizeOf(typeof(Vector4)));
+            ColorBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)SplatCount,
+                Marshal.SizeOf(typeof(Vector4)));
+            if (SHBands > 0)
+                SHBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured,
+                    GsplatUtils.SHBandsToCoefficientCount(SHBands) * (int)SplatCount, Marshal.SizeOf(typeof(Vector3)));
+
+            PositionBuffer.SetData(Positions);
+            ScaleBuffer.SetData(Scales);
+            RotationBuffer.SetData(Rotations);
+            ColorBuffer.SetData(Colors);
+            if (SHBands > 0)
+                SHBuffer.SetData(SHs);
+        }
+
+        protected override void ReleaseGPU()
+        {
+            PositionBuffer?.Dispose();
+            PositionBuffer = null;
+            ScaleBuffer?.Dispose();
+            ScaleBuffer = null;
+            RotationBuffer?.Dispose();
+            RotationBuffer = null;
+            ColorBuffer?.Dispose();
+            ColorBuffer = null;
+            SHBuffer?.Dispose();
+            SHBuffer = null;
+        }
+
+        public override void SetupMaterialPropertyBlock(MaterialPropertyBlock propertyBlock)
+        {
+            propertyBlock.SetBuffer(k_positionBuffer, PositionBuffer);
+            propertyBlock.SetBuffer(k_scaleBuffer, ScaleBuffer);
+            propertyBlock.SetBuffer(k_rotationBuffer, RotationBuffer);
+            propertyBlock.SetBuffer(k_colorBuffer, ColorBuffer);
+            if (SHBands > 0)
+                propertyBlock.SetBuffer(k_shBuffer, SHBuffer);
+        }
+
+        public override void ComputeDepth(CommandBuffer cmd, Matrix4x4 matrixMv, ISorterResource sorterResource)
+        {
+            var cs = GsplatSettings.Instance.CalcDepthShader;
+            var kernelCalcDistance = 0;
+            cmd.SetComputeIntParam(cs, k_splatCount, (int)SplatCount);
+            cmd.SetComputeMatrixParam(cs, k_matrixMv, matrixMv);
+            cmd.SetComputeBufferParam(cs, kernelCalcDistance, k_positionBuffer, PositionBuffer);
+            cmd.SetComputeBufferParam(cs, kernelCalcDistance, k_depthBuffer, sorterResource.InputKeys);
+            cmd.SetComputeBufferParam(cs, kernelCalcDistance, k_orderBuffer, sorterResource.OrderBuffer);
+            cmd.DispatchCompute(cs, kernelCalcDistance, (int)GsplatUtils.DivRoundUp(SplatCount, 1024), 1, 1);
         }
 
         public override void LoadFromPly(string plyPath, ProgressCallback progressCallback = null)

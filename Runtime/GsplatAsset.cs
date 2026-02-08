@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace Gsplat
 {
@@ -88,7 +89,7 @@ namespace Gsplat
             }
         }
     }
-    
+
     public delegate void ProgressCallback(string info, float progress);
 
     public abstract class GsplatAsset : ScriptableObject
@@ -99,7 +100,22 @@ namespace Gsplat
         public abstract CompressionMode Compression { get; }
         //public GsplatData Data;
 
+        void OnEnable()
+        {
+            AllocateGPU();
+        }
+
+        void OnDisable()
+        {
+            ReleaseGPU();
+        }
+
         public abstract void Allocate();
         public abstract void LoadFromPly(string plyPath, ProgressCallback progressCallback = null);
+        protected abstract void AllocateGPU();
+        protected abstract void ReleaseGPU();
+        public abstract void SetupMaterialPropertyBlock(MaterialPropertyBlock propertyBlock);
+
+        public abstract void ComputeDepth(CommandBuffer cmd, Matrix4x4 matrixMv, ISorterResource sorterResource);
     }
 }

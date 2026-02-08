@@ -26,24 +26,19 @@ namespace Gsplat
         public bool Valid => RenderBeforeUploadComplete ? SplatCount > 0 : SplatCount == GsplatAsset.SplatCount;
         public uint SplatCount => GsplatAsset ? GsplatAsset.SplatCount - m_pendingSplatCount : 0;
         public ISorterResource SorterResource => m_renderer.SorterResource;
-        public void ComputeDepth(CommandBuffer cmd, Matrix4x4 matrixMv) => m_renderer.ComputeDepth(cmd, matrixMv);
+
+        public void ComputeDepth(CommandBuffer cmd, Matrix4x4 matrixMv) =>
+            GsplatAsset.ComputeDepth(cmd, matrixMv, SorterResource);
 
         uint m_pendingSplatCount;
 
-        void SetBufferData()
-        {
-            var asset = (GsplatAssetSpark)GsplatAsset;
-            m_renderer.PackedSplatsBuffer.SetData(asset.PackedSplats);
-            if (GsplatAsset.SHBands > 0)
-                m_renderer.SHBuffer.SetData(asset.SHs);
-        }
 
         void SetBufferDataAsync()
         {
             m_pendingSplatCount = GsplatAsset.SplatCount;
         }
 
-        void UploadData()
+        /*void UploadData()
         {
             var offset = (int)(GsplatAsset.SplatCount - m_pendingSplatCount);
             var count = (int)Math.Min(UploadBatchSize, m_pendingSplatCount);
@@ -54,7 +49,7 @@ namespace Gsplat
             var coefficientCount = GsplatUtils.SHBandsToCoefficientCount(GsplatAsset.SHBands);
             m_renderer.SHBuffer.SetData(asset.SHs, coefficientCount * offset,
                 coefficientCount * offset, coefficientCount * count);
-        }
+        }*/
 
         void OnEnable()
         {
@@ -62,14 +57,15 @@ namespace Gsplat
             if (!GsplatAsset)
                 return;
             m_renderer = new GsplatRendererImpl(GsplatAsset.SplatCount, GsplatAsset.SHBands);
+            m_renderer.BindGsplatAsset(GsplatAsset);
 #if UNITY_EDITOR
             if (AsyncUpload && Application.isPlaying)
 #else
             if (AsyncUpload)
 #endif
                 SetBufferDataAsync();
-            else
-                SetBufferData();
+            //else
+            //    SetBufferData();
         }
 
         void OnDisable()
@@ -81,8 +77,8 @@ namespace Gsplat
 
         void Update()
         {
-            if (m_pendingSplatCount > 0)
-                UploadData();
+            //if (m_pendingSplatCount > 0)
+            //    UploadData();
 
             if (m_prevAsset != GsplatAsset)
             {
@@ -93,14 +89,15 @@ namespace Gsplat
                         m_renderer = new GsplatRendererImpl(GsplatAsset.SplatCount, GsplatAsset.SHBands);
                     else
                         m_renderer.RecreateResources(GsplatAsset.SplatCount, GsplatAsset.SHBands);
+                    m_renderer.BindGsplatAsset(GsplatAsset);
 #if UNITY_EDITOR
                     if (AsyncUpload && Application.isPlaying)
 #else
                     if (AsyncUpload)
 #endif
                         SetBufferDataAsync();
-                    else
-                        SetBufferData();
+                    //else
+                    //    SetBufferData();
                 }
             }
 

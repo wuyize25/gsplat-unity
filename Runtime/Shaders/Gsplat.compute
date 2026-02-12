@@ -28,7 +28,7 @@
 
 #include "DeviceRadixSort.hlsl"
 
-StructuredBuffer<float3> _PositionBuffer;
+StructuredBuffer<uint4> _PackedSplatsBuffer;
 float4x4 _MatrixMV;
 
 [numthreads(GROUP_SIZE,1,1)]
@@ -48,7 +48,9 @@ void CalcDistance(uint3 id : SV_DispatchThreadID)
     if (idx >= e_numKeys)
         return;
 
-    float3 pos = _PositionBuffer[b_sortPayload[idx]];
+    uint4 word = _PackedSplatsBuffer[b_sortPayload[idx]];
+    float3 pos = float3(f16tof32(word.y & 0xffffu), f16tof32((word.y >> 16u) & 0xffffu), f16tof32(word.z & 0xffffu));
+
     pos = mul(_MatrixMV, float4(pos.xyz, 1)).xyz;
     b_sort[idx] = pos.z;
 }

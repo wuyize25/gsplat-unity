@@ -13,7 +13,7 @@ namespace Gsplat
 {
     public class GsplatSortPass
     {
-        static readonly int k_positionBuffer = Shader.PropertyToID("_PositionBuffer");
+        static readonly int k_packedSplatsBuffer = Shader.PropertyToID("_PackedSplatsBuffer");
         static readonly int k_matrixMv = Shader.PropertyToID("_MatrixMV");
         static readonly int k_eNumKeys = Shader.PropertyToID("e_numKeys");
         static readonly int k_eThreadBlocks = Shader.PropertyToID("e_threadBlocks");
@@ -41,7 +41,7 @@ namespace Gsplat
         {
             public uint Count;
             public Matrix4x4 MatrixMv;
-            public GraphicsBuffer PositionBuffer;
+            public GraphicsBuffer PackedSplatsBuffer;
             public GraphicsBuffer InputKeys;
             public GraphicsBuffer InputValues;
             public SupportResources Resources;
@@ -66,9 +66,9 @@ namespace Gsplat
                     AltBuffer = new GraphicsBuffer(target, (int)count, 4) { name = "DeviceRadixAlt" },
                     AltPayloadBuffer = new GraphicsBuffer(target, (int)count, 4) { name = "DeviceRadixAltPayload" },
                     PassHistBuffer = new GraphicsBuffer(target, (int)scratchBufferSize, 4)
-                        { name = "DeviceRadixPassHistogram" },
+                    { name = "DeviceRadixPassHistogram" },
                     GlobalHistBuffer = new GraphicsBuffer(target, (int)reducedScratchBufferSize, 4)
-                        { name = "DeviceRadixGlobalHistogram" },
+                    { name = "DeviceRadixGlobalHistogram" },
                 };
                 return resources;
             }
@@ -158,7 +158,7 @@ namespace Gsplat
         {
             Assert.IsTrue(Valid);
 
-            GraphicsBuffer positionBuffer = args.PositionBuffer;
+            GraphicsBuffer packedSplatsBuffer = args.PackedSplatsBuffer;
             GraphicsBuffer srcKeyBuffer = args.InputKeys;
             GraphicsBuffer srcPayloadBuffer = args.InputValues;
             GraphicsBuffer dstKeyBuffer = args.Resources.AltBuffer;
@@ -173,7 +173,7 @@ namespace Gsplat
             cmd.SetComputeMatrixParam(m_CS, k_matrixMv, args.MatrixMv);
 
             //CalcDistance
-            cmd.SetComputeBufferParam(m_CS, m_kernelCalcDistance, k_positionBuffer, positionBuffer);
+            cmd.SetComputeBufferParam(m_CS, m_kernelCalcDistance, k_packedSplatsBuffer, packedSplatsBuffer);
             cmd.SetComputeBufferParam(m_CS, m_kernelCalcDistance, k_bSort, srcKeyBuffer);
             cmd.SetComputeBufferParam(m_CS, m_kernelCalcDistance, k_bSortPayload, srcPayloadBuffer);
             cmd.DispatchCompute(m_CS, m_kernelCalcDistance, (int)DivRoundUp(args.Count, 1024), 1, 1);

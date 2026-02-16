@@ -7,7 +7,7 @@ using UnityEngine;
 namespace Gsplat.Editor
 {
     /// <summary>
-    /// Implementation taken from SparkJs
+    /// Implementation taken from SparkJS
     ///
     /// A PackedSplats is a collection of Gaussian splats, packed into a format that
     /// takes exactly 16 bytes per Gsplat to maximize memory and cache efficiency.
@@ -35,7 +35,7 @@ namespace Gsplat.Editor
     public class GsplatPacker
     {
         /// <summary>
-        /// Copied from SparkJs encodeQuatXyz888 implementation
+        /// Copied from SparkJS encodeQuatXyz888 implementation
         /// Encode a Quaternion into 3 8-bit integer, converting the xyz coordinates
         /// to signed 8-bit integers (w can be derived from xyz), and flipping the sign
         /// of the quaternion if necessary to make this possible (q == -q for quaternions).
@@ -53,7 +53,7 @@ namespace Gsplat.Editor
         }
 
         /// <summary>
-        /// Copied from SparkJs decodeQuatXyz888 implementation
+        /// Copied from SparkJS decodeQuatXyz888 implementation
         /// Decode a 24-bit integer of the quaternion's xyz coordinates into a THREE.Quaternion.
         /// </summary>
         private static Quaternion DecodeQuatXyz888(uint encoded)
@@ -68,7 +68,7 @@ namespace Gsplat.Editor
         }
 
         /// <summary>
-        /// Copied from SparkJs encodeQuatOctXy88R8 implementation
+        /// Copied from SparkJS encodeQuatOctXy88R8 implementation
         /// Encodes a THREE.Quaternion into a 24‐bit integer.
         ///
         /// Bit layout (LSB → MSB):

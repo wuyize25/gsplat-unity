@@ -105,7 +105,7 @@ Shader "Gsplat/Standard"
 
                 float3 modelCenter, scale;
                 float4 color, quat;
-                UpackSplat(packedSplat, color, modelCenter, scale, quat);
+                UnpackSplat(packedSplat, color, modelCenter, scale, quat);
 
                 SplatCenter center;
                 if (!InitCenter(modelCenter, center))

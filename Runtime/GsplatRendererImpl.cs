@@ -29,6 +29,19 @@ namespace Gsplat
         static readonly int k_splatCount = Shader.PropertyToID("_SplatCount");
         static readonly int k_gammaToLinear = Shader.PropertyToID("_GammaToLinear");
 
+        public void EditSHBands(byte shBands)
+        {
+            SHBands = shBands;
+            SHBuffer?.Dispose();
+            if (SHBands == 0)
+                SHBuffer = null;
+            else
+                SHBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured,
+                    GsplatUtils.SHBandsToCoefficientCount(SHBands) * (int)SplatCount,
+                    System.Runtime.InteropServices.Marshal.SizeOf(typeof(Vector3)));
+            m_propertyBlock.SetBuffer(k_shBuffer, SHBuffer);
+        }
+
         public GsplatRendererImpl(uint splatCount, byte shBands)
         {
             SplatCount = splatCount;
@@ -90,9 +103,8 @@ namespace Gsplat
         /// <param name="localBounds">Bounding box in object space.</param>
         /// <param name="layer">Layer used for rendering.</param>
         /// <param name="gammaToLinear">Covert color space from Gamma to Linear.</param>
-        /// <param name="shDegree">Order of SH coefficients used for rendering. The final value is capped by the SHBands property.</param>
         public void Render(uint splatCount, Transform transform, Bounds localBounds, int layer,
-            bool gammaToLinear = false, int shDegree = 3)
+            bool gammaToLinear = false)
         {
             if (!Valid || !GsplatSettings.Instance.Valid || !GsplatSorter.Instance.Valid)
                 return;
@@ -101,7 +113,7 @@ namespace Gsplat
             m_propertyBlock.SetInteger(k_gammaToLinear, gammaToLinear ? 1 : 0);
             m_propertyBlock.SetInteger(k_splatInstanceSize, (int)GsplatSettings.Instance.SplatInstanceSize);
             m_propertyBlock.SetMatrix(k_matrixM, transform.localToWorldMatrix);
-            var rp = new RenderParams(GsplatSettings.Instance.Materials[Math.Min(SHBands, shDegree)])
+            var rp = new RenderParams(GsplatSettings.Instance.Materials[SHBands])
             {
                 worldBounds = GsplatUtils.CalcWorldBounds(localBounds, transform),
                 matProps = m_propertyBlock,

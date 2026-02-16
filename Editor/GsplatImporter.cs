@@ -126,7 +126,6 @@ namespace Gsplat.Editor
                 }
 
                 var plyInfo = ReadPlyHeader(fs);
-                var shCoeffs = plyInfo.SHPropertyCount / 3;
                 gsplatAsset.SplatCount = plyInfo.VertexCount;
                 gsplatAsset.SHBands = GsplatUtils.CalcSHBandsFromSHPropertyCount(plyInfo.SHPropertyCount);
 
@@ -148,8 +147,13 @@ namespace Gsplat.Editor
                     return;
                 }
 
-                if (shCoeffs > 0)
-                    gsplatAsset.SHs = new Vector3[plyInfo.VertexCount * shCoeffs];
+                gsplatAsset.SHs = new SHBand[gsplatAsset.SHBands];
+                for (int j = 0; j < gsplatAsset.SHBands; j++)
+                {
+                    int shCoeffs = GsplatUtils.SHBandsToCoefficientCount((byte)(j + 1)) - GsplatUtils.SHBandsToCoefficientCount((byte)j);
+                    gsplatAsset.SHs[j] = new SHBand(new Vector3[plyInfo.VertexCount * shCoeffs]);
+                }
+
                 gsplatAsset.PackedSplats = new uint[plyInfo.VertexCount * 4];
 
                 var buffer = new byte[plyInfo.PropertyCount * sizeof(float)];
@@ -165,12 +169,20 @@ namespace Gsplat.Editor
                     }
 
                     var properties = MemoryMarshal.Cast<byte, float>(buffer);
-                    for (int j = 0; j < shCoeffs; j++)
-                        gsplatAsset.SHs[i * shCoeffs + j] = new Vector3(
-                            properties[j + plyInfo.SHOffset],
-                            properties[j + plyInfo.SHOffset + shCoeffs],
-                            properties[j + plyInfo.SHOffset + shCoeffs * 2]);
 
+                    int maxCoeff = GsplatUtils.SHBandsToCoefficientCount(gsplatAsset.SHBands);
+                    for (int j = 0; j < gsplatAsset.SHBands; j++)
+                    {
+                        int currentCoeff = GsplatUtils.SHBandsToCoefficientCount((byte)(j + 1));
+                        int previousCoeff = GsplatUtils.SHBandsToCoefficientCount((byte)j);
+                        for (int k = 0; k < currentCoeff - previousCoeff; k++)
+                        {
+                            gsplatAsset.SHs[j].SHs[i * (currentCoeff - previousCoeff) + k] = new Vector3(
+                                properties[previousCoeff + k + plyInfo.SHOffset],
+                                properties[previousCoeff + k + plyInfo.SHOffset + maxCoeff],
+                                properties[previousCoeff + k + plyInfo.SHOffset + maxCoeff * 2]);
+                        }
+                    }
 
                     var color = new Vector4(
                         properties[plyInfo.ColorOffset],

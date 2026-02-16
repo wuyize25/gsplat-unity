@@ -10,7 +10,26 @@ namespace Gsplat
     public class GsplatRenderer : MonoBehaviour, IGsplat
     {
         public GsplatAsset GsplatAsset;
-        [Range(0, 3)] public int SHDegree = 3;
+
+        public int SHDegree
+        {
+            get { return m_renderer.SHBands; }
+            set
+            {
+                if (m_renderer.SHBands != value)
+                {
+                    m_renderer.EditSHBands((byte)value);
+                    int lastPos = 0;
+                    for (int i = 0; i != m_renderer.SHBands; i++)
+                    {
+                        m_renderer.SHBuffer.SetData(GsplatAsset.SHs[i].SHs, 0, lastPos, GsplatAsset.SHs[i].SHs.Length);
+                        lastPos += GsplatAsset.SHs[i].SHs.Length;
+                    }
+                    Debug.Log(lastPos);
+                }
+            }
+        }
+
         public bool GammaToLinear;
         public bool AsyncUpload;
 
@@ -31,8 +50,12 @@ namespace Gsplat
         void SetBufferData()
         {
             m_renderer.PackedSplatsBuffer.SetData(GsplatAsset.PackedSplats);
-            if (GsplatAsset.SHBands > 0)
-                m_renderer.SHBuffer.SetData(GsplatAsset.SHs);
+            int lastPos = 0;
+            for (int i = 0; i != m_renderer.SHBands; i++)
+            {
+                m_renderer.SHBuffer.SetData(GsplatAsset.SHs[i].SHs, 0, lastPos, GsplatAsset.SHs[i].SHs.Length);
+                lastPos += GsplatAsset.SHs[i].SHs.Length;
+            }
         }
 
         void SetBufferDataAsync()
@@ -48,8 +71,8 @@ namespace Gsplat
             m_renderer.PackedSplatsBuffer.SetData(GsplatAsset.PackedSplats, offset, offset, count);
             if (GsplatAsset.SHBands <= 0) return;
             var coefficientCount = GsplatUtils.SHBandsToCoefficientCount(GsplatAsset.SHBands);
-            m_renderer.SHBuffer.SetData(GsplatAsset.SHs, coefficientCount * offset,
-                coefficientCount * offset, coefficientCount * count);
+            // m_renderer.SHBuffer.SetData(GsplatAsset.SHs, coefficientCount * offset,
+            //     coefficientCount * offset, coefficientCount * count);
         }
 
         void OnEnable()
@@ -102,7 +125,7 @@ namespace Gsplat
 
             if (Valid)
                 m_renderer.Render(SplatCount, transform, GsplatAsset.Bounds,
-                    gameObject.layer, GammaToLinear, SHDegree);
+                    gameObject.layer, GammaToLinear);
         }
     }
 }

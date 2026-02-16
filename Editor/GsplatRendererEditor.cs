@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 using UnityEditor;
+using UnityEngine;
 
 namespace Gsplat.Editor
 {
@@ -14,6 +15,10 @@ namespace Gsplat.Editor
 
             DrawPropertiesExcluding(serializedObject, "m_Script", nameof(GsplatRenderer.UploadBatchSize),
                 nameof(GsplatRenderer.RenderBeforeUploadComplete));
+
+            var renderer = (GsplatRenderer)target;
+            if (renderer.GsplatAsset != null)
+                renderer.SHDegree = (byte)EditorGUILayout.IntSlider(new GUIContent("SH Degree"), renderer.SHDegree, 0, renderer.GsplatAsset.SHBands);
 
             if (serializedObject.FindProperty(nameof(GsplatRenderer.AsyncUpload)).boolValue)
             {

@@ -125,8 +125,22 @@ Shader "Gsplat/Standard"
                 // calculate the model-space view direction
                 float3 dir = normalize(mul(center.view, (float3x3)center.modelView));
                 float3 sh[SH_COEFFS];
-                for (int i = 0; i < SH_COEFFS; i++)
-                    sh[i] = _SHBuffer[source.id * SH_COEFFS + i];
+                for (int i = 0; i < SH_COEFFS_BANDS_1; i++)
+                    sh[i] = _SHBuffer[source.id * SH_COEFFS_BANDS_1 + i];
+
+                #ifdef SH_BANDS_2
+                for (int i = 0; i < 5; i++)
+                    sh[i + SH_COEFFS_BANDS_1] = _SHBuffer[source.id * (SH_COEFFS_BANDS_2 - SH_COEFFS_BANDS_1) + i + SH_COEFFS_BANDS_1 * _SplatCount];
+                #endif
+
+                #ifdef SH_BANDS_3
+                for (int i = 0; i < 5; i++)
+                    sh[i + SH_COEFFS_BANDS_1] = _SHBuffer[source.id * (SH_COEFFS_BANDS_2 - SH_COEFFS_BANDS_1) + i + SH_COEFFS_BANDS_1 * _SplatCount];
+
+                for (int i = 0; i < 7; i++)
+                    sh[i + SH_COEFFS_BANDS_2] = _SHBuffer[source.id * (SH_COEFFS_BANDS_3 - SH_COEFFS_BANDS_2) + i + SH_COEFFS_BANDS_2 * _SplatCount];
+                #endif
+
                 color.rgb += EvalSH(sh, dir);
                 #endif
 

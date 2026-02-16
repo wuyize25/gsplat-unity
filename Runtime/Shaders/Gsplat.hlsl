@@ -157,13 +157,20 @@ void ClipCorner(inout SplatCorner corner, float alpha)
     corner.uv *= clip;
 }
 
+#define SH_COEFFS_BANDS_1 3
+#define SH_COEFFS_BANDS_2 8
+#define SH_COEFFS_BANDS_3 15
+
+
 // spherical Harmonics
 #ifdef SH_BANDS_1
 #define SH_COEFFS 3
 #elif defined(SH_BANDS_2)
 #define SH_COEFFS 8
+#define SH_PREV_COEFFS 3
 #elif defined(SH_BANDS_3)
 #define SH_COEFFS 15
+#define SH_PREV_COEFFS 8
 #else
 #define SH_COEFFS 0
 #endif

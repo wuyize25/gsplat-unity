@@ -17,6 +17,7 @@ namespace Gsplat.Editor
                 nameof(GsplatRenderer.RenderBeforeUploadComplete));
 
             var renderer = (GsplatRenderer)target;
+
             if (renderer.GsplatAsset != null)
                 renderer.SHDegree = (byte)EditorGUILayout.IntSlider(new GUIContent("SH Degree"), renderer.SHDegree, 0, renderer.GsplatAsset.SHBands);
 

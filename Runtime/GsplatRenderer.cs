@@ -11,22 +11,17 @@ namespace Gsplat
     {
         public GsplatAsset GsplatAsset;
 
+        private int shDegree = 3;
         public int SHDegree
         {
-            get { return m_renderer.SHBands; }
+            get
+            {
+                return shDegree;
+            }
             set
             {
-                if (m_renderer.SHBands != value)
-                {
-                    m_renderer.EditSHBands((byte)value);
-                    int lastPos = 0;
-                    for (int i = 0; i != m_renderer.SHBands; i++)
-                    {
-                        m_renderer.SHBuffer.SetData(GsplatAsset.SHs[i].SHs, 0, lastPos, GsplatAsset.SHs[i].SHs.Length);
-                        lastPos += GsplatAsset.SHs[i].SHs.Length;
-                    }
-                    Debug.Log(lastPos);
-                }
+                shDegree = value;
+                SetSHDegreeData();
             }
         }
 
@@ -50,11 +45,20 @@ namespace Gsplat
         void SetBufferData()
         {
             m_renderer.PackedSplatsBuffer.SetData(GsplatAsset.PackedSplats);
-            int lastPos = 0;
-            for (int i = 0; i != m_renderer.SHBands; i++)
+            SetSHDegreeData();
+        }
+
+        void SetSHDegreeData()
+        {
+            if (m_renderer != null)
             {
-                m_renderer.SHBuffer.SetData(GsplatAsset.SHs[i].SHs, 0, lastPos, GsplatAsset.SHs[i].SHs.Length);
-                lastPos += GsplatAsset.SHs[i].SHs.Length;
+                m_renderer.EditSHBands((byte)shDegree);
+                int lastPos = 0;
+                for (int i = 0; i != m_renderer.SHBands; i++)
+                {
+                    m_renderer.SHBuffer.SetData(GsplatAsset.SHs[i].SHs, 0, lastPos, GsplatAsset.SHs[i].SHs.Length);
+                    lastPos += GsplatAsset.SHs[i].SHs.Length;
+                }
             }
         }
 
@@ -63,16 +67,30 @@ namespace Gsplat
             m_pendingSplatCount = GsplatAsset.SplatCount;
         }
 
+
         void UploadData()
         {
             var offset = (int)(GsplatAsset.SplatCount - m_pendingSplatCount);
             var count = (int)Math.Min(UploadBatchSize, m_pendingSplatCount);
             m_pendingSplatCount -= (uint)count;
             m_renderer.PackedSplatsBuffer.SetData(GsplatAsset.PackedSplats, offset, offset, count);
-            if (GsplatAsset.SHBands <= 0) return;
-            var coefficientCount = GsplatUtils.SHBandsToCoefficientCount(GsplatAsset.SHBands);
-            // m_renderer.SHBuffer.SetData(GsplatAsset.SHs, coefficientCount * offset,
-            //     coefficientCount * offset, coefficientCount * count);
+            UploadSHDegreeData(offset, count);
+        }
+
+        void UploadSHDegreeData(int offset, int count)
+        {
+            if (m_renderer != null)
+            {
+                m_renderer.EditSHBands((byte)shDegree);
+                int lastPos = 0;
+                for (int i = 0; i != m_renderer.SHBands; i++)
+                {
+                    var coefficientOffset = GsplatUtils.SHBandsToCoefficientOffsetCount(GsplatAsset.SHBands);
+
+                    m_renderer.SHBuffer.SetData(GsplatAsset.SHs[i].SHs, coefficientOffset * offset, coefficientOffset * offset + lastPos, coefficientOffset * count);
+                    lastPos += GsplatAsset.SHs[i].SHs.Length;
+                }
+            }
         }
 
         void OnEnable()

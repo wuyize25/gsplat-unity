@@ -29,9 +29,12 @@ namespace Gsplat
         static readonly int k_splatCount = Shader.PropertyToID("_SplatCount");
         static readonly int k_gammaToLinear = Shader.PropertyToID("_GammaToLinear");
 
-        public void EditSHBands(byte shBands)
+        public void EditSHBands(byte newSHBandsValue)
         {
-            SHBands = shBands;
+            if (SHBands == newSHBandsValue)
+                return;
+
+            SHBands = newSHBandsValue;
             SHBuffer?.Dispose();
             if (SHBands == 0)
                 SHBuffer = null;

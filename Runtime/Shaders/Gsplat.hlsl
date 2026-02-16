@@ -284,7 +284,7 @@ float4 DecodeQuatOctXyz88R8(uint encoded) {
 #define LN_SCALE_MIN -12.0
 #define LN_SCALE_MAX 9.0
 
-void UpackSplat(uint4 packedData, out float4 color, out float3 modelCenter, out float3 scale, out float4 quat) {
+void UnpackSplat(uint4 packedData, out float4 color, out float3 modelCenter, out float3 scale, out float4 quat) {
     uint word0 = packedData.x;
     uint word1 = packedData.y;
     uint word2 = packedData.z;

@@ -10,20 +10,7 @@ namespace Gsplat
     public class GsplatRenderer : MonoBehaviour, IGsplat
     {
         public GsplatAsset GsplatAsset;
-
-        private int shDegree = 3;
-        public int SHDegree
-        {
-            get
-            {
-                return shDegree;
-            }
-            set
-            {
-                shDegree = value;
-                SetSHDegreeData();
-            }
-        }
+        [HideInInspector] public int SHDegree = 3;
 
         public bool GammaToLinear;
         public bool AsyncUpload;
@@ -45,22 +32,14 @@ namespace Gsplat
         void SetBufferData()
         {
             m_renderer.PackedSplatsBuffer.SetData(GsplatAsset.PackedSplats);
-            SetSHDegreeData();
+            if (GsplatAsset.SHBands >= 1)
+                m_renderer.SH1Buffer.SetData(GsplatAsset.PackedSH1);
+            if (GsplatAsset.SHBands >= 2)
+                m_renderer.SH2Buffer.SetData(GsplatAsset.PackedSH2);
+            if (GsplatAsset.SHBands == 3)
+                m_renderer.SH3Buffer.SetData(GsplatAsset.PackedSH3);
         }
 
-        void SetSHDegreeData()
-        {
-            if (m_renderer != null)
-            {
-                m_renderer.EditSHBands((byte)shDegree);
-                int lastPos = 0;
-                for (int i = 0; i != m_renderer.SHBands; i++)
-                {
-                    m_renderer.SHBuffer.SetData(GsplatAsset.SHs[i].SHs, 0, lastPos, GsplatAsset.SHs[i].SHs.Length);
-                    lastPos += GsplatAsset.SHs[i].SHs.Length;
-                }
-            }
-        }
 
         void SetBufferDataAsync()
         {
@@ -74,23 +53,13 @@ namespace Gsplat
             var count = (int)Math.Min(UploadBatchSize, m_pendingSplatCount);
             m_pendingSplatCount -= (uint)count;
             m_renderer.PackedSplatsBuffer.SetData(GsplatAsset.PackedSplats, offset, offset, count);
-            UploadSHDegreeData(offset, count);
-        }
 
-        void UploadSHDegreeData(int offset, int count)
-        {
-            if (m_renderer != null)
-            {
-                m_renderer.EditSHBands((byte)shDegree);
-                int lastPos = 0;
-                for (int i = 0; i != m_renderer.SHBands; i++)
-                {
-                    var coefficientOffset = GsplatUtils.SHBandsToCoefficientOffsetCount(GsplatAsset.SHBands);
-
-                    m_renderer.SHBuffer.SetData(GsplatAsset.SHs[i].SHs, coefficientOffset * offset, coefficientOffset * offset + lastPos, coefficientOffset * count);
-                    lastPos += GsplatAsset.SHs[i].SHs.Length;
-                }
-            }
+            if (GsplatAsset.SHBands >= 1)
+                m_renderer.SH1Buffer.SetData(GsplatAsset.PackedSH1, 2 * offset, 2 * offset, 2 * count);
+            if (GsplatAsset.SHBands >= 2)
+                m_renderer.SH2Buffer.SetData(GsplatAsset.PackedSH2, 4 * offset, 4 * offset, 4 * count);
+            if (GsplatAsset.SHBands == 3)
+                m_renderer.SH3Buffer.SetData(GsplatAsset.PackedSH3, 4 * offset, 4 * offset, 4 * count);
         }
 
         void OnEnable()
@@ -143,7 +112,7 @@ namespace Gsplat
 
             if (Valid)
                 m_renderer.Render(SplatCount, transform, GsplatAsset.Bounds,
-                    gameObject.layer, GammaToLinear);
+                    gameObject.layer, GammaToLinear, SHDegree);
         }
     }
 }

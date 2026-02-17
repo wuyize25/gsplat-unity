@@ -141,6 +141,123 @@ namespace Gsplat.Editor
 
         const float shC0 = 0.28209479177387814f;
 
+        /// <summary>
+        /// Inspired from SparkJs encodeSh1Rgb implementation
+        ///
+        /// Encode an array of 9 signed RGB SH1 coefficients (clamped to [-1,1]) into
+        /// a pair of uint32 values, where each coefficient is stored as a sint7
+        /// </summary>
+        public static uint[] PackSH1(float[] sh)
+        {
+            uint[] packedSH = new uint[2];
+
+            for (var i = 0; i < 9; ++i)
+            {
+                float shScaled = sh[i] * 63.0f;
+                int shBounded = (int)Math.Round(Math.Max(-63.0f, Math.Min(63.0f, shScaled)));
+                int sint7SH = shBounded & 0x7f;
+
+                int bitStart = i * 7;
+                int bitEnd = bitStart + 7;
+
+                int wordStart = (int)Math.Floor((double)(bitStart / 32));
+                int bitOffset = bitStart - wordStart * 32;
+                uint firstWord = (uint)((sint7SH << bitOffset) & 0xffffffff);
+                packedSH[wordStart] |= firstWord;
+
+                if (bitEnd > wordStart * 32 + 32)
+                {
+                    uint secondWord = ((uint)sint7SH >> (32 - bitOffset)) & 0xffffffff;
+                    packedSH[wordStart + 1] |= secondWord;
+                }
+            }
+
+            return packedSH;
+        }
+
+        public static uint PackSint8Bytes(float b0, float b1, float b2, float b3)
+        {
+            sbyte clampedB0 = GsplatUtils.FloatToSByte(b0);
+            sbyte clampedB1 = GsplatUtils.FloatToSByte(b1);
+            sbyte clampedB2 = GsplatUtils.FloatToSByte(b2);
+            sbyte clampedB3 = GsplatUtils.FloatToSByte(b3);
+            byte uB0 = (byte)(clampedB0 & 0xff);
+            byte uB1 = (byte)(clampedB1 & 0xff);
+            byte uB2 = (byte)(clampedB2 & 0xff);
+            byte uB3 = (byte)(clampedB3 & 0xff);
+            return (uint)(uB0 | (uB1 << 8) | (uB2 << 16) | (uB3 << 24));
+        }
+
+        /// <summary>
+        /// Inspired from SparkJs encodeSh2Rgb implementation
+        ///
+        /// Encode an array of 15 signed RGB SH2 coefficients (clamped to [-1,1]) into
+        /// an array of 4 uint32 values, where each coefficient is stored as a sint8.
+        /// </summary>
+        public static uint[] PackSH2(float[] sh)
+        {
+            uint[] packedSH = new uint[4];
+
+            packedSH[0] = PackSint8Bytes(
+                sh[0],
+                sh[1],
+                sh[2],
+                sh[3]
+            );
+            packedSH[1] = PackSint8Bytes(
+                sh[4],
+                sh[5],
+                sh[6],
+                sh[7]
+            );
+            packedSH[2] = PackSint8Bytes(
+                sh[8],
+                sh[9],
+                sh[10],
+                sh[11]
+            );
+            packedSH[3] = PackSint8Bytes(
+                sh[12],
+                sh[13],
+                sh[14],
+                0
+            );
+            return packedSH;
+        }
+
+        /// <summary>
+        /// Inspired from SparkJs encodeSh3Rgb implementation
+        ///
+        /// Encode an array of 21 signed RGB SH3 coefficients (clamped to [-1,1]) into
+        /// an array of 4 uint32 values, where each coefficient is stored as a sint6.
+        /// </summary>
+        public static uint[] PackSH3(float[] sh)
+        {
+            uint[] packedSH = new uint[4];
+
+            for (var i = 0; i < 21; ++i)
+            {
+                float shScaled = sh[i] * 31.0f;
+                int shBounded = (int)Math.Round(Math.Max(-31.0f, Math.Min(31.0f, shScaled)));
+                int sint6SH = shBounded & 0x3f;
+                int bitStart = i * 6;
+                int bitEnd = bitStart + 6;
+
+                int wordStart = (int)Math.Floor((double)(bitStart / 32));
+                int bitOffset = bitStart - wordStart * 32;
+                uint firstWord = (uint)((sint6SH << bitOffset) & 0xffffffff);
+
+                packedSH[wordStart] |= firstWord;
+                if (bitEnd > wordStart * 32 + 32)
+                {
+                    uint secondWord = ((uint)sint6SH >> (32 - bitOffset)) & 0xffffffff;
+                    packedSH[wordStart + 1] |= secondWord;
+                }
+            }
+
+            return packedSH;
+        }
+
         public static uint[] PackSplat(Vector4 color, Vector3 position, Vector3 scale, Quaternion rotation)
         {
             byte uR = GsplatUtils.FloatToByte(color.x * shC0 + 0.5f);

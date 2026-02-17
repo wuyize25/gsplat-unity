@@ -32,9 +32,21 @@ Shader "Gsplat/Standard"
             float4x4 _MATRIX_M;
             StructuredBuffer<uint> _OrderBuffer;
             StructuredBuffer<uint4> _PackedSplatsBuffer;
+
             #ifndef SH_BANDS_0
-            StructuredBuffer<float3> _SHBuffer;
+            StructuredBuffer<uint2> _SH1Buffer;
+
+            #ifndef SH_BANDS_1
+            StructuredBuffer<uint4> _SH2Buffer;
             #endif
+
+            #ifdef SH_BANDS_3
+            StructuredBuffer<uint4> _SH3Buffer;
+            #endif
+
+            #endif
+
+            #include "SH.hlsl"
 
             struct appdata
             {
@@ -124,24 +136,17 @@ Shader "Gsplat/Standard"
                 #ifndef SH_BANDS_0
                 // calculate the model-space view direction
                 float3 dir = normalize(mul(center.view, (float3x3)center.modelView));
-                float3 sh[SH_COEFFS];
-                for (int i = 0; i < SH_COEFFS_BANDS_1; i++)
-                    sh[i] = _SHBuffer[source.id * SH_COEFFS_BANDS_1 + i];
 
-                #ifdef SH_BANDS_2
-                for (int i = 0; i < 5; i++)
-                    sh[i + SH_COEFFS_BANDS_1] = _SHBuffer[source.id * (SH_COEFFS_BANDS_2 - SH_COEFFS_BANDS_1) + i + SH_COEFFS_BANDS_1 * _SplatCount];
+                color.rgb += EvaluateSH1(_SH1Buffer[source.id], dir);
+
+                #ifndef SH_BANDS_1
+                color.rgb += EvaluateSH2(_SH2Buffer[source.id], dir);
                 #endif
 
                 #ifdef SH_BANDS_3
-                for (int i = 0; i < 5; i++)
-                    sh[i + SH_COEFFS_BANDS_1] = _SHBuffer[source.id * (SH_COEFFS_BANDS_2 - SH_COEFFS_BANDS_1) + i + SH_COEFFS_BANDS_1 * _SplatCount];
-
-                for (int i = 0; i < 7; i++)
-                    sh[i + SH_COEFFS_BANDS_2] = _SHBuffer[source.id * (SH_COEFFS_BANDS_3 - SH_COEFFS_BANDS_2) + i + SH_COEFFS_BANDS_2 * _SplatCount];
+                color.rgb += EvaluateSH3(_SH3Buffer[source.id], dir);
                 #endif
 
-                color.rgb += EvalSH(sh, dir);
                 #endif
 
                 ClipCorner(corner, color.w);

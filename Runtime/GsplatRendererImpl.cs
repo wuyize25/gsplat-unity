@@ -21,7 +21,8 @@ namespace Gsplat
 
         public bool Valid =>
             PackedSplatsBuffer != null &&
-            ((SHBands == 1 && PackedSH1Buffer != null) ||
+            (SHBands == 0 ||
+            (SHBands == 1 && PackedSH1Buffer != null) ||
             (SHBands == 2 && PackedSH1Buffer != null && PackedSH2Buffer != null) ||
             (SHBands == 3 && PackedSH1Buffer != null && PackedSH2Buffer != null && PackedSH3Buffer != null));
 

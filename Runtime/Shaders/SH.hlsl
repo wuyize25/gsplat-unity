@@ -20,7 +20,21 @@
 #define SH_C3_5 1.445305721320277f
 #define SH_C3_6 -0.5900435899266435f
 
-float3 EvaluateSH1(uint2 packedSH1, float3 dir) {
+float3 EvalSH(
+    uint2 packedSH1,
+
+#if defined(SH_BANDS_2) || defined(SH_BANDS_3)
+    uint4 packedSH2,
+#endif
+
+#ifdef SH_BANDS_3
+    uint4 packedSH3,
+#endif
+
+    float3 dir
+) {
+    float3 sh;
+
     // Extract sint7 values packed into 2 x uint32
     float3 sh1_0 = float3(
         int(packedSH1.x << 25u) >> 25,
@@ -38,13 +52,11 @@ float3 EvaluateSH1(uint2 packedSH1, float3 dir) {
         int(packedSH1.y << 1u) >> 25
     ) / 63.0;
 
-    return sh1_0 * (-SH_C1 * dir.y)
+    sh = sh1_0 * (-SH_C1 * dir.y)
         + sh1_1 * (SH_C1 * dir.z)
         + sh1_2 * (-SH_C1 * dir.x);
-}
 
 #if defined(SH_BANDS_2) || defined(SH_BANDS_3)
-float3 EvaluateSH2(uint4 packedSH2, float3 dir) {
     // Extract sint8 values packed into 4 x uint32
     float3 sh2_0 = float3(
         int(packedSH2.x << 24u) >> 24,
@@ -72,16 +84,21 @@ float3 EvaluateSH2(uint4 packedSH2, float3 dir) {
         int(packedSH2.w << 8u) >> 24
     ) / 127.0;
 
-    return sh2_0 * (SH_C2_0 * dir.x * dir.y)
-        + sh2_1 * (SH_C2_1 * dir.y * dir.z)
-        + sh2_2 * (SH_C2_2 * (2.0 * dir.z * dir.z - dir.x * dir.x - dir.y * dir.y))
-        + sh2_3 * (SH_C2_3 * dir.x * dir.z)
-        + sh2_4 * (SH_C2_4 * (dir.x * dir.x - dir.y * dir.y));
-}
+    float xx = dir.x * dir.x;
+    float yy = dir.y * dir.y;
+    float zz = dir.z * dir.z;
+    float xy = dir.x * dir.y;
+    float yz = dir.y * dir.z;
+    float zx = dir.z * dir.x;
+
+    sh += sh2_0 * (SH_C2_0 * xy)
+        + sh2_1 * (SH_C2_1 * yz)
+        + sh2_2 * (SH_C2_2 * (2.0 * zz - xx - yy))
+        + sh2_3 * (SH_C2_3 * zx)
+        + sh2_4 * (SH_C2_4 * (xx- yy));
 #endif
 
 #ifdef SH_BANDS_3
-float3 EvaluateSH3(uint4 packedSH3, float3 dir) {
     // Extract sint6 values packed into 4 x uint32
     float3 sh3_0 = float3(
         int(packedSH3.x << 26u) >> 26,
@@ -119,20 +136,15 @@ float3 EvaluateSH3(uint4 packedSH3, float3 dir) {
         int(packedSH3.w << 2u) >> 26
     ) / 31.0;
 
-    float xx = dir.x * dir.x;
-    float yy = dir.y * dir.y;
-    float zz = dir.z * dir.z;
-    float xy = dir.x * dir.y;
-    float yz = dir.y * dir.z;
-    float zx = dir.z * dir.x;
-
-    return sh3_0 * (SH_C3_0 * dir.y * (3.0 * xx - yy))
+    sh += sh3_0 * (SH_C3_0 * dir.y * (3.0 * xx - yy))
         + sh3_1 * (SH_C3_1 * xy * dir.z) +
         + sh3_2 * (SH_C3_2 * dir.y * (4.0 * zz - xx - yy))
         + sh3_3 * (SH_C3_3 * dir.z * (2.0 * zz - 3.0 * xx - 3.0 * yy))
         + sh3_4 * (SH_C3_4 * dir.x * (4.0 * zz - xx - yy))
         + sh3_5 * (SH_C3_5 * dir.z * (xx - yy))
         + sh3_6 * (SH_C3_6 * dir.x * (xx - 3.0 * yy));
-}
 #endif
+
+    return sh;
+}
 #endif

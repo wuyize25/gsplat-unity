@@ -137,15 +137,16 @@ Shader "Gsplat/Standard"
                 // calculate the model-space view direction
                 float3 dir = normalize(mul(center.view, (float3x3)center.modelView));
 
-                color.rgb += EvaluateSH1(_PackedSH1Buffer[source.id], dir);
-
-                #ifndef SH_BANDS_1
-                color.rgb += EvaluateSH2(_PackedSH2Buffer[source.id], dir);
+                color.rgb += EvalSH(
+                    _PackedSH1Buffer[source.id],
+                #if defined(SH_BANDS_2) || defined(SH_BANDS_3)
+                    _PackedSH2Buffer[source.id],
                 #endif
-
                 #ifdef SH_BANDS_3
-                color.rgb += EvaluateSH3(_PackedSH3Buffer[source.id], dir);
+                    _PackedSH3Buffer[source.id],
                 #endif
+                    dir
+                );
 
                 #endif
 

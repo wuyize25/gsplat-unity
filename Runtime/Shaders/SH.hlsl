@@ -1,9 +1,10 @@
+// Gaussian Splatting Spherical Harmonics unpacking and evaluation functions
+// most of these are from https://github.com/sparkjsdev/spark/blob/main/src/SplatMesh.ts
+// Copyright (c) 2025 sparkjs
+// Copyright (c) 2026 Arthur Aillet
+// SPDX-License-Identifier: MIT
 
 #ifndef SH_BANDS_0
-
-// spherical Harmonics
-
-#define SH_C0 0.28209479177387814f
 
 #define SH_C1 0.4886025119029199f
 #define SH_C2_0 1.0925484305920792f

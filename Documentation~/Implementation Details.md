@@ -4,7 +4,7 @@
 
 **Material & Mesh**: The `GsplatSettings` singleton creates a set of materials from the `Gsplat.shader`, one for each SH degree (0-3). It also procedurally generates a `Mesh` that consists of multiple quads. The number of quads is defined by `SplatInstanceSize`. Each vertex of these quads has its z-coordinate encoded with an intra-instance index, which is used in the vertex shader to fetch the splat order.
 
-**Gsplat Data**: When a new Gaussian is imported, `GsplatAsset` parses the Gsplat data and feeds it to `GsplatPacker` which compresses the position, scale, rotation, and color of each splat as 4 uints. The `GsplatRendererImpl` class then creates several `GraphicsBuffer`s on the GPU to hold the data: `PackedSplatsBuffer` and `SHBuffer`. It also creates an `OrderBuffer` which will later store the sorted indices of the splats. Finally, the `GsplatRenderer` class uploads the data from the `GsplatAsset` arrays to these corresponding `GraphicsBuffer`s.
+**Gsplat Data**: When a new Gaussian is imported, `GsplatAsset` parses the Gsplat data and feeds it to `GsplatPacker` which compresses the position, scale, rotation, and color of each splat as 4 uints. It also compresses the three different SH band color data as 2, 4 and 4 uint, respectively. The `GsplatRendererImpl` class then creates several `GraphicsBuffer`s on the GPU to hold the data (`PackedSplatsBuffer`, `PackedSH1Buffer`, `PackedSH2Buffer` and `PackedSH3Buffer`). It also creates an `OrderBuffer` which will later store the sorted indices of the splats. Finally, the `GsplatRenderer` class uploads the data from the `GsplatAsset` arrays to these corresponding `GraphicsBuffer`s.
 
 ### Rendering Pipeline
 
@@ -32,7 +32,7 @@ With the splats sorted, they can now be drawn using `Gsplat.shader`.
     3.  **Fetch Splat Data**: Using this sorted `id`, it fetches the splat's packed and SH data from their respective buffers.
     4.  **Unpack Data**: Using `UnpackSplat`, it extracts position, color, scale, and rotation from the packed data.
     4.  **Covariance & Projection**: It calculates the 2D covariance matrix of the Gaussian in screen space. This determines the shape and size of the splat on the screen. It performs frustum and small-splat culling for efficiency.
-    5.  **Color Calculation**: The base color is taken from the packed data. If SHs are used, `EvalSH` is called to calculate the view-dependent color component, which is then added.
+    5.  **Color Calculation**: The base color is taken from the packed data. If SHs are used, `EvaluateSH1-3` are called to unpack the SH data and calculate the view-dependent color component, which is then added.
     6.  **Vertex Output**: It calculates the final clip-space position of the quad's vertex by offsetting it from the splat's projected center based on the 2D covariance. The final color and UV coordinates (representing the position within the Gaussian ellipse) are passed to the fragment shader.
 *   **Fragment Shader**:
     1.  It calculates the squared distance from the pixel to the center of the Gaussian ellipse using the interpolated UVs.

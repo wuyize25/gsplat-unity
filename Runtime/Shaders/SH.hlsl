@@ -2,17 +2,6 @@
 #ifndef SH_BANDS_0
 
 // spherical Harmonics
-#ifdef SH_BANDS_1
-#define SH_COEFFS 3
-#elif defined(SH_BANDS_2)
-#define SH_COEFFS 8
-#define SH_PREV_COEFFS 3
-#elif defined(SH_BANDS_3)
-#define SH_COEFFS 15
-#define SH_PREV_COEFFS 8
-#else
-#define SH_COEFFS 0
-#endif
 
 #define SH_C0 0.28209479177387814f
 

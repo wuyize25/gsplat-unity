@@ -27,8 +27,8 @@ Shader "Gsplat/Standard"
             #include "UnityCG.cginc"
             #include "Gsplat.hlsl"
             bool _GammaToLinear;
-            int _SplatCount;
-            int _SplatInstanceSize;
+            uint _SplatCount;
+            uint _SplatInstanceSize;
             float4x4 _MATRIX_M;
             StructuredBuffer<uint> _OrderBuffer;
             StructuredBuffer<uint4> _PackedSplatsBuffer;

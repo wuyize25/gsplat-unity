@@ -13,23 +13,23 @@ namespace Gsplat
 
         MaterialPropertyBlock m_propertyBlock;
         public GraphicsBuffer PackedSplatsBuffer { get; private set; }
-        public GraphicsBuffer SH1Buffer { get; private set; }
-        public GraphicsBuffer SH2Buffer { get; private set; }
-        public GraphicsBuffer SH3Buffer { get; private set; }
+        public GraphicsBuffer PackedSH1Buffer { get; private set; }
+        public GraphicsBuffer PackedSH2Buffer { get; private set; }
+        public GraphicsBuffer PackedSH3Buffer { get; private set; }
         public GraphicsBuffer OrderBuffer { get; private set; }
         public ISorterResource SorterResource { get; private set; }
 
         public bool Valid =>
             PackedSplatsBuffer != null &&
-            ((SHBands == 1 && SH1Buffer != null) ||
-            (SHBands == 2 && SH1Buffer != null && SH2Buffer != null) ||
-            (SHBands == 3 && SH1Buffer != null && SH2Buffer != null && SH3Buffer != null));
+            ((SHBands == 1 && PackedSH1Buffer != null) ||
+            (SHBands == 2 && PackedSH1Buffer != null && PackedSH2Buffer != null) ||
+            (SHBands == 3 && PackedSH1Buffer != null && PackedSH2Buffer != null && PackedSH3Buffer != null));
 
         static readonly int k_orderBuffer = Shader.PropertyToID("_OrderBuffer");
         static readonly int k_packedSplatsBuffer = Shader.PropertyToID("_PackedSplatsBuffer");
-        static readonly int k_sh1Buffer = Shader.PropertyToID("_SH1Buffer");
-        static readonly int k_sh2Buffer = Shader.PropertyToID("_SH2Buffer");
-        static readonly int k_sh3Buffer = Shader.PropertyToID("_SH3Buffer");
+        static readonly int k_packedSH1Buffer = Shader.PropertyToID("_PackedSH1Buffer");
+        static readonly int k_packedSH2Buffer = Shader.PropertyToID("_PackedSH2Buffer");
+        static readonly int k_packedSH3Buffer = Shader.PropertyToID("_PackedSH3Buffer");
         static readonly int k_matrixM = Shader.PropertyToID("_MATRIX_M");
         static readonly int k_splatInstanceSize = Shader.PropertyToID("_SplatInstanceSize");
         static readonly int k_splatCount = Shader.PropertyToID("_SplatCount");
@@ -59,13 +59,13 @@ namespace Gsplat
             PackedSplatsBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)splatCount,
                 System.Runtime.InteropServices.Marshal.SizeOf(typeof(uint)) * 4);
             if (SHBands >= 1)
-                SH1Buffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)SplatCount,
+                PackedSH1Buffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)SplatCount,
                     System.Runtime.InteropServices.Marshal.SizeOf(typeof(uint)) * 2);
             if (SHBands >= 2)
-                SH2Buffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)SplatCount,
+                PackedSH2Buffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)SplatCount,
                     System.Runtime.InteropServices.Marshal.SizeOf(typeof(uint)) * 4);
             if (SHBands == 3)
-                SH3Buffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)SplatCount,
+                PackedSH3Buffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)SplatCount,
                     System.Runtime.InteropServices.Marshal.SizeOf(typeof(uint)) * 4);
 
             OrderBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)splatCount, sizeof(uint));
@@ -80,26 +80,26 @@ namespace Gsplat
             m_propertyBlock.SetBuffer(k_orderBuffer, OrderBuffer);
 
             if (SHBands >= 1)
-                m_propertyBlock.SetBuffer(k_sh1Buffer, SH1Buffer);
+                m_propertyBlock.SetBuffer(k_packedSH1Buffer, PackedSH1Buffer);
             if (SHBands >= 2)
-                m_propertyBlock.SetBuffer(k_sh2Buffer, SH2Buffer);
+                m_propertyBlock.SetBuffer(k_packedSH2Buffer, PackedSH2Buffer);
             if (SHBands == 3)
-                m_propertyBlock.SetBuffer(k_sh3Buffer, SH3Buffer);
+                m_propertyBlock.SetBuffer(k_packedSH3Buffer, PackedSH3Buffer);
         }
 
         public void Dispose()
         {
             PackedSplatsBuffer?.Dispose();
-            SH1Buffer?.Dispose();
-            SH2Buffer?.Dispose();
-            SH3Buffer?.Dispose();
+            PackedSH1Buffer?.Dispose();
+            PackedSH2Buffer?.Dispose();
+            PackedSH3Buffer?.Dispose();
             OrderBuffer?.Dispose();
             SorterResource?.Dispose();
 
             PackedSplatsBuffer = null;
-            SH1Buffer = null;
-            SH2Buffer = null;
-            SH3Buffer = null;
+            PackedSH1Buffer = null;
+            PackedSH2Buffer = null;
+            PackedSH3Buffer = null;
             OrderBuffer = null;
         }
 

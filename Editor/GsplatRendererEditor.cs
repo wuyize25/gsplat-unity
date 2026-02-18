@@ -18,6 +18,7 @@ namespace Gsplat.Editor
 
             var renderer = (GsplatRenderer)target;
 
+            // Cap the SHDegree slider to the asset SHBands
             if (renderer.GsplatAsset != null)
                 renderer.SHDegree = (byte)EditorGUILayout.IntSlider(new GUIContent("SH Degree"), renderer.SHDegree, 0, renderer.GsplatAsset.SHBands);
 

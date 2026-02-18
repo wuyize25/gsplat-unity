@@ -34,14 +34,14 @@ Shader "Gsplat/Standard"
             StructuredBuffer<uint4> _PackedSplatsBuffer;
 
             #ifndef SH_BANDS_0
-            StructuredBuffer<uint2> _SH1Buffer;
+            StructuredBuffer<uint2> _PackedSH1Buffer;
 
             #ifndef SH_BANDS_1
-            StructuredBuffer<uint4> _SH2Buffer;
+            StructuredBuffer<uint4> _PackedSH2Buffer;
             #endif
 
             #ifdef SH_BANDS_3
-            StructuredBuffer<uint4> _SH3Buffer;
+            StructuredBuffer<uint4> _PackedSH3Buffer;
             #endif
 
             #endif
@@ -137,14 +137,14 @@ Shader "Gsplat/Standard"
                 // calculate the model-space view direction
                 float3 dir = normalize(mul(center.view, (float3x3)center.modelView));
 
-                color.rgb += EvaluateSH1(_SH1Buffer[source.id], dir);
+                color.rgb += EvaluateSH1(_PackedSH1Buffer[source.id], dir);
 
                 #ifndef SH_BANDS_1
-                color.rgb += EvaluateSH2(_SH2Buffer[source.id], dir);
+                color.rgb += EvaluateSH2(_PackedSH2Buffer[source.id], dir);
                 #endif
 
                 #ifdef SH_BANDS_3
-                color.rgb += EvaluateSH3(_SH3Buffer[source.id], dir);
+                color.rgb += EvaluateSH3(_PackedSH3Buffer[source.id], dir);
                 #endif
 
                 #endif

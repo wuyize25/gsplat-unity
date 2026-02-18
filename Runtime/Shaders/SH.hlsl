@@ -32,21 +32,21 @@
 
 float3 EvaluateSH1(uint2 packedSH1, float3 dir) {
     // Extract sint7 values packed into 2 x uint32
-    float3 sh1_0 = float3(int3(
+    float3 sh1_0 = float3(
         int(packedSH1.x << 25u) >> 25,
         int(packedSH1.x << 18u) >> 25,
         int(packedSH1.x << 11u) >> 25
-    )) / 63.0;
-    float3 sh1_1 = float3(int3(
+    ) / 63.0;
+    float3 sh1_1 = float3(
         int(packedSH1.x << 4u) >> 25,
         int((packedSH1.x >> 3u) | (packedSH1.y << 29u)) >> 25,
         int(packedSH1.y << 22u) >> 25
-    )) / 63.0;
-    float3 sh1_2 = float3(int3(
+    ) / 63.0;
+    float3 sh1_2 = float3(
         int(packedSH1.y << 15u) >> 25,
         int(packedSH1.y << 8u) >> 25,
         int(packedSH1.y << 1u) >> 25
-    )) / 63.0;
+    ) / 63.0;
 
     return sh1_0 * (-SH_C1 * dir.y)
         + sh1_1 * (SH_C1 * dir.z)
@@ -56,31 +56,31 @@ float3 EvaluateSH1(uint2 packedSH1, float3 dir) {
 #if defined(SH_BANDS_2) || defined(SH_BANDS_3)
 float3 EvaluateSH2(uint4 packedSH2, float3 dir) {
     // Extract sint8 values packed into 4 x uint32
-    float3 sh2_0 = float3(int3(
-        int(packedSH2.x << 24) >> 24,
-        int(packedSH2.x << 16) >> 24,
-        int(packedSH2.x << 8) >> 24
-    )) / 127.0;
-    float3 sh2_1 = float3(int3(
-        int(packedSH2.x) >> 24,
-        int(packedSH2.y << 24) >> 24,
-        int(packedSH2.y << 16) >> 24
-    )) / 127.0;
-    float3 sh2_2 = float3(int3(
-        int(packedSH2.y << 8) >> 24,
+    float3 sh2_0 = float3(
+        int(packedSH2.x << 24u) >> 24,
+        int(packedSH2.x << 16u) >> 24,
+        int(packedSH2.x << 8u) >> 24
+    ) / 127.0;
+    float3 sh2_1 = float3(
+        int(packedSH2.x) >> 24u,
+        int(packedSH2.y << 24u) >> 24,
+        int(packedSH2.y << 16u) >> 24
+    ) / 127.0;
+    float3 sh2_2 = float3(
+        int(packedSH2.y << 8u) >> 24,
         int(packedSH2.y) >> 24,
-        int(packedSH2.z << 24) >> 24
-    )) / 127.0;
-    float3 sh2_3 = float3(int3(
-        int(packedSH2.z << 16) >> 24,
-        int(packedSH2.z << 8) >> 24,
+        int(packedSH2.z << 24u) >> 24
+    ) / 127.0;
+    float3 sh2_3 = float3(
+        int(packedSH2.z << 16u) >> 24,
+        int(packedSH2.z << 8u) >> 24,
         int(packedSH2.z) >> 24
-    )) / 127.0;
-    float3 sh2_4 = float3(int3(
-        int(packedSH2.w << 24) >> 24,
-        int(packedSH2.w << 16) >> 24,
-        int(packedSH2.w << 8) >> 24
-    )) / 127.0;
+    ) / 127.0;
+    float3 sh2_4 = float3(
+        int(packedSH2.w << 24u) >> 24,
+        int(packedSH2.w << 16u) >> 24,
+        int(packedSH2.w << 8u) >> 24
+    ) / 127.0;
 
     return sh2_0 * (SH_C2_0 * dir.x * dir.y)
         + sh2_1 * (SH_C2_1 * dir.y * dir.z)
@@ -93,41 +93,41 @@ float3 EvaluateSH2(uint4 packedSH2, float3 dir) {
 #ifdef SH_BANDS_3
 float3 EvaluateSH3(uint4 packedSH3, float3 dir) {
     // Extract sint6 values packed into 4 x uint32
-    float3 sh3_0 = float3(int3(
+    float3 sh3_0 = float3(
         int(packedSH3.x << 26u) >> 26,
         int(packedSH3.x << 20u) >> 26,
         int(packedSH3.x << 14u) >> 26
-    )) / 31.0;
-    float3 sh3_1 = float3(int3(
+    ) / 31.0;
+    float3 sh3_1 = float3(
         int(packedSH3.x << 8u) >> 26,
         int(packedSH3.x << 2u) >> 26,
         int((packedSH3.x >> 4u) | (packedSH3.y << 28)) >> 26
-    )) / 31.0;
-    float3 sh3_2 = float3(int3(
+    ) / 31.0;
+    float3 sh3_2 = float3(
         int(packedSH3.y << 22u) >> 26,
         int(packedSH3.y << 16u) >> 26,
         int(packedSH3.y << 10u) >> 26
-    )) / 31.0;
-    float3 sh3_3 = float3(int3(
+    ) / 31.0;
+    float3 sh3_3 = float3(
         int(packedSH3.y << 4u) >> 26,
         int((packedSH3.y >> 2u) | (packedSH3.z << 30u)) >> 26,
         int(packedSH3.z << 24u) >> 26
-    )) / 31.0;
-    float3 sh3_4 = float3(int3(
+    ) / 31.0;
+    float3 sh3_4 = float3(
         int(packedSH3.z << 18u) >> 26,
         int(packedSH3.z << 12u) >> 26,
         int(packedSH3.z << 6u) >> 26
-    )) / 31.0;
-    float3 sh3_5 = float3(int3(
+    ) / 31.0;
+    float3 sh3_5 = float3(
         int(packedSH3.z) >> 26,
         int(packedSH3.w << 26u) >> 26,
         int(packedSH3.w << 20u) >> 26
-    )) / 31.0;
-    float3 sh3_6 = float3(int3(
+    ) / 31.0;
+    float3 sh3_6 = float3(
         int(packedSH3.w << 14u) >> 26,
         int(packedSH3.w << 8u) >> 26,
         int(packedSH3.w << 2u) >> 26
-    )) / 31.0;
+    ) / 31.0;
 
     float xx = dir.x * dir.x;
     float yy = dir.y * dir.y;

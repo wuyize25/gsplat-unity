@@ -126,6 +126,7 @@ namespace Gsplat.Editor
                 }
 
                 var plyInfo = ReadPlyHeader(fs);
+                var shCoeffs = plyInfo.SHPropertyCount / 3;
                 gsplatAsset.SplatCount = plyInfo.VertexCount;
                 gsplatAsset.SHBands = GsplatUtils.CalcSHBandsFromSHPropertyCount(plyInfo.SHPropertyCount);
 
@@ -150,7 +151,6 @@ namespace Gsplat.Editor
                 gsplatAsset.PackedSH1 = new uint[plyInfo.VertexCount * 2];
                 gsplatAsset.PackedSH2 = new uint[plyInfo.VertexCount * 4];
                 gsplatAsset.PackedSH3 = new uint[plyInfo.VertexCount * 4];
-                int shCoeff = GsplatUtils.SHBandsToCoefficientCount(gsplatAsset.SHBands);
 
                 gsplatAsset.PackedSplats = new uint[plyInfo.VertexCount * 4];
 
@@ -172,12 +172,12 @@ namespace Gsplat.Editor
                     for (int j = 0; j < gsplatAsset.SHBands; j++)
                     {
                         int bandSize = GsplatUtils.SHBandSize[j];
-                        float[] shBandData = new float[bandSize * 3]; // 3 floats per SH
+                        float[] shBandData = new float[bandSize * 3]; // x3 for rgb
                         for (int k = 0; k < bandSize; k++)
                         {
                             shBandData[k * 3] = properties[shReadOffset + k + plyInfo.SHOffset];
-                            shBandData[k * 3 + 1] = properties[shReadOffset + k + plyInfo.SHOffset + shCoeff];
-                            shBandData[k * 3 + 2] = properties[shReadOffset + k + plyInfo.SHOffset + shCoeff * 2];
+                            shBandData[k * 3 + 1] = properties[shReadOffset + k + plyInfo.SHOffset + shCoeffs];
+                            shBandData[k * 3 + 2] = properties[shReadOffset + k + plyInfo.SHOffset + shCoeffs * 2];
                         }
 
                         if (j == 0)

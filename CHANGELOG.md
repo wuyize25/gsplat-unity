@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - PLY importer and shaders extended to also pack Splats Spherical Harmonics as 2 uint for SH1, 6 uint for SH2 and 10 uint for SH3.
 The implementation is also heavily inspired by the SparkJS [packing implementation](https://github.com/sparkjsdev/spark/blob/main/src/SplatMesh.ts#L754).
 
-- PLY importer and shaders extended to pack Gaussian Splat data in 4 uint ([#12]https://github.com/wuyize25/gsplat-unity/pull/12).
+- PLY importer and shaders extended to pack Gaussian Splat data in 4 uint ([#12](https://github.com/wuyize25/gsplat-unity/pull/12)).
 Implementation heavily inspired by the SparkJS packing implementation.
 
 - Supports streaming data from RAM to VRAM ([#6](https://github.com/wuyize25/gsplat-unity/issues/6)). An option `Async Upload` is added to `GsplatRenderer` to enable this feature.

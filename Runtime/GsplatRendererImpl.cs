@@ -111,6 +111,7 @@ namespace Gsplat
         /// <param name="localBounds">Bounding box in object space.</param>
         /// <param name="layer">Layer used for rendering.</param>
         /// <param name="gammaToLinear">Covert color space from Gamma to Linear.</param>
+        /// <param name="shDegree">Order of SH coefficients used for rendering. The final value is capped by the SHBands property.</param>
         public void Render(uint splatCount, Transform transform, Bounds localBounds, int layer,
             bool gammaToLinear = false, int shDegree = 3)
         {

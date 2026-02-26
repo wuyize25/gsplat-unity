@@ -64,8 +64,8 @@ namespace Gsplat
             if (AsyncUpload)
 #endif
                 SetBufferDataAsync();
-            //else
-            //    SetBufferData();
+            else
+                GsplatAsset.UploadData();
         }
 
         void OnDisable()
@@ -96,8 +96,8 @@ namespace Gsplat
                     if (AsyncUpload)
 #endif
                         SetBufferDataAsync();
-                    //else
-                    //    SetBufferData();
+                    else
+                        GsplatAsset.UploadData();
                 }
             }
 

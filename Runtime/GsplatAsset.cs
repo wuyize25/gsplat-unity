@@ -100,9 +100,12 @@ namespace Gsplat
         public Material Material;
         public abstract CompressionMode Compression { get; }
 
+        protected bool m_uploaded;
+
         void OnEnable()
         {
             AllocateGPU();
+            m_uploaded = false;
         }
 
         void OnDisable()
@@ -114,6 +117,17 @@ namespace Gsplat
         public abstract void LoadFromPly(string plyPath, ProgressCallback progressCallback = null);
         protected abstract void AllocateGPU();
         protected abstract void ReleaseGPU();
+
+        public void UploadData()
+        {
+            if (m_uploaded) return;
+            _UploadData();
+            m_uploaded = true;
+        }
+
+        public abstract void UploadDataAsync();
+
+        protected abstract void _UploadData();
         public abstract void SetupMaterialPropertyBlock(MaterialPropertyBlock propertyBlock);
 
         public abstract void ComputeDepth(CommandBuffer cmd, Matrix4x4 matrixMv, ISorterResource sorterResource);

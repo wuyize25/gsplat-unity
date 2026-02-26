@@ -67,9 +67,6 @@ namespace Gsplat
                 Marshal.SizeOf(typeof(uint)) * 4);
             SHBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured,
                 GsplatUtils.SHBandsToCoefficientCount(SHBands) * (int)SplatCount, Marshal.SizeOf(typeof(Vector3)));
-            PackedSplatsBuffer.SetData(PackedSplats);
-            if (SHBands > 0)
-                SHBuffer.SetData(SHs);
         }
 
         protected override void ReleaseGPU()
@@ -78,6 +75,18 @@ namespace Gsplat
             PackedSplatsBuffer = null;
             SHBuffer?.Dispose();
             SHBuffer = null;
+        }
+
+        protected override void _UploadData()
+        {
+            PackedSplatsBuffer.SetData(PackedSplats);
+            if (SHBands > 0)
+                SHBuffer.SetData(SHs);
+        }
+
+        public override void UploadDataAsync()
+        {
+            throw new NotImplementedException();
         }
 
         public override void SetupMaterialPropertyBlock(MaterialPropertyBlock propertyBlock)

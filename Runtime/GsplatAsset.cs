@@ -97,6 +97,7 @@ namespace Gsplat
         public uint SplatCount;
         public byte SHBands; // 0, 1, 2, or 3
         public Bounds Bounds;
+        public Material Material;
         public abstract CompressionMode Compression { get; }
 
         void OnEnable()

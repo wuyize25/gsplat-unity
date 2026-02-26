@@ -98,7 +98,6 @@ namespace Gsplat
         public byte SHBands; // 0, 1, 2, or 3
         public Bounds Bounds;
         public abstract CompressionMode Compression { get; }
-        //public GsplatData Data;
 
         void OnEnable()
         {

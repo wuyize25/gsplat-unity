@@ -90,7 +90,7 @@ namespace Gsplat
         public override void ComputeDepth(CommandBuffer cmd, Matrix4x4 matrixMv, ISorterResource sorterResource)
         {
             var cs = GsplatSettings.Instance.CalcDepthSparkShader;
-            var kernelCalcDistanceSpark = 0;
+            const int kernelCalcDistanceSpark = 0;
             cmd.SetComputeIntParam(cs, k_splatCount, (int)SplatCount);
             cmd.SetComputeMatrixParam(cs, k_matrixMv, matrixMv);
             cmd.SetComputeBufferParam(cs, kernelCalcDistanceSpark, k_packedSplatsBuffer, PackedSplatsBuffer);

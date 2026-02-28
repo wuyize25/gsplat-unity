@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -100,12 +101,14 @@ namespace Gsplat
         public Material Material;
         public abstract CompressionMode Compression { get; }
 
-        protected bool m_uploaded;
+        public bool Uploaded { get; private set; }
+        public uint UploadedCount { get; protected set; }
 
         void OnEnable()
         {
             AllocateGPU();
-            m_uploaded = false;
+            Uploaded = false;
+            UploadedCount = 0;
         }
 
         void OnDisable()
@@ -120,12 +123,20 @@ namespace Gsplat
 
         public void UploadData()
         {
-            if (m_uploaded) return;
+            if (Uploaded) return;
             _UploadData();
-            m_uploaded = true;
+            Uploaded = true;
+            UploadedCount = SplatCount;
         }
 
-        public abstract void UploadDataAsync();
+        public Task UploadDataAsync()
+        {
+            if (Uploaded) return Task.CompletedTask;
+            Uploaded = true;
+            return _UploadDataAsync();
+        }
+
+        protected abstract Task _UploadDataAsync();
 
         protected abstract void _UploadData();
         public abstract void SetupMaterialPropertyBlock(MaterialPropertyBlock propertyBlock);

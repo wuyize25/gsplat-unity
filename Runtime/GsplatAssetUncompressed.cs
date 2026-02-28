@@ -4,6 +4,7 @@
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -76,19 +77,34 @@ namespace Gsplat
 
         protected override void _UploadData()
         {
-            if (m_uploaded) return;
             PositionBuffer.SetData(Positions);
             ScaleBuffer.SetData(Scales);
             RotationBuffer.SetData(Rotations);
             ColorBuffer.SetData(Colors);
             if (SHBands > 0)
                 SHBuffer.SetData(SHs);
-            m_uploaded = true;
         }
 
-        public override void UploadDataAsync()
+        protected override async Task _UploadDataAsync()
         {
-            throw new NotImplementedException();
+            while (UploadedCount < SplatCount)
+            {
+                var batchSize = (int)Math.Min(GsplatSettings.Instance.UploadBatchSize, SplatCount - UploadedCount);
+                PositionBuffer.SetData(Positions, (int)UploadedCount, (int)UploadedCount, batchSize);
+                ScaleBuffer.SetData(Scales, (int)UploadedCount, (int)UploadedCount, batchSize);
+                RotationBuffer.SetData(Rotations, (int)UploadedCount, (int)UploadedCount, batchSize);
+                ColorBuffer.SetData(Colors, (int)UploadedCount, (int)UploadedCount, batchSize);
+
+                if (SHBands > 0)
+                {
+                    var coefficientCount = GsplatUtils.SHBandsToCoefficientCount(SHBands);
+                    SHBuffer.SetData(SHs, coefficientCount * (int)UploadedCount,
+                        coefficientCount * (int)UploadedCount, coefficientCount * batchSize);
+                }
+
+                UploadedCount += (uint)batchSize;
+                await Task.Yield();
+            }
         }
 
         public override void SetupMaterialPropertyBlock(MaterialPropertyBlock propertyBlock)

@@ -65,6 +65,7 @@ namespace Gsplat
         public ComputeShader CalcDepthShader;
         public ComputeShader CalcDepthSparkShader;
         public uint SplatInstanceSize = 128;
+        public uint UploadBatchSize = 100000;
         public bool ShowImportErrors = true;
         public GsplatMaterial[] Materials; // { get; private set; }
         public Mesh Mesh { get; private set; }

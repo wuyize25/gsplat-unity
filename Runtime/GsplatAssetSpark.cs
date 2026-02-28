@@ -4,6 +4,7 @@
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -84,9 +85,23 @@ namespace Gsplat
                 SHBuffer.SetData(SHs);
         }
 
-        public override void UploadDataAsync()
+        protected override async Task _UploadDataAsync()
         {
-            throw new NotImplementedException();
+            while (UploadedCount < SplatCount)
+            {
+                var batchSize = (int)Math.Min(GsplatSettings.Instance.UploadBatchSize, SplatCount - UploadedCount);
+                PackedSplatsBuffer.SetData(PackedSplats, (int)UploadedCount, (int)UploadedCount, batchSize);
+
+                if (SHBands > 0)
+                {
+                    var coefficientCount = GsplatUtils.SHBandsToCoefficientCount(SHBands);
+                    SHBuffer.SetData(SHs, coefficientCount * (int)UploadedCount,
+                        coefficientCount * (int)UploadedCount, coefficientCount * batchSize);
+                }
+
+                UploadedCount += (uint)batchSize;
+                await Task.Yield();
+            }
         }
 
         public override void SetupMaterialPropertyBlock(MaterialPropertyBlock propertyBlock)

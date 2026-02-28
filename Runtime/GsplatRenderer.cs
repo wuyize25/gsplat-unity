@@ -14,43 +14,18 @@ namespace Gsplat
         [Range(0, 3)] public int SHDegree = 3;
         public bool GammaToLinear;
         public bool AsyncUpload;
-
-        [Tooltip("Max splat count to be uploaded per frame")]
-        public uint UploadBatchSize = 100000;
-
         public bool RenderBeforeUploadComplete = true;
 
         GsplatAsset m_prevAsset;
         GsplatRendererImpl m_renderer;
 
         public bool Valid => RenderBeforeUploadComplete ? SplatCount > 0 : SplatCount == GsplatAsset.SplatCount;
-        public uint SplatCount => GsplatAsset ? GsplatAsset.SplatCount - m_pendingSplatCount : 0;
+        public uint SplatCount => GsplatAsset ? GsplatAsset.UploadedCount : 0;
         public ISorterResource SorterResource => m_renderer.SorterResource;
 
         public void ComputeDepth(CommandBuffer cmd, Matrix4x4 matrixMv) =>
             GsplatAsset.ComputeDepth(cmd, matrixMv, SorterResource);
-
-        uint m_pendingSplatCount;
-
-
-        void SetBufferDataAsync()
-        {
-            m_pendingSplatCount = GsplatAsset.SplatCount;
-        }
-
-        /*void UploadData()
-        {
-            var offset = (int)(GsplatAsset.SplatCount - m_pendingSplatCount);
-            var count = (int)Math.Min(UploadBatchSize, m_pendingSplatCount);
-            m_pendingSplatCount -= (uint)count;
-            var asset = (GsplatAssetSpark)GsplatAsset;
-            m_renderer.PackedSplatsBuffer.SetData(asset.PackedSplats, offset, offset, count);
-            if (GsplatAsset.SHBands <= 0) return;
-            var coefficientCount = GsplatUtils.SHBandsToCoefficientCount(GsplatAsset.SHBands);
-            m_renderer.SHBuffer.SetData(asset.SHs, coefficientCount * offset,
-                coefficientCount * offset, coefficientCount * count);
-        }*/
-
+        
         void OnEnable()
         {
             GsplatSorter.Instance.RegisterGsplat(this);
@@ -63,7 +38,7 @@ namespace Gsplat
 #else
             if (AsyncUpload)
 #endif
-                SetBufferDataAsync();
+                GsplatAsset.UploadDataAsync();
             else
                 GsplatAsset.UploadData();
         }
@@ -77,9 +52,6 @@ namespace Gsplat
 
         void Update()
         {
-            //if (m_pendingSplatCount > 0)
-            //    UploadData();
-
             if (m_prevAsset != GsplatAsset)
             {
                 m_prevAsset = GsplatAsset;
@@ -95,7 +67,7 @@ namespace Gsplat
 #else
                     if (AsyncUpload)
 #endif
-                        SetBufferDataAsync();
+                        GsplatAsset.UploadDataAsync();
                     else
                         GsplatAsset.UploadData();
                 }

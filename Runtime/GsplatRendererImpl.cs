@@ -17,8 +17,6 @@ namespace Gsplat
         public GraphicsBuffer OrderBuffer { get; private set; }
         public ISorterResource SorterResource { get; private set; }
 
-        public bool Valid => true;
-
         static readonly int k_orderBuffer = Shader.PropertyToID("_OrderBuffer");
         static readonly int k_matrixM = Shader.PropertyToID("_MATRIX_M");
         static readonly int k_splatInstanceSize = Shader.PropertyToID("_SplatInstanceSize");
@@ -83,7 +81,7 @@ namespace Gsplat
         public void Render(uint splatCount, Transform transform, Bounds localBounds, int layer,
             bool gammaToLinear = false, int shDegree = 3)
         {
-            if (!Valid || !GsplatSettings.Instance.Valid || !GsplatSorter.Instance.Valid)
+            if (!GsplatSettings.Instance.Valid || !GsplatSorter.Instance.Valid)
                 return;
 
             m_propertyBlock.SetInteger(k_splatCount, (int)splatCount);

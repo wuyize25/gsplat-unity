@@ -104,25 +104,33 @@ namespace Gsplat
         public bool Uploaded { get; private set; }
         public uint UploadedCount { get; protected set; }
 
-        void OnEnable()
-        {
-            AllocateGPU();
-            Uploaded = false;
-            UploadedCount = 0;
-        }
+        bool m_allocatedGPU;
 
         void OnDisable()
         {
             ReleaseGPU();
+            m_allocatedGPU = false;
+            Uploaded = false;
         }
 
         public abstract void Allocate();
         public abstract void LoadFromPly(string plyPath, ProgressCallback progressCallback = null);
+
+        void EnsureGPUResources()
+        {
+            if (m_allocatedGPU) return;
+            AllocateGPU();
+            Uploaded = false;
+            UploadedCount = 0;
+            m_allocatedGPU = true;
+        }
+
         protected abstract void AllocateGPU();
         protected abstract void ReleaseGPU();
 
         public void UploadData()
         {
+            EnsureGPUResources();
             if (Uploaded) return;
             _UploadData();
             Uploaded = true;
@@ -131,6 +139,7 @@ namespace Gsplat
 
         public Task UploadDataAsync()
         {
+            EnsureGPUResources();
             if (Uploaded) return Task.CompletedTask;
             Uploaded = true;
             return _UploadDataAsync();

@@ -1,4 +1,4 @@
-// Copyright (c) 2026 Yize Wu
+// Copyright (c) 2026 Arthur Aillet, Yize Wu
 // SPDX-License-Identifier: MIT
 
 #ifndef GSPLAT_SPARK_INCLUDED

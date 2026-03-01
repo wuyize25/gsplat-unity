@@ -67,7 +67,7 @@ namespace Gsplat
         public uint SplatInstanceSize = 128;
         public uint UploadBatchSize = 100000;
         public bool ShowImportErrors = true;
-        public GsplatMaterial[] Materials; // { get; private set; }
+        public GsplatMaterial[] Materials;
         public Mesh Mesh { get; private set; }
 
         public bool Valid => Materials?.Length != 0 && Mesh && SplatInstanceSize > 0;
@@ -102,33 +102,6 @@ namespace Gsplat
                 hideFlags = HideFlags.HideAndDontSave
             };
         }
-
-        /*void CreateMaterials()
-        {
-            if (Materials != null)
-                foreach (var mat in Materials)
-                    DestroyImmediate(mat);
-
-            if (!Shader)
-            {
-                Materials = null;
-                return;
-            }
-
-            Materials = new Material[4];
-            for (var i = 0; i < 4; ++i)
-            {
-                Materials[i] = new Material(Shader)
-                {
-                    /*hideFlags = HideFlags.HideAndDontSave#1#
-                };
-                Materials[i].EnableKeyword($"SH_BANDS_{i}");
-                Materials[i].EnableKeyword("SPARK");
-                AssetDatabase.CreateAsset(Materials[i], GsplatUtils.k_PackagePath +
-                                                        $"Runtime/Materials/GsplatSpark{i}.mat");
-                AssetDatabase.SaveAssets();
-            }
-        }*/
 
         void OnValidate()
         {

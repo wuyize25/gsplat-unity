@@ -48,6 +48,8 @@ namespace Gsplat
 
         protected override void AllocateGPU()
         {
+            if (SplatCount == 0)
+                return;
             PositionBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)SplatCount,
                 Marshal.SizeOf(typeof(Vector3)));
             ScaleBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)SplatCount,
@@ -141,8 +143,7 @@ namespace Gsplat
             SplatCount = plyInfo.VertexCount;
             SHBands = GsplatUtils.CalcSHBandsFromSHPropertyCount(plyInfo.SHPropertyCount);
 
-            if (SHBands > 3 ||
-                GsplatUtils.SHBandsToCoefficientCount(SHBands) * 3 != plyInfo.SHPropertyCount)
+            if (SHBands > 3 || GsplatUtils.SHBandsToCoefficientCount(SHBands) * 3 != plyInfo.SHPropertyCount)
                 throw new NotSupportedException($"unexpected SH property count {plyInfo.SHPropertyCount}");
 
             if (plyInfo.PositionOffset == -1 || plyInfo.ColorOffset == -1 || plyInfo.OpacityOffset == -1 ||

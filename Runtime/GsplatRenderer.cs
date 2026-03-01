@@ -25,22 +25,11 @@ namespace Gsplat
 
         public void ComputeDepth(CommandBuffer cmd, Matrix4x4 matrixMv) =>
             GsplatAsset.ComputeDepth(cmd, matrixMv, SorterResource);
-        
+
         void OnEnable()
         {
             GsplatSorter.Instance.RegisterGsplat(this);
-            if (!GsplatAsset)
-                return;
-            m_renderer = new GsplatRendererImpl(GsplatAsset.SplatCount, GsplatAsset.SHBands);
-            m_renderer.BindGsplatAsset(GsplatAsset);
-#if UNITY_EDITOR
-            if (AsyncUpload && Application.isPlaying)
-#else
-            if (AsyncUpload)
-#endif
-                GsplatAsset.UploadDataAsync();
-            else
-                GsplatAsset.UploadData();
+            m_prevAsset = null;
         }
 
         void OnDisable()
@@ -61,7 +50,6 @@ namespace Gsplat
                         m_renderer = new GsplatRendererImpl(GsplatAsset.SplatCount, GsplatAsset.SHBands);
                     else
                         m_renderer.RecreateResources(GsplatAsset.SplatCount, GsplatAsset.SHBands);
-                    m_renderer.BindGsplatAsset(GsplatAsset);
 #if UNITY_EDITOR
                     if (AsyncUpload && Application.isPlaying)
 #else
@@ -70,9 +58,10 @@ namespace Gsplat
                         GsplatAsset.UploadDataAsync();
                     else
                         GsplatAsset.UploadData();
+                    m_renderer.BindGsplatAsset(GsplatAsset);
                 }
             }
-
+            
             if (Valid)
                 m_renderer.Render(SplatCount, transform, GsplatAsset.Bounds, gameObject.layer, GammaToLinear, SHDegree);
         }

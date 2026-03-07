@@ -33,18 +33,7 @@ namespace Gsplat
                         Directory.CreateDirectory(assetPath);
 
                     settings = CreateInstance<GsplatSettings>();
-                    settings.ComputeShader =
-                        AssetDatabase.LoadAssetAtPath<ComputeShader>(GsplatUtils.k_PackagePath +
-                                                                     "Runtime/Shaders/Gsplat.compute");
-                    settings.Materials = new GsplatMaterial[Enum.GetValues(typeof(CompressionMode)).Length];
-                    settings.Materials[(int)CompressionMode.Uncompressed] =
-                        AssetDatabase.LoadAssetAtPath<GsplatMaterial>(GsplatUtils.k_PackagePath +
-                                                                      "Runtime/Materials/GsplatUncompressed.asset");
-                    settings.Materials[(int)CompressionMode.Spark] =
-                        AssetDatabase.LoadAssetAtPath<GsplatMaterial>(GsplatUtils.k_PackagePath +
-                                                                      "Runtime/Materials/GsplatSpark.asset");
-
-                    settings.OnValidate();
+                    settings.Reset();
                     AssetDatabase.CreateAsset(settings, k_gsplatSettingsPath);
                     AssetDatabase.SaveAssets();
                 }
@@ -67,6 +56,34 @@ namespace Gsplat
         Shader m_prevShader;
         ComputeShader m_prevComputeShader;
         uint m_prevSplatInstanceSize;
+
+#if UNITY_EDITOR
+        static ComputeShader DefaultComputeShader => AssetDatabase.LoadAssetAtPath<ComputeShader>(
+            GsplatUtils.k_PackagePath +
+            "Runtime/Shaders/Gsplat.compute");
+
+        static GsplatMaterial[] DefaultMaterials
+        {
+            get
+            {
+                var materials = new GsplatMaterial[Enum.GetValues(typeof(CompressionMode)).Length];
+                materials[(int)CompressionMode.Uncompressed] =
+                    AssetDatabase.LoadAssetAtPath<GsplatMaterial>(GsplatUtils.k_PackagePath +
+                                                                  "Runtime/Materials/GsplatUncompressed.asset");
+                materials[(int)CompressionMode.Spark] =
+                    AssetDatabase.LoadAssetAtPath<GsplatMaterial>(GsplatUtils.k_PackagePath +
+                                                                  "Runtime/Materials/GsplatSpark.asset");
+                return materials;
+            }
+        }
+
+        public void Reset()
+        {
+            ComputeShader = DefaultComputeShader;
+            Materials = DefaultMaterials;
+            OnValidate();
+        }
+#endif
 
         void CreateMeshInstance()
         {

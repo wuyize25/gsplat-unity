@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 
 using UnityEngine;
-using UnityEngine.Rendering;
 
 namespace Gsplat
 {

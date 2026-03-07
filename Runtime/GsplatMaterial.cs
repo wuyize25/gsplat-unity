@@ -6,5 +6,6 @@ namespace Gsplat
     public class GsplatMaterial : ScriptableObject
     {
         public Material[] Materials;
+        public ComputeShader CalcDepthShader;
     }
 }

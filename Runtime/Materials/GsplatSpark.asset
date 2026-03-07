@@ -17,3 +17,4 @@ MonoBehaviour:
   - {fileID: 2100000, guid: efae82ae7daf6714ab9c1c8b0beca225, type: 2}
   - {fileID: 2100000, guid: f859fd53d32fcdf48aaa083cfa3d6fe1, type: 2}
   - {fileID: 2100000, guid: 10d60be3c1bad6f4a9c2bcd3980cd2c3, type: 2}
+  CalcDepthShader: {fileID: 7200000, guid: f234fe86176948548be7fad55f5d6147, type: 3}

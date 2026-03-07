@@ -24,7 +24,7 @@ namespace Gsplat
         public ISorterResource SorterResource => m_renderer.SorterResource;
 
         public void ComputeDepth(CommandBuffer cmd, Matrix4x4 matrixMv) =>
-            GsplatAsset.ComputeDepth(cmd, matrixMv, SorterResource);
+            GsplatAsset.ComputeDepth(GsplatAsset.GsplatMaterial, cmd, matrixMv, SorterResource);
 
         void OnEnable()
         {
@@ -61,7 +61,7 @@ namespace Gsplat
                     m_renderer.BindGsplatAsset(GsplatAsset);
                 }
             }
-            
+
             if (Valid)
                 m_renderer.Render(SplatCount, transform, GsplatAsset.Bounds, gameObject.layer, GammaToLinear, SHDegree);
         }

@@ -113,16 +113,16 @@ namespace Gsplat
                 propertyBlock.SetBuffer(k_shBuffer, SHBuffer);
         }
 
-        public override void ComputeDepth(CommandBuffer cmd, Matrix4x4 matrixMv, ISorterResource sorterResource)
+        public override void ComputeDepth(GsplatMaterial material, CommandBuffer cmd, Matrix4x4 matrixMv, ISorterResource sorterResource)
         {
-            var cs = GsplatSettings.Instance.CalcDepthSparkShader;
-            const int kernelCalcDistanceSpark = 0;
+            var cs = material.CalcDepthShader;
+            const int kernelCalcDepthSpark = 0;
             cmd.SetComputeIntParam(cs, k_splatCount, (int)SplatCount);
             cmd.SetComputeMatrixParam(cs, k_matrixMv, matrixMv);
-            cmd.SetComputeBufferParam(cs, kernelCalcDistanceSpark, k_packedSplatsBuffer, PackedSplatsBuffer);
-            cmd.SetComputeBufferParam(cs, kernelCalcDistanceSpark, k_depthBuffer, sorterResource.InputKeys);
-            cmd.SetComputeBufferParam(cs, kernelCalcDistanceSpark, k_orderBuffer, sorterResource.OrderBuffer);
-            cmd.DispatchCompute(cs, kernelCalcDistanceSpark, (int)GsplatUtils.DivRoundUp(SplatCount, 1024), 1, 1);
+            cmd.SetComputeBufferParam(cs, kernelCalcDepthSpark, k_packedSplatsBuffer, PackedSplatsBuffer);
+            cmd.SetComputeBufferParam(cs, kernelCalcDepthSpark, k_depthBuffer, sorterResource.InputKeys);
+            cmd.SetComputeBufferParam(cs, kernelCalcDepthSpark, k_orderBuffer, sorterResource.OrderBuffer);
+            cmd.DispatchCompute(cs, kernelCalcDepthSpark, (int)GsplatUtils.DivRoundUp(SplatCount, 1024), 1, 1);
         }
 
         public override void LoadFromPly(string plyPath, ProgressCallback progressCallback = null)
@@ -144,7 +144,7 @@ namespace Gsplat
                 plyInfo.ScaleOffset == -1 || plyInfo.RotationOffset == -1)
                 throw new NotSupportedException("missing required properties in PLY header");
 
-            Material = GsplatSettings.Instance.Materials[(int)Compression].Materials[SHBands];
+            GsplatMaterial = GsplatSettings.Instance.Materials[(int)Compression];
             Allocate();
             var buffer = new byte[plyInfo.PropertyCount * sizeof(float)];
             for (uint i = 0; i < plyInfo.VertexCount; i++)

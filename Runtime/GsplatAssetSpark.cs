@@ -187,8 +187,6 @@ namespace Gsplat
                 PackedSplats[i] = PackSplat(color, position, scale, rotation);
                 progressCallback?.Invoke("Reading vertices", i / (float)plyInfo.VertexCount);
             }
-
-            AllocateGPU();
         }
 
         /// <summary>

@@ -9,6 +9,7 @@ namespace Gsplat
     public static class GsplatUtils
     {
         public const string k_PackagePath = "Packages/wu.yize.gsplat/";
+        public static readonly Version k_Version = new("1.2.0");
 
         /// <summary>
         /// Convert float ranging between -1..1 to a -127..127 sint8

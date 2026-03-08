@@ -1,6 +1,7 @@
 ﻿// Copyright (c) 2025 Yize Wu
 // SPDX-License-Identifier: MIT
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -108,9 +109,12 @@ namespace Gsplat
 
         void OnDisable()
         {
-            ReleaseGPU();
-            m_allocatedGPU = false;
-            Uploaded = false;
+            Dispose();
+        }
+
+        void OnDestroy()
+        {
+            Dispose();
         }
 
         public abstract void Allocate();
@@ -119,10 +123,20 @@ namespace Gsplat
         void EnsureGPUResources()
         {
             if (m_allocatedGPU) return;
+            ReleaseGPU();
             AllocateGPU();
             Uploaded = false;
             UploadedCount = 0;
             m_allocatedGPU = true;
+        }
+
+        public void Dispose()
+        {
+            Debug.Log("Disposing GsplatAsset " + name);
+            ReleaseGPU();
+            Uploaded = false;
+            UploadedCount = 0;
+            m_allocatedGPU = false;
         }
 
         protected abstract void AllocateGPU();

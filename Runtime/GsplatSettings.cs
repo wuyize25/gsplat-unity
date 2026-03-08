@@ -26,6 +26,17 @@ namespace Gsplat
 
                 var settings = Resources.Load<GsplatSettings>(k_gsplatSettingsResourcesPath);
 #if UNITY_EDITOR
+                if (settings.Version < GsplatUtils.k_Version)
+                {
+                    settings.Materials = DefaultMaterials;
+                    settings.m_prevComputeShader = null;
+                    settings.Version = GsplatUtils.k_Version;
+                    settings.OnValidate();
+                    EditorUtility.SetDirty(settings);
+                    AssetDatabase.SaveAssets();
+                    Debug.Log($"Updated GsplatSettings from version {settings.Version}.");
+                }
+
                 if (!settings)
                 {
                     var assetPath = Path.GetDirectoryName(k_gsplatSettingsPath);
@@ -44,6 +55,7 @@ namespace Gsplat
             }
         }
 
+
         public ComputeShader ComputeShader;
         public uint SplatInstanceSize = 128;
         public uint UploadBatchSize = 100000;
@@ -53,9 +65,16 @@ namespace Gsplat
 
         public bool Valid => Materials?.Length != 0 && Mesh && SplatInstanceSize > 0;
 
-        Shader m_prevShader;
+        public Version Version
+        {
+            get => Version.Parse(m_version);
+            set => m_version = value.ToString();
+        }
+
         ComputeShader m_prevComputeShader;
         uint m_prevSplatInstanceSize;
+
+        [HideInInspector] [SerializeField] string m_version = "1.0.0";
 
 #if UNITY_EDITOR
         static ComputeShader DefaultComputeShader => AssetDatabase.LoadAssetAtPath<ComputeShader>(
@@ -81,6 +100,8 @@ namespace Gsplat
         {
             ComputeShader = DefaultComputeShader;
             Materials = DefaultMaterials;
+            m_prevComputeShader = null;
+            m_prevSplatInstanceSize = 0;
             OnValidate();
         }
 #endif

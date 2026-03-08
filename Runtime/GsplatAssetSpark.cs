@@ -45,9 +45,6 @@ namespace Gsplat
         [HideInInspector] public Vector3[] SHs;
         [HideInInspector] public uint4[] PackedSplats;
 
-        public GraphicsBuffer PackedSplatsBuffer { get; private set; }
-        public GraphicsBuffer SHBuffer { get; private set; }
-
         static readonly int k_packedSplatsBuffer = Shader.PropertyToID("_PackedSplatsBuffer");
         static readonly int k_shBuffer = Shader.PropertyToID("_SHBuffer");
         static readonly int k_splatCount = Shader.PropertyToID("_SplatCount");
@@ -62,64 +59,57 @@ namespace Gsplat
                 SHs = new Vector3[SplatCount * GsplatUtils.SHBandsToCoefficientCount(SHBands)];
         }
 
-        protected override void AllocateGPU()
+        public override GsplatResource CreateResource()
         {
-            if (SplatCount == 0)
-                return;
-            PackedSplatsBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)SplatCount,
-                Marshal.SizeOf(typeof(uint)) * 4);
-            SHBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured,
-                GsplatUtils.SHBandsToCoefficientCount(SHBands) * (int)SplatCount, Marshal.SizeOf(typeof(Vector3)));
+            return new GsplatResourceSpark(SplatCount, SHBands);
         }
 
-        protected override void ReleaseGPU()
+        protected override void _UploadData(GsplatResource resource)
         {
-            PackedSplatsBuffer?.Dispose();
-            PackedSplatsBuffer = null;
-            SHBuffer?.Dispose();
-            SHBuffer = null;
-        }
-
-        protected override void _UploadData()
-        {
-            PackedSplatsBuffer.SetData(PackedSplats);
+            var res = (GsplatResourceSpark)resource;
+            res.PackedSplatsBuffer.SetData(PackedSplats);
             if (SHBands > 0)
-                SHBuffer.SetData(SHs);
+                res.SHBuffer.SetData(SHs);
         }
 
-        protected override async Task _UploadDataAsync()
+        protected override async Task _UploadDataAsync(GsplatResource resource)
         {
-            while (UploadedCount < SplatCount)
+            var res = (GsplatResourceSpark)resource;
+            while (res.UploadedCount < SplatCount)
             {
-                var batchSize = (int)Math.Min(GsplatSettings.Instance.UploadBatchSize, SplatCount - UploadedCount);
-                PackedSplatsBuffer.SetData(PackedSplats, (int)UploadedCount, (int)UploadedCount, batchSize);
+                var batchSize = (int)Math.Min(GsplatSettings.Instance.UploadBatchSize, SplatCount - res.UploadedCount);
+                res.PackedSplatsBuffer.SetData(PackedSplats, (int)res.UploadedCount, (int)res.UploadedCount, batchSize);
 
                 if (SHBands > 0)
                 {
                     var coefficientCount = GsplatUtils.SHBandsToCoefficientCount(SHBands);
-                    SHBuffer.SetData(SHs, coefficientCount * (int)UploadedCount,
-                        coefficientCount * (int)UploadedCount, coefficientCount * batchSize);
+                    res.SHBuffer.SetData(SHs, coefficientCount * (int)res.UploadedCount,
+                        coefficientCount * (int)res.UploadedCount, coefficientCount * batchSize);
                 }
 
-                UploadedCount += (uint)batchSize;
+                res.UploadedCount += (uint)batchSize;
                 await Task.Yield();
             }
         }
 
-        public override void SetupMaterialPropertyBlock(MaterialPropertyBlock propertyBlock)
+        public override void SetupMaterialPropertyBlock(MaterialPropertyBlock propertyBlock,
+            GsplatResource resource)
         {
-            propertyBlock.SetBuffer(k_packedSplatsBuffer, PackedSplatsBuffer);
+            var res = (GsplatResourceSpark)resource;
+            propertyBlock.SetBuffer(k_packedSplatsBuffer, res.PackedSplatsBuffer);
             if (SHBands > 0)
-                propertyBlock.SetBuffer(k_shBuffer, SHBuffer);
+                propertyBlock.SetBuffer(k_shBuffer, res.SHBuffer);
         }
 
-        public override void ComputeDepth(GsplatMaterial material, CommandBuffer cmd, Matrix4x4 matrixMv, ISorterResource sorterResource)
+        public override void ComputeDepth(GsplatMaterial material, CommandBuffer cmd, Matrix4x4 matrixMv,
+            ISorterResource sorterResource, GsplatResource resource)
         {
+            var res = (GsplatResourceSpark)resource;
             var cs = material.CalcDepthShader;
             const int kernelCalcDepthSpark = 0;
             cmd.SetComputeIntParam(cs, k_splatCount, (int)SplatCount);
             cmd.SetComputeMatrixParam(cs, k_matrixMv, matrixMv);
-            cmd.SetComputeBufferParam(cs, kernelCalcDepthSpark, k_packedSplatsBuffer, PackedSplatsBuffer);
+            cmd.SetComputeBufferParam(cs, kernelCalcDepthSpark, k_packedSplatsBuffer, res.PackedSplatsBuffer);
             cmd.SetComputeBufferParam(cs, kernelCalcDepthSpark, k_depthBuffer, sorterResource.InputKeys);
             cmd.SetComputeBufferParam(cs, kernelCalcDepthSpark, k_orderBuffer, sorterResource.OrderBuffer);
             cmd.DispatchCompute(cs, kernelCalcDepthSpark, (int)GsplatUtils.DivRoundUp(SplatCount, 1024), 1, 1);

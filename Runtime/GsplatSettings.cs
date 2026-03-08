@@ -28,13 +28,13 @@ namespace Gsplat
 #if UNITY_EDITOR
                 if (settings.Version < GsplatUtils.k_Version)
                 {
+                    Debug.Log($"Updated GsplatSettings from version {settings.Version}.");
                     settings.Materials = DefaultMaterials;
                     settings.m_prevComputeShader = null;
                     settings.Version = GsplatUtils.k_Version;
                     settings.OnValidate();
                     EditorUtility.SetDirty(settings);
                     AssetDatabase.SaveAssets();
-                    Debug.Log($"Updated GsplatSettings from version {settings.Version}.");
                 }
 
                 if (!settings)

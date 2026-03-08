@@ -13,8 +13,6 @@ namespace Gsplat
 {
     public class GsplatSortPass
     {
-        static readonly int k_packedSplatsBuffer = Shader.PropertyToID("_PackedSplatsBuffer");
-        static readonly int k_matrixMv = Shader.PropertyToID("_MatrixMV");
         static readonly int k_eNumKeys = Shader.PropertyToID("e_numKeys");
         static readonly int k_eThreadBlocks = Shader.PropertyToID("e_threadBlocks");
         static readonly int k_bPassHist = Shader.PropertyToID("b_passHist");

@@ -19,11 +19,12 @@ namespace Gsplat
         GsplatRendererImpl m_renderer;
 
         public bool Valid => RenderBeforeUploadComplete ? SplatCount > 0 : SplatCount == GsplatAsset.SplatCount;
-        public uint SplatCount => GsplatAsset ? GsplatAsset.UploadedCount : 0;
+
+        public uint SplatCount => m_renderer != null ? m_renderer.GsplatResource?.UploadedCount ?? 0 : 0;
+
         public ISorterResource SorterResource => m_renderer.SorterResource;
 
-        public void ComputeDepth(CommandBuffer cmd, Matrix4x4 matrixMv) =>
-            GsplatAsset.ComputeDepth(GsplatAsset.GsplatMaterial, cmd, matrixMv, SorterResource);
+        public void ComputeDepth(CommandBuffer cmd, Matrix4x4 matrixMv) => m_renderer.ComputeDepth(cmd, matrixMv);
 
         void OnEnable()
         {
@@ -42,6 +43,7 @@ namespace Gsplat
         {
             if (m_prevAsset != GsplatAsset)
             {
+                m_renderer?.ReleaseGsplatAsset();
                 m_prevAsset = GsplatAsset;
                 if (GsplatAsset)
                 {
@@ -50,14 +52,11 @@ namespace Gsplat
                     else
                         m_renderer.RecreateResources(GsplatAsset.SplatCount, GsplatAsset.SHBands);
 #if UNITY_EDITOR
-                    if (AsyncUpload && Application.isPlaying)
+                    var asyncUpload = AsyncUpload && Application.isPlaying;
 #else
-                    if (AsyncUpload)
+                    var asyncUpload = AsyncUpload;
 #endif
-                        GsplatAsset.UploadDataAsync();
-                    else
-                        GsplatAsset.UploadData();
-                    m_renderer.BindGsplatAsset(GsplatAsset);
+                    m_renderer.BindGsplatAsset(GsplatAsset, asyncUpload);
                 }
             }
 

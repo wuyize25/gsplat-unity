@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace Gsplat
 {
@@ -12,7 +13,9 @@ namespace Gsplat
 
         MaterialPropertyBlock m_propertyBlock;
         GsplatAsset m_gsplatAsset;
+        int m_gsplatAssetID;
 
+        public GsplatResource GsplatResource { get; private set; }
         public GraphicsBuffer OrderBuffer { get; private set; }
         public ISorterResource SorterResource { get; private set; }
 
@@ -42,10 +45,28 @@ namespace Gsplat
             CreatePropertyBlock();
         }
 
-        public void BindGsplatAsset(GsplatAsset gsplatAsset)
+        public void ComputeDepth(CommandBuffer cmd, Matrix4x4 matrixMv) =>
+            m_gsplatAsset.ComputeDepth(m_gsplatAsset.GsplatMaterial, cmd, matrixMv, SorterResource, GsplatResource);
+
+        public void BindGsplatAsset(GsplatAsset gsplatAsset, bool asyncUpload = false)
         {
-            gsplatAsset.SetupMaterialPropertyBlock(m_propertyBlock);
+            Debug.Assert(m_gsplatAssetID == 0);
+            m_gsplatAssetID = gsplatAsset.GetInstanceID();
             m_gsplatAsset = gsplatAsset;
+            GsplatResource = GsplatResourceManager.Get(gsplatAsset);
+            gsplatAsset.SetupMaterialPropertyBlock(m_propertyBlock, GsplatResource);
+            if (asyncUpload)
+                gsplatAsset.UploadDataAsync(GsplatResource);
+            else
+                gsplatAsset.UploadData(GsplatResource);
+        }
+
+        public void ReleaseGsplatAsset()
+        {
+            GsplatResourceManager.Release(m_gsplatAssetID);
+            GsplatResource = null;
+            m_gsplatAsset = null;
+            m_gsplatAssetID = 0;
         }
 
         void CreateResources(uint splatCount)
@@ -62,6 +83,7 @@ namespace Gsplat
 
         public void Dispose()
         {
+            ReleaseGsplatAsset();
             OrderBuffer?.Dispose();
             SorterResource?.Dispose();
             OrderBuffer = null;

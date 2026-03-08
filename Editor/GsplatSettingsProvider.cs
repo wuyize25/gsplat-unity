@@ -31,7 +31,7 @@ namespace Gsplat.Editor
             EditorGUILayout.Space();
             GUILayout.BeginHorizontal();
             GUILayout.FlexibleSpace();
-            if (GUILayout.Button("Reset", GUILayout.Width(60))) 
+            if (GUILayout.Button("Reset", GUILayout.Width(60)))
                 ResetToDefaults();
             GUILayout.EndHorizontal();
             m_gsplatSettings.ApplyModifiedProperties();

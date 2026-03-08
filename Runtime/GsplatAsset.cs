@@ -1,7 +1,6 @@
 ﻿// Copyright (c) 2025 Yize Wu
 // SPDX-License-Identifier: MIT
 
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -101,70 +100,36 @@ namespace Gsplat
         public GsplatMaterial GsplatMaterial;
         public abstract CompressionMode Compression { get; }
 
-        public bool Uploaded { get; private set; }
-        public uint UploadedCount { get; protected set; }
         public Material Material => GsplatMaterial.Materials[SHBands];
-
-        bool m_allocatedGPU;
-
-        void OnDisable()
-        {
-            Dispose();
-        }
-
-        void OnDestroy()
-        {
-            Dispose();
-        }
 
         public abstract void Allocate();
         public abstract void LoadFromPly(string plyPath, ProgressCallback progressCallback = null);
 
-        void EnsureGPUResources()
+        public abstract GsplatResource CreateResource();
+
+        public void UploadData(GsplatResource resource)
         {
-            if (m_allocatedGPU) return;
-            ReleaseGPU();
-            AllocateGPU();
-            Uploaded = false;
-            UploadedCount = 0;
-            m_allocatedGPU = true;
+            if (resource.Uploaded) return;
+            _UploadData(resource);
+            resource.Uploaded = true;
+            resource.UploadedCount = SplatCount;
         }
 
-        public void Dispose()
+        public Task UploadDataAsync(GsplatResource resource)
         {
-            Debug.Log("Disposing GsplatAsset " + name);
-            ReleaseGPU();
-            Uploaded = false;
-            UploadedCount = 0;
-            m_allocatedGPU = false;
+            if (resource.Uploaded) return Task.CompletedTask;
+            resource.Uploaded = true;
+            return _UploadDataAsync(resource);
         }
 
-        protected abstract void AllocateGPU();
-        protected abstract void ReleaseGPU();
+        protected abstract Task _UploadDataAsync(GsplatResource resource);
 
-        public void UploadData()
-        {
-            EnsureGPUResources();
-            if (Uploaded) return;
-            _UploadData();
-            Uploaded = true;
-            UploadedCount = SplatCount;
-        }
+        protected abstract void _UploadData(GsplatResource resource);
 
-        public Task UploadDataAsync()
-        {
-            EnsureGPUResources();
-            if (Uploaded) return Task.CompletedTask;
-            Uploaded = true;
-            return _UploadDataAsync();
-        }
-
-        protected abstract Task _UploadDataAsync();
-
-        protected abstract void _UploadData();
-        public abstract void SetupMaterialPropertyBlock(MaterialPropertyBlock propertyBlock);
+        public abstract void SetupMaterialPropertyBlock(MaterialPropertyBlock propertyBlock,
+            GsplatResource resource);
 
         public abstract void ComputeDepth(GsplatMaterial material, CommandBuffer cmd, Matrix4x4 matrixMv,
-            ISorterResource sorterResource);
+            ISorterResource sorterResource, GsplatResource resource);
     }
 }

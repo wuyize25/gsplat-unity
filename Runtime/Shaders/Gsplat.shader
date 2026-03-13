@@ -31,6 +31,7 @@ Shader "Gsplat/Standard"
             int _SplatInstanceSize;
             int _SHDegree;
             float4x4 _MATRIX_M;
+            float _Brightness;
             StructuredBuffer<uint> _OrderBuffer;
             StructuredBuffer<float3> _PositionBuffer;
             StructuredBuffer<float3> _ScaleBuffer;
@@ -155,8 +156,8 @@ Shader "Gsplat/Standard"
                 float alpha = exp(-A * 4.0) * i.color.a;
                 if (alpha < 1.0 / 255.0) discard;
                 if (_GammaToLinear)
-                    return float4(GammaToLinearSpace(i.color.rgb) * alpha, alpha);
-                return float4(i.color.rgb * alpha, alpha);
+                    return float4(GammaToLinearSpace(i.color.rgb) * alpha * _Brightness, alpha);
+                return float4(i.color.rgb * alpha * _Brightness, alpha);
             }
             ENDHLSL
 

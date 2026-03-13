@@ -11,7 +11,7 @@ namespace Gsplat
     {
         public GsplatAsset GsplatAsset;
         [Range(0, 3)] public int SHDegree = 3;
-        [Range(0, 10)] public float Brightness = 1.0f;
+        public float Brightness = 1.0f;
         public bool GammaToLinear;
         public bool AsyncUpload;
 

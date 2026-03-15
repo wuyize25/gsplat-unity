@@ -26,17 +26,6 @@ namespace Gsplat
 
                 var settings = Resources.Load<GsplatSettings>(k_gsplatSettingsResourcesPath);
 #if UNITY_EDITOR
-                if (settings.Version < GsplatUtils.k_Version)
-                {
-                    Debug.Log($"Updated GsplatSettings from version {settings.Version}.");
-                    settings.Materials = DefaultMaterials;
-                    settings.m_prevComputeShader = null;
-                    settings.Version = GsplatUtils.k_Version;
-                    settings.OnValidate();
-                    EditorUtility.SetDirty(settings);
-                    AssetDatabase.SaveAssets();
-                }
-
                 if (!settings)
                 {
                     var assetPath = Path.GetDirectoryName(k_gsplatSettingsPath);
@@ -46,6 +35,16 @@ namespace Gsplat
                     settings = CreateInstance<GsplatSettings>();
                     settings.Reset();
                     AssetDatabase.CreateAsset(settings, k_gsplatSettingsPath);
+                    AssetDatabase.SaveAssets();
+                }
+                else if (settings.Version < GsplatUtils.k_Version)
+                {
+                    Debug.Log($"Updated GsplatSettings from version {settings.Version}.");
+                    settings.Materials = DefaultMaterials;
+                    settings.m_prevComputeShader = null;
+                    settings.Version = GsplatUtils.k_Version;
+                    settings.OnValidate();
+                    EditorUtility.SetDirty(settings);
                     AssetDatabase.SaveAssets();
                 }
 #endif
@@ -98,6 +97,7 @@ namespace Gsplat
 
         public void Reset()
         {
+            Version = GsplatUtils.k_Version;
             ComputeShader = DefaultComputeShader;
             Materials = DefaultMaterials;
             m_prevComputeShader = null;

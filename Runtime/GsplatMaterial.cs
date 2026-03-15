@@ -5,7 +5,7 @@ namespace Gsplat
     [CreateAssetMenu(menuName = "Gsplat/Gsplat Material")]
     public class GsplatMaterial : ScriptableObject
     {
-        public Material[] Materials;
+        public Material[] Materials; // materials for SH bands from 0 to 3
         public ComputeShader CalcDepthShader;
     }
 }

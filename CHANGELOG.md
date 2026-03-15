@@ -9,10 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Per\-asset GPU data buffers now allocated and cached by `GsplatResourceManager` (reference counted). When multiple instances of the same `GsplatAsset` are present in a scene, they can share the same GraphicsBuffers.
+
 - PLY importer and shaders extended to pack Gaussian Splat data in 4 uint ([#12](https://github.com/wuyize25/gsplat-unity/pull/12)).
-Implementation heavily inspired by the SparkJS packing implementation.
+Implementation heavily inspired by the SparkJS packing implementation. An option `Compression Mode` is added to `GsplatImporter` to choose between `Uncompressed` and `Spark` (packed) modes. 
 
 - Supports streaming data from RAM to VRAM ([#6](https://github.com/wuyize25/gsplat-unity/issues/6)). An option `Async Upload` is added to `GsplatRenderer` to enable this feature.
+
+### Changed
+
+- The PLY file will be imported using Spark compression mode by default. Assets imported in the previous versions will be automatically re-imported in the new mode, but `GsplatRenderer` references to the `GsplatAsset` may be lost and need to be manually re-assigned.
+
+### Removed
+
+- Switching `GsplatAsset` instances with the same point count and the same SH bands on `GsplatRenderer` no longer supports the behavior of reusing existing per\-asset GPU data buffers without recreating them.
 
 ## [1.1.2] - 2025-11-20
 

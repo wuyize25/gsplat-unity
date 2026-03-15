@@ -4,6 +4,9 @@
 // Copyright (c) 2025 Yize Wu
 // SPDX-License-Identifier: MIT
 
+#ifndef GSPLAT_INCLUDED
+#define GSPLAT_INCLUDED
+
 struct SplatSource
 {
     uint order;
@@ -37,6 +40,22 @@ struct SplatCorner
 
 const float4 discardVec = float4(0.0, 0.0, 2.0, 1.0);
 
+bool InitCenter(float4x4 modelView, float3 modelCenter, out SplatCenter center)
+{
+    float4 centerView = mul(modelView, float4(modelCenter, 1.0));
+    if (centerView.z > 0.0)
+    {
+        return false;
+    }
+    float4 centerProj = mul(UNITY_MATRIX_P, centerView);
+    centerProj.z = clamp(centerProj.z, -abs(centerProj.w), abs(centerProj.w));
+    center.view = centerView.xyz / centerView.w;
+    center.proj = centerProj;
+    center.projMat00 = UNITY_MATRIX_P[0][0];
+    center.modelView = modelView;
+    return true;
+}
+
 float3x3 QuatToMat3(float4 R)
 {
     float4 R2 = R + R;
@@ -58,7 +77,7 @@ float3x3 QuatToMat3(float4 R)
     );
 }
 
-// quat format: w, x, y, z 
+// quat format: w, x, y, z
 SplatCovariance CalcCovariance(float4 quat, float3 scale)
 {
     float3x3 rot = QuatToMat3(quat);
@@ -104,10 +123,10 @@ bool InitCorner(SplatSource source, SplatCovariance covariance, SplatCenter cent
     float3x3 cov = mul(mul(T, Vrk), transpose(T));
 
     #if GSPLAT_AA
-        // calculate AA factor
-        float detOrig = cov[0][0] * cov[1][1] - cov[0][1] * cov[0][1];
-        float detBlur = (cov[0][0] + 0.3) * (cov[1][1] + 0.3) - cov[0][1] * cov[0][1];
-        corner.aaFactor = sqrt(max(detOrig / detBlur, 0.0));
+    // calculate AA factor
+    float detOrig = cov[0][0] * cov[1][1] - cov[0][1] * cov[0][1];
+    float detBlur = (cov[0][0] + 0.3) * (cov[1][1] + 0.3) - cov[0][1] * cov[0][1];
+    corner.aaFactor = sqrt(max(detOrig / detBlur, 0.0));
     #endif
 
     float diagonal1 = cov[0][0] + 0.3;
@@ -190,7 +209,7 @@ float3 EvalSH(const inout float3 sh[SH_COEFFS], float3 dir, int degree = 3)
 {
     if (degree == 0)
         return float3(0, 0, 0);
-    
+
     float x = dir.x;
     float y = dir.y;
     float z = dir.z;
@@ -201,39 +220,41 @@ float3 EvalSH(const inout float3 sh[SH_COEFFS], float3 dir, int degree = 3)
         return result;
 
 #if defined(SH_BANDS_2) || defined(SH_BANDS_3)
-    // 2nd degree
-    float xx = x * x;
-    float yy = y * y;
-    float zz = z * z;
-    float xy = x * y;
-    float yz = y * z;
-    float xz = x * z;
+// 2nd degree
+float xx = x * x;
+float yy = y * y;
+float zz = z * z;
+float xy = x * y;
+float yz = y * z;
+float xz = x * z;
 
-    result = result + (
-        sh[3] * (SH_C2_0 * xy) +
-        sh[4] * (SH_C2_1 * yz) +
-        sh[5] * (SH_C2_2 * (2.0 * zz - xx - yy)) +
-        sh[6] * (SH_C2_3 * xz) +
-        sh[7] * (SH_C2_4 * (xx - yy))
+result= result+ (
+    sh[3]* (SH_C2_0 *xy)+
+sh [4]* (SH_C2_1 *yz)+
+sh [5]* (SH_C2_2 *(2.0 * zz- xx- yy))+
+sh [6]* (SH_C2_3 *xz)+
+sh [7]* (SH_C2_4 *(xx- yy))
     );
 
-    if (degree == 2)
+    if (degree== 2)
         return result;
 #endif
 
 #ifdef SH_BANDS_3
-    // 3rd degree
-    result = result + (
-        sh[8] * (SH_C3_0 * y * (3.0 * xx - yy)) +
-        sh[9] * (SH_C3_1 * xy * z) +
-        sh[10] * (SH_C3_2 * y * (4.0 * zz - xx - yy)) +
-        sh[11] * (SH_C3_3 * z * (2.0 * zz - 3.0 * xx - 3.0 * yy)) +
-        sh[12] * (SH_C3_4 * x * (4.0 * zz - xx - yy)) +
-        sh[13] * (SH_C3_5 * z * (xx - yy)) +
-        sh[14] * (SH_C3_6 * x * (xx - 3.0 * yy))
+// 3rd degree
+result= result+ (
+    sh[8]* (SH_C3_0 * y *(3.0 * xx- yy))+
+sh [9]* (SH_C3_1 * xy *z)+
+sh [10]* (SH_C3_2 * y *(4.0 * zz- xx- yy))+
+sh [11]* (SH_C3_3 * z *(2.0 * zz- 3.0 * xx- 3.0 * yy))+
+sh [12]* (SH_C3_4 * x *(4.0 * zz- xx- yy))+
+sh [13]* (SH_C3_5 * z *(xx- yy))+
+sh [14]* (SH_C3_6 * x *(xx- 3.0 * yy))
     );
 #endif
 
-    return result;
+return result;
 }
+#endif
+
 #endif

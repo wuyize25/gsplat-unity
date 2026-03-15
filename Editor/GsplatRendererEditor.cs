@@ -13,14 +13,14 @@ namespace Gsplat.Editor
             serializedObject.Update();
 
             DrawPropertiesExcluding(serializedObject, "m_Script",
-                nameof(GsplatRenderer.UploadBatchSize),
+                nameof(GsplatRenderer.AsyncUpload),
                 nameof(GsplatRenderer.RenderBeforeUploadComplete),
                 nameof(GsplatRenderer.Brightness)
             );
 
             var brightnessProp = serializedObject.FindProperty(nameof(GsplatRenderer.Brightness));
             float brightness = brightnessProp.floatValue;
-            
+
             // Use log scale for the slider UX
             // range from -3 (~5%) to 3 (~20x)
             float logVal = UnityEngine.Mathf.Log(
@@ -32,10 +32,10 @@ namespace Gsplat.Editor
             );
             brightnessProp.floatValue = brightness;
 
+            EditorGUILayout.PropertyField(serializedObject.FindProperty(nameof(GsplatRenderer.AsyncUpload)));
             if (serializedObject.FindProperty(nameof(GsplatRenderer.AsyncUpload)).boolValue)
             {
                 EditorGUI.indentLevel++;
-                EditorGUILayout.PropertyField(serializedObject.FindProperty(nameof(GsplatRenderer.UploadBatchSize)));
                 EditorGUILayout.PropertyField(
                     serializedObject.FindProperty(nameof(GsplatRenderer.RenderBeforeUploadComplete)));
                 EditorGUI.indentLevel--;

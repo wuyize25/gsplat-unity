@@ -26,6 +26,17 @@ namespace Gsplat
 
                 var settings = Resources.Load<GsplatSettings>(k_gsplatSettingsResourcesPath);
 #if UNITY_EDITOR
+                if (settings.Version < GsplatUtils.k_Version)
+                {
+                    Debug.Log($"Updated GsplatSettings from version {settings.Version}.");
+                    settings.Materials = DefaultMaterials;
+                    settings.m_prevComputeShader = null;
+                    settings.Version = GsplatUtils.k_Version;
+                    settings.OnValidate();
+                    EditorUtility.SetDirty(settings);
+                    AssetDatabase.SaveAssets();
+                }
+
                 if (!settings)
                 {
                     var assetPath = Path.GetDirectoryName(k_gsplatSettingsPath);
@@ -33,13 +44,7 @@ namespace Gsplat
                         Directory.CreateDirectory(assetPath);
 
                     settings = CreateInstance<GsplatSettings>();
-                    settings.Shader =
-                        AssetDatabase.LoadAssetAtPath<Shader>(GsplatUtils.k_PackagePath +
-                                                              "Runtime/Shaders/Gsplat.shader");
-                    settings.ComputeShader =
-                        AssetDatabase.LoadAssetAtPath<ComputeShader>(GsplatUtils.k_PackagePath +
-                                                                     "Runtime/Shaders/Gsplat.compute");
-                    settings.OnValidate();
+                    settings.Reset();
                     AssetDatabase.CreateAsset(settings, k_gsplatSettingsPath);
                     AssetDatabase.SaveAssets();
                 }
@@ -50,18 +55,56 @@ namespace Gsplat
             }
         }
 
-        public Shader Shader;
+
         public ComputeShader ComputeShader;
         public uint SplatInstanceSize = 128;
+        public uint UploadBatchSize = 100000;
         public bool ShowImportErrors = true;
-        public Material[] Materials { get; private set; }
+        public GsplatMaterial[] Materials;
         public Mesh Mesh { get; private set; }
 
         public bool Valid => Materials?.Length != 0 && Mesh && SplatInstanceSize > 0;
 
-        Shader m_prevShader;
+        public Version Version
+        {
+            get => Version.Parse(m_version);
+            set => m_version = value.ToString();
+        }
+
         ComputeShader m_prevComputeShader;
         uint m_prevSplatInstanceSize;
+
+        [HideInInspector] [SerializeField] string m_version = "1.0.0";
+
+#if UNITY_EDITOR
+        static ComputeShader DefaultComputeShader => AssetDatabase.LoadAssetAtPath<ComputeShader>(
+            GsplatUtils.k_PackagePath +
+            "Runtime/Shaders/Gsplat.compute");
+
+        static GsplatMaterial[] DefaultMaterials
+        {
+            get
+            {
+                var materials = new GsplatMaterial[Enum.GetValues(typeof(CompressionMode)).Length];
+                materials[(int)CompressionMode.Uncompressed] =
+                    AssetDatabase.LoadAssetAtPath<GsplatMaterial>(GsplatUtils.k_PackagePath +
+                                                                  "Runtime/Materials/GsplatUncompressed.asset");
+                materials[(int)CompressionMode.Spark] =
+                    AssetDatabase.LoadAssetAtPath<GsplatMaterial>(GsplatUtils.k_PackagePath +
+                                                                  "Runtime/Materials/GsplatSpark.asset");
+                return materials;
+            }
+        }
+
+        public void Reset()
+        {
+            ComputeShader = DefaultComputeShader;
+            Materials = DefaultMaterials;
+            m_prevComputeShader = null;
+            m_prevSplatInstanceSize = 0;
+            OnValidate();
+        }
+#endif
 
         void CreateMeshInstance()
         {
@@ -90,34 +133,8 @@ namespace Gsplat
             };
         }
 
-        void CreateMaterials()
-        {
-            if (Materials != null)
-                foreach (var mat in Materials)
-                    DestroyImmediate(mat);
-
-            if (!Shader)
-            {
-                Materials = null;
-                return;
-            }
-
-            Materials = new Material[4];
-            for (var i = 0; i < 4; ++i)
-            {
-                Materials[i] = new Material(Shader) { hideFlags = HideFlags.HideAndDontSave };
-                Materials[i].EnableKeyword($"SH_BANDS_{i}");
-            }
-        }
-
         void OnValidate()
         {
-            if (Shader != m_prevShader)
-            {
-                CreateMaterials();
-                m_prevShader = Shader;
-            }
-
             if (ComputeShader != m_prevComputeShader)
             {
                 GsplatSorter.Instance.InitSorter(ComputeShader);
@@ -134,8 +151,6 @@ namespace Gsplat
 
         void OnEnable()
         {
-            CreateMaterials();
-            m_prevShader = Shader;
             GsplatSorter.Instance.InitSorter(ComputeShader);
             m_prevComputeShader = ComputeShader;
 

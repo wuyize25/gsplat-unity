@@ -23,9 +23,18 @@ Shader "Gsplat/Standard"
             #pragma fragment frag
             #pragma require compute
             #pragma multi_compile SH_BANDS_0 SH_BANDS_1 SH_BANDS_2 SH_BANDS_3
+            #pragma multi_compile UNCOMPRESSED SPARK 
 
             #include "UnityCG.cginc"
             #include "Gsplat.hlsl"
+            #ifdef UNCOMPRESSED
+            #include "GsplatUncompressed.hlsl"
+            #endif
+            #ifdef SPARK
+            #include "GsplatSpark.hlsl"
+            #endif
+
+
             bool _GammaToLinear;
             int _SplatCount;
             int _SplatInstanceSize;
@@ -33,11 +42,6 @@ Shader "Gsplat/Standard"
             float4x4 _MATRIX_M;
             float _Brightness;
             StructuredBuffer<uint> _OrderBuffer;
-            StructuredBuffer<float3> _PositionBuffer;
-            StructuredBuffer<float3> _ScaleBuffer;
-            StructuredBuffer<float4> _RotationBuffer;
-            StructuredBuffer<float4> _ColorBuffer;
-
             #ifndef SH_BANDS_0
             StructuredBuffer<float3> _SHBuffer;
             #endif
@@ -67,31 +71,6 @@ Shader "Gsplat/Standard"
                 return true;
             }
 
-            bool InitCenter(float3 modelCenter, out SplatCenter center)
-            {
-                float4x4 modelView = mul(UNITY_MATRIX_V, _MATRIX_M);
-                float4 centerView = mul(modelView, float4(modelCenter, 1.0));
-                if (centerView.z > 0.0)
-                {
-                    return false;
-                }
-                float4 centerProj = mul(UNITY_MATRIX_P, centerView);
-                centerProj.z = clamp(centerProj.z, -abs(centerProj.w), abs(centerProj.w));
-                center.view = centerView.xyz / centerView.w;
-                center.proj = centerProj;
-                center.projMat00 = UNITY_MATRIX_P[0][0];
-                center.modelView = modelView;
-                return true;
-            }
-
-            // sample covariance vectors
-            SplatCovariance ReadCovariance(SplatSource source)
-            {
-                float4 quat = _RotationBuffer[source.id];
-                float3 scale = _ScaleBuffer[source.id];
-                return CalcCovariance(quat, scale);
-            }
-
             struct v2f
             {
                 float2 uv : TEXCOORD0;
@@ -106,32 +85,18 @@ Shader "Gsplat/Standard"
                 UNITY_SETUP_INSTANCE_ID(v);
                 UNITY_INITIALIZE_OUTPUT(v2f, o);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+                o.vertex = discardVec;
 
                 SplatSource source;
                 if (!InitSource(v, source))
-                {
-                    o.vertex = discardVec;
                     return o;
-                }
 
-                float3 modelCenter = _PositionBuffer[source.id];
                 SplatCenter center;
-                if (!InitCenter(modelCenter, center))
-                {
-                    o.vertex = discardVec;
-                    return o;
-                }
-
-                SplatCovariance cov = ReadCovariance(source);
                 SplatCorner corner;
-                if (!InitCorner(source, cov, center, corner))
-                {
-                    o.vertex = discardVec;
+                float4 color;
+                if (!InitSplatData(source, mul(UNITY_MATRIX_V, _MATRIX_M), center, corner, color))
                     return o;
-                }
 
-                float4 color = _ColorBuffer[source.id];
-                color.rgb = color.rgb * SH_C0 + 0.5;
                 #ifndef SH_BANDS_0
                 // calculate the model-space view direction
                 float3 dir = normalize(mul(center.view, (float3x3)center.modelView));
@@ -144,7 +109,7 @@ Shader "Gsplat/Standard"
                 ClipCorner(corner, color.w);
 
                 o.vertex = center.proj + float4(corner.offset.x, _ProjectionParams.x * corner.offset.y, 0, 0);
-                o.color = float4(max(color.rgb, float3(0, 0, 0)), color.a);
+                o.color = color;
                 o.uv = corner.uv;
                 return o;
             }

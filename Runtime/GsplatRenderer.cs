@@ -12,6 +12,8 @@ namespace Gsplat
         public GsplatAsset GsplatAsset;
         [Range(0, 3)] public int SHDegree = 3;
         public float Brightness = 1.0f;
+        [Tooltip("Improves rendering speed by shrinking Gaussian splats while trying to keep the impact on visual quality as small as possible.")]
+        [Range(0, 1)] public float SplatDownscaleFactor = 0.0f;
         public bool GammaToLinear;
         public bool AsyncUpload;
         public bool RenderBeforeUploadComplete = true;
@@ -63,7 +65,7 @@ namespace Gsplat
 
             if (Valid)
                 m_renderer.Render(SplatCount, transform, GsplatAsset.Bounds,
-                    gameObject.layer, GammaToLinear, SHDegree, Brightness);
+                    gameObject.layer, GammaToLinear, SHDegree, Brightness, 1.0f - SplatDownscaleFactor);
         }
     }
 }

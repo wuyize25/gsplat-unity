@@ -23,7 +23,7 @@ Shader "Gsplat/Standard"
             #pragma fragment frag
             #pragma require compute
             #pragma multi_compile SH_BANDS_0 SH_BANDS_1 SH_BANDS_2 SH_BANDS_3
-            #pragma multi_compile UNCOMPRESSED SPARK 
+            #pragma multi_compile UNCOMPRESSED SPARK
 
             #include "UnityCG.cginc"
             #include "Gsplat.hlsl"
@@ -41,6 +41,7 @@ Shader "Gsplat/Standard"
             int _SHDegree;
             float4x4 _MATRIX_M;
             float _Brightness;
+            float _ScaleFactor;
             StructuredBuffer<uint> _OrderBuffer;
             #ifndef SH_BANDS_0
             StructuredBuffer<float3> _SHBuffer;
@@ -67,7 +68,7 @@ Shader "Gsplat/Standard"
                     return false;
 
                 source.id = _OrderBuffer[source.order];
-                source.cornerUV = float2(v.vertex.x, v.vertex.y);
+                source.cornerUV = float2(v.vertex.x, v.vertex.y) * _ScaleFactor;
                 return true;
             }
 
@@ -118,7 +119,13 @@ Shader "Gsplat/Standard"
             {
                 float A = dot(i.uv, i.uv);
                 if (A > 1.0) discard;
-                float alpha = exp(-A * 4.0) * i.color.a;
+
+                float2 absUV = abs(i.uv);
+                float maxUV = max(absUV.x, absUV.y);
+
+                float falloff = -exp((maxUV - _ScaleFactor * 1.16) * 25 * _ScaleFactor);
+                float alpha = (exp(-A * 4.0) + falloff) * i.color.a;
+
                 if (alpha < 1.0 / 255.0) discard;
                 if (_GammaToLinear)
                     return float4(GammaToLinearSpace(i.color.rgb) * alpha * _Brightness, alpha);

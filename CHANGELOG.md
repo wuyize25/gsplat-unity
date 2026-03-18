@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added a downscale factor for individual splats to the GsplatRenderer. Improves rendering speed while trying to maintain visual fidelity as much as possible. (by [@Arthur-Aillet](https://github.com/Arthur-Aillet)).
+
 - Per\-asset GPU data buffers now allocated and cached by `GsplatResourceManager` (reference counted). When multiple instances of the same `GsplatAsset` are present in a scene, they can share the same GraphicsBuffers.
 
 - PLY importer and shaders extended to pack Gaussian Splat data in 4 uint ([#12](https://github.com/wuyize25/gsplat-unity/pull/12) by [@Arthur-Aillet](https://github.com/Arthur-Aillet)).

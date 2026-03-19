@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 using UnityEditor;
+using UnityEngine;
 
 namespace Gsplat.Editor
 {
@@ -33,6 +34,14 @@ namespace Gsplat.Editor
             brightnessProp.floatValue = brightness;
 
             EditorGUILayout.PropertyField(serializedObject.FindProperty(nameof(GsplatRenderer.AsyncUpload)));
+            
+            var renderOrderProp = serializedObject.FindProperty(nameof(GsplatRenderer.RenderOrder));
+            uint renderOrder = renderOrderProp.uintValue;
+
+            // RenderOrder slider depend on the MaxRenderOrder setting
+            if (GsplatSettings.Instance.MaxRenderOrder > 1)
+                renderOrderProp.uintValue = (uint)EditorGUILayout.IntSlider(new GUIContent("Render Order"), (int)renderOrder, 0, (int)GsplatSettings.Instance.MaxRenderOrder - 1);
+
             if (serializedObject.FindProperty(nameof(GsplatRenderer.AsyncUpload)).boolValue)
             {
                 EditorGUI.indentLevel++;

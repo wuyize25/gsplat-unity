@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2025 Yize Wu
+// Copyright (c) 2025 Yize Wu
 // SPDX-License-Identifier: MIT
 
 using System.Collections.Generic;

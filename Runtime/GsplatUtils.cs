@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 using System;
+using System.Runtime.CompilerServices;
 using UnityEngine;
 
 namespace Gsplat
@@ -10,6 +11,46 @@ namespace Gsplat
     {
         public const string k_PackagePath = "Packages/wu.yize.gsplat/";
         public static readonly Version k_Version = new("1.2.0");
+
+            /// Taken from Unity.Mathematics
+        /// <summary>Returns the bit pattern of a uint as a float.</summary>
+        /// <param name="x">The uint bits to copy.</param>
+        /// <returns>The float with the same bit pattern as the input.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static float asfloat(uint x)
+        {
+            unsafe
+            {
+                return *(float*)&x;
+            }
+        }
+
+        /// Taken from Unity.Mathematics
+        /// <summary>Returns the bit pattern of a float as a uint.</summary>
+        /// <param name="x">The float bits to copy.</param>
+        /// <returns>The uint with the same bit pattern as the input.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static uint asuint(float x)
+        {
+            unsafe
+            {
+                return *(uint*)&x;
+            }
+        }
+
+        // radix sort etc. friendly, see http://stereopsis.com/radix.html
+        public static uint FloatToSortableUint(float f)
+        {
+            uint fu = asuint(f);
+            uint mask = (uint)(-((int)(fu >> 31)) | 0x80000000);
+            return fu ^ mask;
+        }
+
+        public static float SortableUintToFloat(uint v)
+        {
+            uint mask = ((v >> 31) - 1) | 0x80000000u;
+            return asfloat(v ^ mask);
+        }
 
         /// <summary>
         /// Convert float ranging between -1..1 to a -127..127 sint8

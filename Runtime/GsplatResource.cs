@@ -55,7 +55,7 @@ namespace Gsplat
         public GraphicsBuffer PackedSplatsBuffer { get; private set; }
         public GraphicsBuffer SHBuffer { get; private set; }
 
-        public GsplatResourceSpark(uint splatCount, byte shBands)
+        public GsplatResourceSpark(uint splatCount, byte shBands) : base()
         {
             if (splatCount == 0)
                 return;

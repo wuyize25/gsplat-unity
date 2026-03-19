@@ -54,13 +54,14 @@ namespace Gsplat
             }
         }
 
-
         public ComputeShader ComputeShader;
         public uint SplatInstanceSize = 128;
         public uint UploadBatchSize = 100000;
         public bool ShowImportErrors = true;
         public GsplatMaterial[] Materials;
         public Mesh Mesh { get; private set; }
+        public bool DisplayGSplatsBoundingBoxes = false;
+       [Range(1, 20)] public uint MaxRenderOrder = 1;
 
         public bool Valid => Materials?.Length != 0 && Mesh && SplatInstanceSize > 0;
 

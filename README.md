@@ -31,6 +31,8 @@ Most 3DGS assets are trained in Gamma space, following the official implementati
     | Multi-pass            | ✓    | ✓    | ✗    |
     | Single Pass Instanced | ✗    | ✓    | ✗    |
 
+- Cutouts to edit Gaussians Dynamically
+
 ## Platform Compatibility
 
 The sorting pass, built upon [b0nes164/GPUSorting](https://github.com/b0nes164/GPUSorting), requires wave / subgroups operations which are only available in D3D12, Metal or Vulkan graphics APIs. WebGPU supports the subgroup operations but Unity has not implemented it. Anything using other graphics APIs will not work. I have only tested on Windows, Mac and Android, but the compatibility of this package should be similar to [aras-p/UnityGaussianSplatting](https://github.com/aras-p/UnityGaussianSplatting).

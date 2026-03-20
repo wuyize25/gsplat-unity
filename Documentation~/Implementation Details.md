@@ -4,7 +4,7 @@
 
 **Material & Mesh**: The `GsplatSettings` singleton owns global rendering resources. It:
 
-- Maintains a `GsplatMaterial` array indexed by `CompressionMode` (e.g. `Uncompressed`, `Spark`), where each `GsplatMaterial` contains `Materials` for SH bands \(0-3\) and a `CalcDepthShader`.
+- Maintains a `GsplatMaterial` array indexed by `CompressionMode` (e.g. `Uncompressed`, `Spark`), where each `GsplatMaterial` contains a `DefaultMaterial`, a `CalcDepthShader`, and an `InitOrderShader`. The `GsplatMaterial` generates lazily `Materials` for each SH band (0-3) and Render Order combination (defined by `GsplatSettings.MaxRenderOrder`).
 - Procedurally generates a `Mesh` that consists of multiple quads. The number of quads is defined by `SplatInstanceSize`. Each vertex of these quads has its z-coordinate encoded with an intra-instance index, which is used in the vertex shader to fetch the splat order.
 
 **Gsplat Data**: This package supports importing PLY file in two modes via `GsplatAsset` implementations:
@@ -14,13 +14,19 @@
 
 **GPU Resources & Lifetime**:
 
-- `GsplatRendererImpl` creates a per\-renderer `OrderBuffer` (which will later store the sorted indices of the splats) and an `ISorterResource` (sorting support buffers and key buffer).
+- `GsplatRendererImpl` creates a per\-renderer `OrderBuffer` (which will later store the sorted indices of the splats), small buffers for cutouts data (`CutoutsBuffer`, `OrderSizeBuffer`, `BoundsBuffer`) and an `ISorterResource` (sorting support buffers and key buffer).
 - Per\-asset GPU data buffers are allocated and cached by `GsplatResourceManager` (reference counted), so multiple renderers can share the same uploaded asset.
 - Upload can be synchronous (`UploadData`) or asynchronous batched (`UploadDataAsync`), controlled by `GsplatRenderer.AsyncUpload`. The renderer can optionally draw before upload completes (`RenderBeforeUploadComplete`).
 
 ### Rendering Pipeline
 
-The following two passes are performed each frame for every active camera.
+The following steps are performed each frame for every active camera.
+
+### Compute Prepass
+
+This pre-pass performs precalculations when needed. Currently, it is only used to generate the index buffer when cutouts are enabled.
+
+*   **InitOrder** (Optional): `GsplatRendererImpl.DispatchInitOrder`, if cutouts are used and have changed since last call, generate a sequential indices buffer (`OrderBuffer`), similar to `InitPayload`. While doing so, the prepass query the splats position to ignore any splats culled by a cutout. The new Bounds of the gaussian is calculated at the same time. Then, the remaining number of splats is extracted from the `OrderBuffer`.
 
 #### Sorting Pass
 
@@ -28,7 +34,7 @@ This pass sorts the splats by their depth to the camera. The sorting is performe
 
 *   **Integration**: The sorting is initiated by custom render pipeline hooks: `GsplatURPFeature` for URP, `GsplatHDRPPass` for HDRP, or `GsplatSorter.OnPreCullCamera` for BiRP. These hooks call `GsplatSorter.DispatchSort`.
 *   **Sorting Steps**:
-    1.  **InitPayload** (Optional): If the payload buffer (`b_sortPayload`) has not been initialized, fill it with sequential indices (0, 1, 2, ... `SplatCount`-1).
+    1.  **InitPayload** (Optional): If the payload buffer (`b_sortPayload`/`OrderBuffer`) has not been initialized, fill it with sequential indices (0, 1, 2, ... `SplatCount`-1).
     2.  **CalcDepth**: `IGsplat.ComputeDepth` runs an asset\-specific compute kernel (`CalcDepth` or `CalcDepthSpark`) to calculates view-space depth of each splat, and stores them into `SorterResource.InputKeys` which will be used as the sorting key.
     3.  **DeviceRadixSort**: The `Upsweep`, `Scan`, and `Downsweep` kernels execute a device-wide radix sort. It sorts the depth values in the `b_sort` buffer. Crucially, it applies the same reordering operations to the `b_sortPayload` buffer.
 *   **Result**: After the sort, the `b_sortPayload` buffer (which is the `OrderBuffer` from `GsplatRendererImpl`) contains the original splat indices, now sorted from back-to-front based on their depth to the camera.
@@ -36,7 +42,6 @@ This pass sorts the splats by their depth to the camera. The sorting is performe
 #### Render Pass
 
 With the splats sorted, they can now be drawn using `Gsplat.shader`.
-
 *   **Draw Call**: The `GsplatRendererImpl.Render` method issues a single draw call via `Graphics.RenderMeshPrimitives`. It uses GPU instancing to render multiple instances of the procedurally generated quad mesh, and a material from `GsplatAsset.Material` is selected based on the desired `SHBands`. All necessary buffers and parameters (`_MATRIX_M`, `_SplatCount`, etc.) are passed to the shader via a `MaterialPropertyBlock`.
 *   **Vertex Shader**:
     1.  **Index Calculation**: It determines the final splat `order` to render by combining the `instanceID` with the intra-instance index stored in the vertex's z-component.

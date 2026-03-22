@@ -97,9 +97,9 @@ namespace Gsplat
         public uint SplatCount;
         public byte SHBands; // 0, 1, 2, or 3
         public Bounds Bounds;
-        public GsplatMaterial GsplatMaterial;
         public abstract CompressionMode Compression { get; }
 
+        public GsplatMaterial GsplatMaterial => GsplatSettings.Instance.Materials[(int)Compression];
         public Material Material => GsplatMaterial.Materials[SHBands];
 
         public abstract void Allocate();
@@ -126,8 +126,7 @@ namespace Gsplat
 
         protected abstract void _UploadData(GsplatResource resource);
 
-        public abstract void SetupMaterialPropertyBlock(MaterialPropertyBlock propertyBlock,
-            GsplatResource resource);
+        public abstract void SetupMaterialPropertyBlock(MaterialPropertyBlock propertyBlock, GsplatResource resource);
 
         public abstract void ComputeDepth(GsplatMaterial material, CommandBuffer cmd, Matrix4x4 matrixMv,
             ISorterResource sorterResource, GsplatResource resource);

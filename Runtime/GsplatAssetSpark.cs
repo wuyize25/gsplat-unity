@@ -134,7 +134,6 @@ namespace Gsplat
                 plyInfo.ScaleOffset == -1 || plyInfo.RotationOffset == -1)
                 throw new NotSupportedException("missing required properties in PLY header");
 
-            GsplatMaterial = GsplatSettings.Instance.Materials[(int)Compression];
             Allocate();
             var buffer = new byte[plyInfo.PropertyCount * sizeof(float)];
             for (uint i = 0; i < plyInfo.VertexCount; i++)

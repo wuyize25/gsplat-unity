@@ -1,6 +1,7 @@
 ﻿// Copyright (c) 2025 Yize Wu
 // SPDX-License-Identifier: MIT
 
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -21,7 +22,8 @@ namespace Gsplat
         GsplatAsset m_prevAsset;
         GsplatRendererImpl m_renderer;
 
-        public bool Valid => RenderBeforeUploadComplete ? SplatCount > 0 : SplatCount == GsplatAsset.SplatCount;
+        public bool Valid => GsplatAsset &&
+                             (RenderBeforeUploadComplete ? SplatCount > 0 : SplatCount == GsplatAsset.SplatCount);
 
         public uint SplatCount => m_renderer != null ? m_renderer.GsplatResource?.UploadedCount ?? 0 : 0;
 
@@ -44,6 +46,8 @@ namespace Gsplat
 
         void Update()
         {
+            if (!GsplatAsset)
+                m_prevAsset = null;
             if (m_prevAsset != GsplatAsset)
             {
                 m_renderer?.ReleaseGsplatAsset();
@@ -66,6 +70,22 @@ namespace Gsplat
             if (Valid)
                 m_renderer.Render(SplatCount, transform, GsplatAsset.Bounds,
                     gameObject.layer, GammaToLinear, SHDegree, Brightness, 1.0f - SplatDownscaleFactor);
+        }
+
+#if UNITY_EDITOR
+        [SerializeField, HideInInspector] string m_assetGuid;
+        public string AssetGuid => m_assetGuid;
+        void OnValidate()
+        {
+            if (GsplatAsset &&
+                AssetDatabase.TryGetGUIDAndLocalFileIdentifier(GsplatAsset, out var guid, out var localId))
+                m_assetGuid = guid;
+        }
+#endif
+
+        public void ReloadAsset()
+        {
+            m_prevAsset = null;
         }
     }
 }

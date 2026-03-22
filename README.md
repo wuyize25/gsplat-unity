@@ -67,7 +67,7 @@ The `SH Degree` option sets the order of SH coefficients used for rendering. The
 
 The `Gamma To Linear` option is offered as a workaround to render Gamma Space Gsplat Assets in a project using the Linear Space. This will degrade the rendering quality, so changing the color space of the project or retraining the 3DGS asset is the recommended approach. If your project uses a linear color space and you do not wish to retrain your 3DGS assets, it is recommended to use [aras-p/UnityGaussianSplatting](https://github.com/aras-p/UnityGaussianSplatting).
 
-The `Brightness` option allows post-hoc scaling of the Gsplat Asset's brightness. This is functional regardless of colour space choices, but will degrade quality if the project and assets are in Gamma Space. This can be most smoothly controlled via the `Log Brightness` slider.
+The `Brightness` option allows post-hoc scaling of the Gsplat Asset's brightness. This is functional regardless of color space choices, but will degrade quality if the project and assets are in Gamma Space. This can be most smoothly controlled via the `Log Brightness` slider.
 
 The `Async Upload` option enables streaming data from RAM to VRAM, which can help reduce lags when loading the `GsplatRenderer` or setting its enable property to true. When enabled, the renderer can optionally draw before upload completes (`Render Before Upload Complete`), which will render the asset with whatever data has been uploaded so far.
 

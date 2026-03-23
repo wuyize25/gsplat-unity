@@ -61,7 +61,11 @@ namespace Gsplat
         public GsplatMaterial[] Materials;
         public Mesh Mesh { get; private set; }
         public bool DisplayGSplatsBoundingBoxes = false;
-       [Range(1, 20)] public uint MaxRenderOrder = 1;
+        [Range(1, 20)] public uint MaxRenderOrder = 1;
+        [Tooltip("If a camera moves more that this threshold, each GsplatRenderer compute sorting and cutouts regardless of refresh rate")]
+        [Range(0.05f, 1f)] public float CameraTranslationRefreshTreshold = 0.2f;
+        [Tooltip("If a camera rotates more that this threshold, each GsplatRenderer compute sorting and cutouts refresh regardless of refresh rate")]
+        [Range(0.2f, 30f)] public float CameraRotationRefreshTreshold = 10;
 
         public bool Valid => Materials?.Length != 0 && Mesh && SplatInstanceSize > 0;
 

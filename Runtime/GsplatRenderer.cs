@@ -10,6 +10,13 @@ namespace Gsplat
     [ExecuteAlways]
     public class GsplatRenderer : MonoBehaviour, IGsplat
     {
+        public enum GsplatSortMode
+        {
+            Always,
+            SortEveryNFrames,
+            CutoutsEveryNSorts,
+        }
+
         public GsplatAsset GsplatAsset;
         [Range(0, 3)] public int SHDegree = 3;
         [HideInInspector] public uint RenderOrder = 0;
@@ -43,6 +50,12 @@ namespace Gsplat
                 return cutouts.ToArray();
             }
         }
+        public bool ComputeSortRequired => m_renderer.ComputeSortRequired;
+        public bool ComputeCutoutsRequired => m_renderer.ComputeCutoutsRequired;
+        public GsplatSortMode SortMode = GsplatSortMode.Always;
+        [HideInInspector] public uint SortRefreshRate = 1;
+        [HideInInspector] public uint CutoutsRefreshRate = 1;
+
         public void ComputeDepth(CommandBuffer cmd, Matrix4x4 matrixMv) => m_renderer.ComputeDepth(cmd, matrixMv);
 
         void OnEnable()
@@ -56,6 +69,16 @@ namespace Gsplat
             GsplatSorter.Instance.UnregisterGsplat(this);
             m_renderer?.Dispose();
             m_renderer = null;
+        }
+
+        void OnValidate()
+        {
+            ForceRefresh();
+        }
+
+        public void ForceRefresh()
+        {
+            m_renderer?.ForceRefresh();
         }
 
 #if UNITY_EDITOR
@@ -93,6 +116,7 @@ namespace Gsplat
 
             if (Valid && GsplatSettings.Instance.Valid && GsplatSorter.Instance.Valid)
             {
+                m_renderer.EvaluateRefreshRequired(SortMode, SortRefreshRate - 1, CutoutsRefreshRate - 1);
                 m_renderer.DispatchInitOrder(Cutouts, transform.localToWorldMatrix, CutoutsUpdateBounds);
                 m_renderer.Render(transform, gameObject.layer, GammaToLinear, SHDegree, Brightness, RenderOrder);
             }

@@ -19,6 +19,29 @@ namespace Gsplat.Editor
                 nameof(GsplatRenderer.Brightness)
             );
 
+            var renderer = (GsplatRenderer)target;
+            // Sort Refresh Rate slider only if on correct mode
+            if (renderer.SortMode == GsplatRenderer.GsplatSortMode.SortEveryNFrames || renderer.SortMode == GsplatRenderer.GsplatSortMode.CutoutsEveryNSorts)
+            {
+                var newSortRefreshRate = (uint)EditorGUILayout.IntSlider(new GUIContent("Sort Refresh Rate"), (int)renderer.SortRefreshRate, 1, 60);
+                if (newSortRefreshRate != renderer.SortRefreshRate)
+                {
+                    renderer.SortRefreshRate = newSortRefreshRate;
+                    renderer.ForceRefresh();
+                }
+            }
+
+            // Cutouts Refresh Rate slider only if on correct mode
+            if (renderer.SortMode == GsplatRenderer.GsplatSortMode.CutoutsEveryNSorts)
+            {
+                var newCutoutsRefreshRate = (uint)EditorGUILayout.IntSlider(new GUIContent("Cutouts Refresh Rate"), (int)renderer.CutoutsRefreshRate, 1, 60);
+                if (newCutoutsRefreshRate != renderer.CutoutsRefreshRate)
+                {
+                    renderer.CutoutsRefreshRate = newCutoutsRefreshRate;
+                    renderer.ForceRefresh();
+                }
+            }
+
             var brightnessProp = serializedObject.FindProperty(nameof(GsplatRenderer.Brightness));
             float brightness = brightnessProp.floatValue;
 
@@ -34,7 +57,7 @@ namespace Gsplat.Editor
             brightnessProp.floatValue = brightness;
 
             EditorGUILayout.PropertyField(serializedObject.FindProperty(nameof(GsplatRenderer.AsyncUpload)));
-            
+
             var renderOrderProp = serializedObject.FindProperty(nameof(GsplatRenderer.RenderOrder));
             uint renderOrder = renderOrderProp.uintValue;
 

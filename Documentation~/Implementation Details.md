@@ -20,7 +20,7 @@
 
 ### Rendering Pipeline
 
-The following steps are performed each frame for every active camera.
+The following steps are performed each frame for every active camera, except for the Sorting pass, which is executed only every Nth frame, and the Compute pass, which is executed only every Nth sort, as configured in the `GsplatRenderer`. The sorting and compute are also triggered when a camera moves past a certain threshold and can be manually triggered.
 
 ### Compute Prepass
 

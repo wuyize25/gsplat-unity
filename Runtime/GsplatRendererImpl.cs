@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: MIT
 
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
+using Vector3 = UnityEngine.Vector3;
 
 namespace Gsplat
 {
@@ -33,6 +35,12 @@ namespace Gsplat
         static readonly int k_shDegree = Shader.PropertyToID("_SHDegree");
         static readonly int k_brightness = Shader.PropertyToID("_Brightness");
 
+        private uint m_framesBeforeRecomputeSort = 0;
+        private uint m_sortsBeforeRecomputeCutouts = 0;
+        public bool ComputeSortRequired = true;
+        public bool ComputeCutoutsRequired = true;
+        private Dictionary<int, (Vector3, Vector3)> m_prevCamTransforms;
+
         private bool m_handlingCutouts = true;
         private GsplatCutout.ShaderData[] m_cutoutsData;
 
@@ -40,6 +48,7 @@ namespace Gsplat
         {
             SplatCount = splatCount;
             SHBands = shBands;
+            m_prevCamTransforms = new Dictionary<int, (Vector3, Vector3)>();
             CreateResources(splatCount);
             CreatePropertyBlock();
         }
@@ -83,6 +92,9 @@ namespace Gsplat
 
         public void DispatchInitOrder(GsplatCutout[] Cutouts, Matrix4x4 matrixWorld, bool cutoutsUpdateBounds)
         {
+            if (!ComputeCutoutsRequired)
+                return;
+
             if (Cutouts.Length == 0)
             {
                 if (m_handlingCutouts)
@@ -173,6 +185,69 @@ namespace Gsplat
             OrderSizeBuffer = null;
             BoundsBuffer?.Dispose();
             BoundsBuffer = null;
+        }
+
+        public void ForceRefresh()
+        {
+            m_framesBeforeRecomputeSort = 0;
+            m_sortsBeforeRecomputeCutouts = 0;
+        }
+
+        public void RefreshOnCameraMove()
+        {
+            foreach (var cam in Camera.allCameras)
+            {
+                var id = cam.GetInstanceID();
+                if (m_prevCamTransforms.TryGetValue(id, out (Vector3, Vector3)prevCamTransform))
+                {
+                    (Vector3 prevCamPos, Vector3 prevCamRot) = prevCamTransform;
+
+                    if ((cam.transform.position - prevCamPos).magnitude > GsplatSettings.Instance.CameraTranslationRefreshTreshold
+                        || (cam.transform.eulerAngles - prevCamRot).magnitude > GsplatSettings.Instance.CameraRotationRefreshTreshold)
+                    {
+                        m_prevCamTransforms[id] = (cam.transform.position, cam.transform.eulerAngles);
+                        ForceRefresh();
+                    }
+                }
+                else
+                {
+                    m_prevCamTransforms.Add(cam.GetInstanceID(), (cam.transform.position, cam.transform.eulerAngles));
+                    ForceRefresh();
+                }
+            }
+        }
+
+        public void EvaluateRefreshRequired(GsplatRenderer.GsplatSortMode mode, uint sortRefreshRate, uint cutoutsRefreshRate)
+        {
+            if (mode == GsplatRenderer.GsplatSortMode.Always)
+            {
+                sortRefreshRate = 0;
+                cutoutsRefreshRate = 0;
+            }
+            if (mode == GsplatRenderer.GsplatSortMode.SortEveryNFrames)
+            {
+                cutoutsRefreshRate = 0;
+            }
+
+            RefreshOnCameraMove();
+
+            ComputeSortRequired = false;
+            ComputeCutoutsRequired = false;
+
+            if (m_framesBeforeRecomputeSort == 0)
+            {
+                m_framesBeforeRecomputeSort = sortRefreshRate;
+                ComputeSortRequired = true;
+                if (m_sortsBeforeRecomputeCutouts == 0)
+                {
+                    m_sortsBeforeRecomputeCutouts = cutoutsRefreshRate;
+                    ComputeCutoutsRequired = true;
+                }
+                else
+                    m_sortsBeforeRecomputeCutouts -= 1;
+            }
+            else
+                m_framesBeforeRecomputeSort -= 1;
         }
 
         /// <summary>

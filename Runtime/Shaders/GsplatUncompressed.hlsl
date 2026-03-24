@@ -15,7 +15,7 @@ StructuredBuffer<float3> _SHBuffer;
 #endif
 
 bool InitSplatData(SplatSource source, float4x4 modelView, out SplatCenter center, out SplatCorner corner,
-                   out float4 color)
+                   out float4 color, float cullArea, float frustumMultiplier)
 {
     float3 modelCenter = _PositionBuffer[source.id];
     if (!InitCenter(modelView, modelCenter, center))
@@ -23,7 +23,7 @@ bool InitSplatData(SplatSource source, float4x4 modelView, out SplatCenter cente
     float4 quat = _RotationBuffer[source.id];
     float3 scale = _ScaleBuffer[source.id];
     SplatCovariance cov = CalcCovariance(quat, scale);
-    if (!InitCorner(source, cov, center, corner))
+    if (!InitCorner(source, cov, center, corner, cullArea, frustumMultiplier))
         return false;
     color = _ColorBuffer[source.id];
     color.rgb = color.rgb * SH_C0 + 0.5;

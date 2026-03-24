@@ -24,6 +24,9 @@ namespace Gsplat
         public float Brightness = 1.0f;
         [Tooltip("Improves rendering speed by shrinking Gaussian splats while trying to keep the impact on visual quality as small as possible.")]
         [Range(0, 1)] public float SplatDownscaleFactor = 0.0f;
+        [Range(2, 75)] public float CullArea = 2.0f;
+        [Range(1.0f, 1.2f)] public float FrustumMultiplier = 1.0f;
+        [Range(1.0f, 70.0f)] public float AlphaCulling = 1.0f;
         public bool GammaToLinear;
         public bool AsyncUpload;
         public bool RenderBeforeUploadComplete = true;
@@ -137,7 +140,7 @@ namespace Gsplat
             {
                 m_renderer.EvaluateRefreshRequired(SortMode, SortRefreshRate - 1, CutoutsRefreshRate - 1);
                 m_renderer.DispatchInitOrder(Cutouts, transform.localToWorldMatrix, CutoutsUpdateBounds);
-                m_renderer.Render(transform, gameObject.layer, GammaToLinear, SHDegree, Brightness, 1.0f - SplatDownscaleFactor, RenderOrder);
+                m_renderer.Render(transform, gameObject.layer, GammaToLinear, SHDegree, Brightness, 1.0f - SplatDownscaleFactor, CullArea, FrustumMultiplier, AlphaCulling, RenderOrder);
             }
         }
     }

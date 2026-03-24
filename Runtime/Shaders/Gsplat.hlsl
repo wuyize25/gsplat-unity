@@ -111,7 +111,7 @@ SplatCovariance CalcCovariance(float4 quat, float3 scale)
 }
 
 // calculate the clip-space offset from the center for this gaussian
-bool InitCorner(SplatSource source, SplatCovariance covariance, SplatCenter center, out SplatCorner corner)
+bool InitCorner(SplatSource source, SplatCovariance covariance, SplatCenter center, out SplatCorner corner, float cullArea, float frustumMultiplier)
 {
     float3 covA = covariance.covA;
     float3 covB = covariance.covB;
@@ -159,9 +159,8 @@ bool InitCorner(SplatSource source, SplatCovariance covariance, SplatCenter cent
     float l1 = 2.0 * min(sqrt(2.0 * lambda1), vmin);
     float l2 = 2.0 * min(sqrt(2.0 * lambda2), vmin);
 
-    // early-out gaussians smaller than 2 pixels
-    if (l1 < 2.0 && l2 < 2.0)
-    {
+    // early-out gaussians too small
+    if (l1 * l2 < cullArea) {
         return false;
     }
 
@@ -169,7 +168,7 @@ bool InitCorner(SplatSource source, SplatCovariance covariance, SplatCenter cent
 
     // cull against frustum x/y axes
     float maxL = max(l1, l2);
-    if (any(abs(center.proj.xy) - float2(maxL, maxL) * c > center.proj.ww))
+    if (any(abs(center.proj.xy * frustumMultiplier) - float2(maxL, maxL) * c > center.proj.ww))
     {
         return false;
     }

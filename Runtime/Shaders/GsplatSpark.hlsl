@@ -76,7 +76,7 @@ void UnpackSplat(uint4 packedData, out float4 color, out float3 modelCenter, out
 }
 
 bool InitSplatData(SplatSource source, float4x4 modelView, out SplatCenter center, out SplatCorner corner,
-                   out float4 color)
+                   out float4 color, float cullArea, float frustumMultiplier)
 {
     uint4 packedSplat = _PackedSplatsBuffer[source.id];
     float3 modelCenter, scale;
@@ -85,7 +85,7 @@ bool InitSplatData(SplatSource source, float4x4 modelView, out SplatCenter cente
     if (!InitCenter(modelView, modelCenter, center))
         return false;
     SplatCovariance cov = CalcCovariance(quat, scale);
-    if (!InitCorner(source, cov, center, corner))
+    if (!InitCorner(source, cov, center, corner, cullArea, frustumMultiplier))
         return false;
     return true;
 }

@@ -41,6 +41,9 @@ Shader "Gsplat/Standard"
             float4x4 _MATRIX_M;
             float _Brightness;
             float _ScaleFactor;
+            float _CullArea;
+            float _FrustumMultiplier;
+            float _AlphaCulling;
             StructuredBuffer<uint> _OrderBuffer;
 
             struct appdata
@@ -91,7 +94,10 @@ Shader "Gsplat/Standard"
                 SplatCenter center;
                 SplatCorner corner;
                 float4 color;
-                if (!InitSplatData(source, mul(UNITY_MATRIX_V, _MATRIX_M), center, corner, color))
+                if (!InitSplatData(source, mul(UNITY_MATRIX_V, _MATRIX_M), center, corner, color, _CullArea, _FrustumMultiplier))
+                    return o;
+
+                if (color.a < _AlphaCulling)
                     return o;
 
                 #ifndef SH_BANDS_0

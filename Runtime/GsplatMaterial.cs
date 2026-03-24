@@ -10,6 +10,12 @@ namespace Gsplat
     {
         public Material DefaultMaterial;
         private Material[][] m_material;
+
+        public void Reset()
+        {
+            m_material = null;
+        }
+
         public Material[][] Materials // materials generated with SH bands from 0 to 3 and custom renderOrders
         {
             get

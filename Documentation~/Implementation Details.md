@@ -47,12 +47,14 @@ With the splats sorted, they can now be drawn using `Gsplat.shader`.
     1.  **Index Calculation**: It determines the final splat `order` to render by combining the `instanceID` with the intra-instance index stored in the vertex's z-component.
     2.  **Fetch Sorted ID**: It uses this `order` to look up the actual splat `id` from the `_OrderBuffer`. This `id` corresponds to the correct, depth-sorted splat.
     3.  **Fetch Splat Data**: Using this sorted `id`, it fetches (extracts) the splat's position, rotation, scale, color, and SH data from their respective buffers.
-    4.  **Covariance & Projection**: It calculates the 2D covariance matrix of the Gaussian in screen space. This determines the shape and size of the splat on the screen. It performs frustum and small-splat culling for efficiency.
-    5.  **SH Calculation** (Optional): If SHs are used, `EvalSH` is called to calculate the view-dependent color component, which is then added to the base color.
-    6.  **Vertex Output**: It calculates the final clip-space position of the quad's vertex by offsetting it from the splat's projected center based on the 2D covariance. The final color and UV coordinates (representing the position within the Gaussian ellipse) are passed to the fragment shader.
+    4.  **Apply Scale factor**: The splat's UV coordinates are multiplied by the splat's `_ScaleFactor`, cropping the splat to the given scale.
+    5.  **Covariance & Projection**: It calculates the 2D covariance matrix of the Gaussian in screen space. This determines the shape and size of the splat on the screen. It performs frustum and small-splat culling for efficiency.
+    6.  **SH Calculation** (Optional): If SHs are used, `EvalSH` is called to calculate the view-dependent color component, which is then added to the base color.
+    7.  **Vertex Output**: It calculates the final clip-space position of the quad's vertex by offsetting it from the splat's projected center based on the 2D covariance. The final color and UV coordinates (representing the position within the Gaussian ellipse) are passed to the fragment shader.
 *   **Fragment Shader**:
     1.  It calculates the squared distance from the pixel to the center of the Gaussian ellipse using the interpolated UVs.
     2.  If the pixel is outside the ellipse (`A > 1.0`), it is discarded.
-    3.  The final alpha is calculated using an exponential falloff based on the distance, modulated by the splat's opacity. Pixels with very low alpha are discarded.
-    4.  The final color is the vertex color multiplied by the calculated alpha. An optional `Gamma To Linear` conversion can be applied before output.
+    3.  The alpha is calculated using an exponential falloff based on the distance, modulated by the splat's opacity. Pixels with very low alpha are discarded.
+    4.  An additional falloff, based on the scaling factor, is added to the alpha to keep the gaussian splats smooth. This prevents the harsh edges of cropped splats.
+    5.  The final color is the vertex color multiplied by the calculated alpha. An optional `Gamma To Linear` conversion can be applied before output.
 

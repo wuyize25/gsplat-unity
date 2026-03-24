@@ -152,6 +152,12 @@ namespace Gsplat
                 CreateMeshInstance();
                 m_prevSplatInstanceSize = SplatInstanceSize;
             }
+#if UNITY_EDITOR
+            foreach (var mat in Materials)
+            {
+                mat.Reset();
+            }
+#endif
         }
 
         void OnEnable()

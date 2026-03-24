@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 using System.Linq;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -14,6 +15,8 @@ namespace Gsplat
         [Range(0, 3)] public int SHDegree = 3;
         [HideInInspector] public uint RenderOrder = 0;
         public float Brightness = 1.0f;
+        [Tooltip("Improves rendering speed by shrinking Gaussian splats while trying to keep the impact on visual quality as small as possible.")]
+        [Range(0, 1)] public float SplatDownscaleFactor = 0.0f;
         public bool GammaToLinear;
         public bool AsyncUpload;
         public bool RenderBeforeUploadComplete = true;
@@ -22,7 +25,8 @@ namespace Gsplat
         GsplatAsset m_prevAsset;
         GsplatRendererImpl m_renderer;
 
-        public bool Valid => RenderBeforeUploadComplete ? SplatCount > 0 : SplatCount == GsplatAsset.SplatCount;
+        public bool Valid => GsplatAsset &&
+                             (RenderBeforeUploadComplete ? SplatCount > 0 : SplatCount == GsplatAsset.SplatCount);
 
         public uint SplatCount => m_renderer != null ? m_renderer.GsplatResource?.UploadedCount ?? 0 : 0;
 
@@ -68,10 +72,26 @@ namespace Gsplat
                 Gizmos.DrawWireCube(Bounds.center, Bounds.size);
             }
         }
+
+        [SerializeField, HideInInspector] string m_assetGuid;
+        public string AssetGuid => m_assetGuid;
+        void OnValidate()
+        {
+            if (GsplatAsset &&
+                AssetDatabase.TryGetGUIDAndLocalFileIdentifier(GsplatAsset, out var guid, out var localId))
+                m_assetGuid = guid;
+        }
 #endif // #if UNITY_EDITOR
+
+        public void ReloadAsset()
+        {
+            m_prevAsset = null;
+        }
 
         public void Update()
         {
+            if (!GsplatAsset)
+                m_prevAsset = null;
             if (m_prevAsset != GsplatAsset)
             {
                 m_renderer?.ReleaseGsplatAsset();
@@ -94,7 +114,7 @@ namespace Gsplat
             if (Valid && GsplatSettings.Instance.Valid && GsplatSorter.Instance.Valid)
             {
                 m_renderer.DispatchInitOrder(Cutouts, transform.localToWorldMatrix, CutoutsUpdateBounds);
-                m_renderer.Render(transform, gameObject.layer, GammaToLinear, SHDegree, Brightness, RenderOrder);
+                m_renderer.Render(transform, gameObject.layer, GammaToLinear, SHDegree, Brightness, 1.0f - SplatDownscaleFactor, RenderOrder);
             }
         }
     }

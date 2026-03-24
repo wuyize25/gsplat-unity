@@ -37,7 +37,7 @@ namespace Gsplat
                     AssetDatabase.CreateAsset(settings, k_gsplatSettingsPath);
                     AssetDatabase.SaveAssets();
                 }
-                else if (settings.Version < GsplatUtils.k_Version)
+                else if (settings.Version < new Version("1.2.0"))
                 {
                     Debug.Log($"Updated GsplatSettings from version {settings.Version}.");
                     settings.Materials = DefaultMaterials;

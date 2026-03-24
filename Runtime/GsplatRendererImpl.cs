@@ -32,6 +32,7 @@ namespace Gsplat
         static readonly int k_gammaToLinear = Shader.PropertyToID("_GammaToLinear");
         static readonly int k_shDegree = Shader.PropertyToID("_SHDegree");
         static readonly int k_brightness = Shader.PropertyToID("_Brightness");
+        static readonly int k_scaleFactor = Shader.PropertyToID("_ScaleFactor");
 
         private bool m_handlingCutouts = true;
         private GsplatCutout.ShaderData[] m_cutoutsData;
@@ -182,9 +183,11 @@ namespace Gsplat
         /// <param name="layer">Layer used for rendering.</param>
         /// <param name="gammaToLinear">Covert color space from Gamma to Linear.</param>
         /// <param name="shDegree">Order of SH coefficients used for rendering. The final value is capped by the SHBands property.</param>
+        /// <param name="brightness">Brightness color scaling.</param>
+        /// <param name="scaleFactor">Splats uv scaling factor, reduce splat size while trying to keep visual fidelity.</param>
         /// <param name="renderOrder">Manual render order placement of the gsplat. The final value is capped by the maximum render order setting.</param>
         public void Render(Transform transform, int layer, bool gammaToLinear = false, int shDegree = 3,
-            float brightness = 1.0f, uint renderOrder = 0)
+            float brightness = 1.0f, float scaleFactor = 1.0f, uint renderOrder = 0)
         {
             if (m_remainingCount <= 0)
                 return;
@@ -194,6 +197,7 @@ namespace Gsplat
             m_propertyBlock.SetInteger(k_splatInstanceSize, (int)GsplatSettings.Instance.SplatInstanceSize);
             m_propertyBlock.SetInteger(k_shDegree, shDegree);
             m_propertyBlock.SetFloat(k_brightness, brightness);
+            m_propertyBlock.SetFloat(k_scaleFactor, scaleFactor);
             m_propertyBlock.SetMatrix(k_matrixM, transform.localToWorldMatrix);
 
             uint order = Math.Clamp(renderOrder, 0, GsplatSettings.Instance.MaxRenderOrder - 1);

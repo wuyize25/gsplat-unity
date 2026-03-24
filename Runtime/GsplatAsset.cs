@@ -98,7 +98,6 @@ namespace Gsplat
         public uint SplatCount;
         public byte SHBands; // 0, 1, 2, or 3
         public Bounds Bounds;
-        public GsplatMaterial GsplatMaterial;
         public abstract CompressionMode Compression { get; }
 
         protected int m_kernelInitOrder;
@@ -106,6 +105,7 @@ namespace Gsplat
         static readonly protected int k_cutoutsBuffer = Shader.PropertyToID("_CutoutsBuffer");
         static readonly protected int k_cutoutsCount = Shader.PropertyToID("_CutoutsCount");
 
+        public GsplatMaterial GsplatMaterial => GsplatSettings.Instance.Materials[(int)Compression];
         public Material[] Materials => GsplatMaterial.Materials[SHBands];
 
         public abstract void Allocate();
@@ -162,8 +162,7 @@ namespace Gsplat
 
         protected abstract void _UploadData(GsplatResource resource);
 
-        public abstract void SetupMaterialPropertyBlock(MaterialPropertyBlock propertyBlock,
-            GsplatResource resource);
+        public abstract void SetupMaterialPropertyBlock(MaterialPropertyBlock propertyBlock, GsplatResource resource);
 
         public abstract void ComputeDepth(CommandBuffer cmd, Matrix4x4 matrixMv,
             ISorterResource sorterResource, GsplatResource resource);

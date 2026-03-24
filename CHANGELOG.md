@@ -7,16 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- `GsplatCutout` component to edit the Gaussian splattings dynamically. A compute shader prepass is done before rendering that creates the order buffer, ignoring splats contained in cutout shapes and removing them from further calculations. ([#19](https://github.com/wuyize25/gsplat-unity/pull/19) by [@Arthur-Aillet](https://github.com/Arthur-Aillet))
+
+- Multiple materials generated automatically to let the user define a custom render order. Max Render order defined in `GsplatSettings`. ([#19](https://github.com/wuyize25/gsplat-unity/pull/19) by [@Arthur-Aillet](https://github.com/Arthur-Aillet))
+
+- Added a downscale factor for individual splats to the GsplatRenderer. Improves rendering speed while trying to maintain visual fidelity as much as possible. ([#18](https://github.com/wuyize25/gsplat-unity/pull/18) by [@Arthur-Aillet](https://github.com/Arthur-Aillet)).
+
+## [1.2.0] - 2026-03-22
+
 ### Added
 
-- `GsplatCutout` component to edit the Gaussian splattings dynamically. A compute shader prepass is done before rendering that creates the order buffer, ignoring splats contained in cutout shapes and removing them from further calculations. (by [@Arthur-Aillet](https://github.com/Arthur-Aillet))
-
-- Multiple materials generated automatically to let the user define a custom render order. Max Render order defined in `GsplatSettings`. (by [@Arthur-Aillet](https://github.com/Arthur-Aillet))
-
-- Per\-asset GPU data buffers now allocated and cached by `GsplatResourceManager` (reference counted). When multiple instances of the same `GsplatAsset` are present in a scene, they can share the same GraphicsBuffers.
+- Per\-asset GPU data buffers are now allocated and cached by `GsplatResourceManager` (reference counted). When multiple instances of the same `GsplatAsset` are present in a scene, they can share the same GraphicsBuffers.
 
 - PLY importer and shaders extended to pack Gaussian Splat data in 4 uint ([#12](https://github.com/wuyize25/gsplat-unity/pull/12) by [@Arthur-Aillet](https://github.com/Arthur-Aillet)).
-Implementation heavily inspired by the SparkJS packing implementation. An option `Compression Mode` is added to `GsplatImporter` to choose between `Uncompressed` and `Spark` (packed) modes.
+Implementation heavily inspired by the SparkJS packing implementation. An option `Compression` is added to `GsplatImporter` to choose between `Uncompressed` and `Spark` (packed) modes.
 
 - Added a brightness slider in `GsplatRenderer` to allow post-hoc scaling of the Gsplat Asset's brightness. ([#17](https://github.com/wuyize25/gsplat-unity/pull/17) by [@Indivicivet](https://github.com/Indivicivet))
 
@@ -81,7 +85,8 @@ Implementation heavily inspired by the SparkJS packing implementation. An option
 - This is the first release of Gsplat, as a Package.
 
 
-[unreleased]: https://github.com/wuyize25/gsplat-unity/compare/v1.1.2...HEAD
+[unreleased]: https://github.com/wuyize25/gsplat-unity/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/wuyize25/gsplat-unity/compare/v1.1.2...v1.2.0
 [1.1.2]: https://github.com/wuyize25/gsplat-unity/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/wuyize25/gsplat-unity/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/wuyize25/gsplat-unity/compare/v1.0.3...v1.1.0

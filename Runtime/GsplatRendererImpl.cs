@@ -10,7 +10,6 @@ namespace Gsplat
     public class GsplatRendererImpl
     {
         public uint SplatCount { get; private set; }
-        public byte SHBands { get; private set; }
 
         MaterialPropertyBlock m_propertyBlock;
         GsplatAsset m_gsplatAsset;
@@ -37,21 +36,19 @@ namespace Gsplat
         private bool m_handlingCutouts = true;
         private GsplatCutout.ShaderData[] m_cutoutsData;
 
-        public GsplatRendererImpl(uint splatCount, byte shBands)
+        public GsplatRendererImpl(uint splatCount)
         {
             SplatCount = splatCount;
-            SHBands = shBands;
             CreateResources(splatCount);
             CreatePropertyBlock();
         }
 
-        public void RecreateResources(uint splatCount, byte shBands)
+        public void RecreateResources(uint splatCount)
         {
-            if (SplatCount == splatCount && SHBands == shBands)
+            if (SplatCount == splatCount)
                 return;
             Dispose();
             SplatCount = splatCount;
-            SHBands = shBands;
             CreateResources(splatCount);
             CreatePropertyBlock();
         }
@@ -195,7 +192,7 @@ namespace Gsplat
             m_propertyBlock.SetInteger(k_splatCount, (int)m_remainingCount);
             m_propertyBlock.SetInteger(k_gammaToLinear, gammaToLinear ? 1 : 0);
             m_propertyBlock.SetInteger(k_splatInstanceSize, (int)GsplatSettings.Instance.SplatInstanceSize);
-            m_propertyBlock.SetInteger(k_shDegree, shDegree);
+            m_propertyBlock.SetInteger(k_shDegree, Math.Min(m_gsplatAsset.SHBands, shDegree));
             m_propertyBlock.SetFloat(k_brightness, brightness);
             m_propertyBlock.SetFloat(k_scaleFactor, scaleFactor);
             m_propertyBlock.SetMatrix(k_matrixM, transform.localToWorldMatrix);

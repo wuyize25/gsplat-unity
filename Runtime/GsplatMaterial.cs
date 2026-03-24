@@ -24,6 +24,10 @@ namespace Gsplat
                     for (var j = 0; j < GsplatSettings.Instance.MaxRenderOrder; ++j)
                     {
                         m_material[i][j] = new Material(DefaultMaterial);
+                        m_material[i][j].DisableKeyword($"SH_BANDS_0");
+                        m_material[i][j].DisableKeyword($"SH_BANDS_1");
+                        m_material[i][j].DisableKeyword($"SH_BANDS_2");
+                        m_material[i][j].DisableKeyword($"SH_BANDS_3");
                         m_material[i][j].EnableKeyword($"SH_BANDS_{i}");
                         m_material[i][j].renderQueue = 3000 + j;
                     }

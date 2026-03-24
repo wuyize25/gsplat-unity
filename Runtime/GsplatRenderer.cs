@@ -19,7 +19,7 @@ namespace Gsplat
         }
 
         public GsplatAsset GsplatAsset;
-        [Range(0, 3)] public int SHDegree = 3;
+        [HideInInspector] public int SHDegree = 3;
         [HideInInspector] public uint RenderOrder = 0;
         public float Brightness = 1.0f;
         [Tooltip("Improves rendering speed by shrinking Gaussian splats while trying to keep the impact on visual quality as small as possible.")]

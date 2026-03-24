@@ -36,16 +36,12 @@ Shader "Gsplat/Standard"
 
 
             bool _GammaToLinear;
-            int _SplatCount;
-            int _SplatInstanceSize;
-            int _SHDegree;
+            uint _SplatCount;
+            uint _SplatInstanceSize;
             float4x4 _MATRIX_M;
             float _Brightness;
             float _ScaleFactor;
             StructuredBuffer<uint> _OrderBuffer;
-            #ifndef SH_BANDS_0
-            StructuredBuffer<float3> _SHBuffer;
-            #endif
 
             struct appdata
             {
@@ -101,10 +97,8 @@ Shader "Gsplat/Standard"
                 #ifndef SH_BANDS_0
                 // calculate the model-space view direction
                 float3 dir = normalize(mul(center.view, (float3x3)center.modelView));
-                float3 sh[SH_COEFFS];
-                for (int i = 0; i < SH_COEFFS; i++)
-                    sh[i] = _SHBuffer[source.id * SH_COEFFS + i];
-                color.rgb += EvalSH(sh, dir, _SHDegree);
+
+                color.rgb += EvalSH(dir, source.id);
                 #endif
 
                 ClipCorner(corner, color.w);

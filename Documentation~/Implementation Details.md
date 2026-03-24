@@ -10,7 +10,7 @@
 **Gsplat Data**: This package supports importing PLY file in two modes via `GsplatAsset` implementations:
 
 - **Uncompressed**: `GsplatAssetUncompressed` stores per\-splat arrays (`Positions`, `Colors`, `Scales`, `Rotations`, optional `SHs`) and uploads them to dedicated GPU `GraphicsBuffer`s.
-- **Spark (Packed)**: `GsplatAssetSpark` packs each splat into a fixed 16\-byte layout (`uint4` per splat in `PackedSplats`) plus an optional `SHs` array. Packing includes float16 position, log\-encoded scale, RGBA8, and octahedral axis\+angle quaternion encoding, which is inspired by [spark.js](https://github.com/sparkjsdev/spark/blob/main/src/shaders/splatDefines.glsl#L237C6-L237C25).
+- **Spark (Packed)**: `GsplatAssetSpark` packs each splat into a fixed 16\-byte layout (`uint4` per splat in `PackedSplats`). Packing includes float16 position, log\-encoded scale, RGBA8, and octahedral axis\+angle quaternion encoding, which is inspired by [spark.js](https://github.com/sparkjsdev/spark/blob/main/src/shaders/splatDefines.glsl#L237C6-L237C25). It also compresses the three different SH band color data as 2, 4 and 4 uint, respectively. The `GsplatRendererImpl` class then creates several `GraphicsBuffer`s on the GPU to hold the data (`PackedSplatsBuffer`, `PackedSH1Buffer`, `PackedSH2Buffer` and `PackedSH3Buffer`).
 
 **GPU Resources & Lifetime**:
 

@@ -106,7 +106,7 @@ namespace Gsplat
         static readonly protected int k_cutoutsCount = Shader.PropertyToID("_CutoutsCount");
 
         public GsplatMaterial GsplatMaterial => GsplatSettings.Instance.Materials[(int)Compression];
-        public Material[] Materials => GsplatMaterial.Materials[SHBands];
+        public Material[][] Materials => GsplatMaterial.Materials;
 
         public abstract void Allocate();
         public abstract void LoadFromPly(string plyPath, ProgressCallback progressCallback = null);

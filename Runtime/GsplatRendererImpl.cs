@@ -31,7 +31,6 @@ namespace Gsplat
         static readonly int k_splatInstanceSize = Shader.PropertyToID("_SplatInstanceSize");
         static readonly int k_splatCount = Shader.PropertyToID("_SplatCount");
         static readonly int k_gammaToLinear = Shader.PropertyToID("_GammaToLinear");
-        static readonly int k_shDegree = Shader.PropertyToID("_SHDegree");
         static readonly int k_brightness = Shader.PropertyToID("_Brightness");
         static readonly int k_scaleFactor = Shader.PropertyToID("_ScaleFactor");
 
@@ -267,13 +266,12 @@ namespace Gsplat
             m_propertyBlock.SetInteger(k_splatCount, (int)m_remainingCount);
             m_propertyBlock.SetInteger(k_gammaToLinear, gammaToLinear ? 1 : 0);
             m_propertyBlock.SetInteger(k_splatInstanceSize, (int)GsplatSettings.Instance.SplatInstanceSize);
-            m_propertyBlock.SetInteger(k_shDegree, Math.Min(m_gsplatAsset.SHBands, shDegree));
             m_propertyBlock.SetFloat(k_brightness, brightness);
             m_propertyBlock.SetFloat(k_scaleFactor, scaleFactor);
             m_propertyBlock.SetMatrix(k_matrixM, transform.localToWorldMatrix);
 
             uint order = Math.Clamp(renderOrder, 0, GsplatSettings.Instance.MaxRenderOrder - 1);
-            var rp = new RenderParams(m_gsplatAsset.Materials[order])
+            var rp = new RenderParams(m_gsplatAsset.Materials[Math.Min(m_gsplatAsset.SHBands, shDegree)][order])
             {
                 worldBounds = GsplatUtils.CalcWorldBounds(m_bounds, transform),
                 matProps = m_propertyBlock,

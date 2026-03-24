@@ -15,7 +15,6 @@ namespace Gsplat
         // radix sort etc. friendly, see http://stereopsis.com/radix.html
         public static uint FloatToSortableUint(float f)
         {
-            
             uint fu = math.asuint(f);
             uint mask = (uint)(-((int)(fu >> 31)) | 0x80000000);
             return fu ^ mask;
@@ -64,6 +63,8 @@ namespace Gsplat
         {
             return (shBands + 1) * (shBands + 1) - 1;
         }
+
+        public static readonly int[] SHBandSize = { 3, 5, 7 };
 
         public static Bounds CalcWorldBounds(Bounds localBounds, Transform transform)
         {

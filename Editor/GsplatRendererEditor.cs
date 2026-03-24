@@ -20,6 +20,17 @@ namespace Gsplat.Editor
             );
 
             var renderer = (GsplatRenderer)target;
+
+            // Cap the SHDegree slider to the asset SHBands
+            if (renderer.GsplatAsset != null && renderer.GsplatAsset.SHBands > 0)
+                renderer.SHDegree = EditorGUILayout.IntSlider(new GUIContent("SH Degree"), renderer.SHDegree, 0, renderer.GsplatAsset.SHBands);
+            else
+            {
+                EditorGUI.BeginDisabledGroup(true);
+                EditorGUILayout.IntSlider(new GUIContent("SH Degree"), 0, 0, 0);
+                EditorGUI.EndDisabledGroup();
+            }
+
             // Sort Refresh Rate slider only if on correct mode
             if (renderer.SortMode == GsplatRenderer.GsplatSortMode.SortEveryNFrames || renderer.SortMode == GsplatRenderer.GsplatSortMode.CutoutsEveryNSorts)
             {

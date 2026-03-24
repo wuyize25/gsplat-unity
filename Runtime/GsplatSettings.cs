@@ -61,7 +61,7 @@ namespace Gsplat
         public GsplatMaterial[] Materials;
         public Mesh Mesh { get; private set; }
         public bool DisplayGSplatsBoundingBoxes = false;
-       [Range(1, 20)] public uint MaxRenderOrder = 1;
+        [Range(1, 20)] public uint MaxRenderOrder = 1;
 
         public bool Valid => Materials?.Length != 0 && Mesh && SplatInstanceSize > 0;
 
@@ -148,6 +148,12 @@ namespace Gsplat
                 CreateMeshInstance();
                 m_prevSplatInstanceSize = SplatInstanceSize;
             }
+#if UNITY_EDITOR
+            foreach (var mat in Materials)
+            {
+                mat.Reset();
+            }
+#endif
         }
 
         void OnEnable()

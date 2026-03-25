@@ -78,7 +78,7 @@ namespace Gsplat
         void OnValidate()
         {
             if (GsplatAsset &&
-                AssetDatabase.TryGetGUIDAndLocalFileIdentifier(GsplatAsset, out var guid, out var localId))
+                AssetDatabase.TryGetGUIDAndLocalFileIdentifier(GsplatAsset, out var guid, out long localId))
                 m_assetGuid = guid;
         }
 #endif

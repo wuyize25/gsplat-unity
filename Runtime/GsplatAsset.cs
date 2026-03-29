@@ -1,6 +1,7 @@
 ﻿// Copyright (c) 2025 Yize Wu
 // SPDX-License-Identifier: MIT
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -99,8 +100,13 @@ namespace Gsplat
         public Bounds Bounds;
         public abstract CompressionMode Compression { get; }
 
+        protected int m_kernelInitOrder;
+        static readonly protected int k_boundsBuffer = Shader.PropertyToID("_BoundsBuffer");
+        static readonly protected int k_cutoutsBuffer = Shader.PropertyToID("_CutoutsBuffer");
+        static readonly protected int k_cutoutsCount = Shader.PropertyToID("_CutoutsCount");
+
         public GsplatMaterial GsplatMaterial => GsplatSettings.Instance.Materials[(int)Compression];
-        public Material Material => GsplatMaterial.Materials[SHBands];
+        public Material[] Materials => GsplatMaterial.Materials[SHBands];
 
         public abstract void Allocate();
         public abstract void LoadFromPly(string plyPath, ProgressCallback progressCallback = null);
@@ -122,13 +128,46 @@ namespace Gsplat
             return _UploadDataAsync(resource);
         }
 
+        public GraphicsBuffer UpdateCutoutsBuffer(GraphicsBuffer cutoutsBuffer, GsplatCutout.ShaderData[] cutoutsData)
+        {
+            var cs = GsplatMaterial.InitOrderShader;
+            int numberOfCutouts = cutoutsData.Length;
+            int bufferSize = Math.Max(numberOfCutouts, 1);
+
+            if (cutoutsBuffer == null || cutoutsBuffer.count != bufferSize)
+            {
+                cutoutsBuffer?.Dispose();
+                cutoutsBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, bufferSize, GsplatCutout.ShaderDataSize);
+            }
+
+            cutoutsBuffer.SetData(cutoutsData);
+            cs.SetBuffer(m_kernelInitOrder, k_cutoutsBuffer, cutoutsBuffer);
+            cs.SetInt(k_cutoutsCount, numberOfCutouts);
+            return cutoutsBuffer;
+        }
+
+        public void UpdateBoundsBuffer(GraphicsBuffer BoundsBuffer)
+        {
+            var cs = GsplatMaterial.InitOrderShader;
+
+            uint max = GsplatUtils.FloatToSortableUint(short.MaxValue);
+            uint min = GsplatUtils.FloatToSortableUint(short.MinValue);
+            uint[] array = {max, max, max, min, min, min};
+            BoundsBuffer.SetData(array);
+
+            cs.SetBuffer(m_kernelInitOrder, k_boundsBuffer, BoundsBuffer);
+        }
+
         protected abstract Task _UploadDataAsync(GsplatResource resource);
 
         protected abstract void _UploadData(GsplatResource resource);
 
         public abstract void SetupMaterialPropertyBlock(MaterialPropertyBlock propertyBlock, GsplatResource resource);
 
-        public abstract void ComputeDepth(GsplatMaterial material, CommandBuffer cmd, Matrix4x4 matrixMv,
+        public abstract void ComputeDepth(CommandBuffer cmd, Matrix4x4 matrixMv,
             ISorterResource sorterResource, GsplatResource resource);
+
+        public abstract void InitOrder(ISorterResource sorterResource, GsplatResource resource,
+            bool updateBounds);
     }
 }

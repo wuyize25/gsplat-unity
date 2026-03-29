@@ -82,6 +82,9 @@ namespace Gsplat
         public override void SetupMaterialPropertyBlock(MaterialPropertyBlock propertyBlock,
             GsplatResource resource)
         {
+            var cs = GsplatMaterial.InitOrderShader;
+            m_kernelInitOrder = cs.FindKernel("InitOrder");
+
             var res = (GsplatResourceUncompressed)resource;
             propertyBlock.SetBuffer(k_positionBuffer, res.PositionBuffer);
             propertyBlock.SetBuffer(k_scaleBuffer, res.ScaleBuffer);
@@ -91,11 +94,11 @@ namespace Gsplat
                 propertyBlock.SetBuffer(k_shBuffer, res.SHBuffer);
         }
 
-        public override void ComputeDepth(GsplatMaterial material, CommandBuffer cmd, Matrix4x4 matrixMv,
+        public override void ComputeDepth(CommandBuffer cmd, Matrix4x4 matrixMv,
             ISorterResource sorterResource, GsplatResource resource)
         {
             var res = (GsplatResourceUncompressed)resource;
-            var cs = material.CalcDepthShader;
+            var cs = GsplatMaterial.CalcDepthShader;
             var kernelCalcDepth = 0;
             cmd.SetComputeIntParam(cs, k_splatCount, (int)SplatCount);
             cmd.SetComputeMatrixParam(cs, k_matrixMv, matrixMv);
@@ -103,6 +106,25 @@ namespace Gsplat
             cmd.SetComputeBufferParam(cs, kernelCalcDepth, k_depthBuffer, sorterResource.InputKeys);
             cmd.SetComputeBufferParam(cs, kernelCalcDepth, k_orderBuffer, sorterResource.OrderBuffer);
             cmd.DispatchCompute(cs, kernelCalcDepth, (int)GsplatUtils.DivRoundUp(SplatCount, 1024), 1, 1);
+        }
+
+        public override void InitOrder(ISorterResource sorterResource, GsplatResource resource, bool updateBounds)
+        {
+            var cs = GsplatMaterial.InitOrderShader;
+            var res = (GsplatResourceUncompressed)resource;
+
+            sorterResource.OrderBuffer.SetCounterValue(0);
+
+            uint threadBlocks = GsplatUtils.DivRoundUp(SplatCount, 1024);
+
+            cs.SetInt(k_splatCount, (int)SplatCount);
+            cs.SetBuffer(m_kernelInitOrder, k_orderBuffer, sorterResource.OrderBuffer);
+            cs.SetBuffer(m_kernelInitOrder, k_positionBuffer, res.PositionBuffer);
+            if (updateBounds)
+                cs.EnableKeyword("UPDATE_BOUNDS");
+            else
+                cs.DisableKeyword("UPDATE_BOUNDS");
+            cs.Dispatch(m_kernelInitOrder, (int)threadBlocks, 1, 1);
         }
 
         public override void LoadFromPly(string plyPath, ProgressCallback progressCallback = null)

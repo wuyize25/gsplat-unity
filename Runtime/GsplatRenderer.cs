@@ -1,6 +1,7 @@
 ﻿// Copyright (c) 2025 Yize Wu
 // SPDX-License-Identifier: MIT
 
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -12,12 +13,20 @@ namespace Gsplat
     {
         public GsplatAsset GsplatAsset;
         [Range(0, 3)] public int SHDegree = 3;
+        [HideInInspector] public uint RenderOrder = 0;
         public float Brightness = 1.0f;
-        [Tooltip("Improves rendering speed by shrinking Gaussian splats while trying to keep the impact on visual quality as small as possible.")]
-        [Range(0, 1)] public float SplatDownscaleFactor = 0.0f;
+
+        [Tooltip(
+            "Improves rendering speed by shrinking Gaussian splats while trying to keep the impact on visual quality as small as possible.")]
+        [Range(0, 1)]
+        public float SplatDownscaleFactor = 0.0f;
+
         public bool GammaToLinear;
         public bool AsyncUpload;
         public bool RenderBeforeUploadComplete = true;
+
+        [Tooltip("Does cutouts update the Gsplat world bounds? (Costly on moving cutouts)")]
+        public bool CutoutsUpdateBounds = true;
 
         GsplatAsset m_prevAsset;
         GsplatRendererImpl m_renderer;
@@ -28,6 +37,33 @@ namespace Gsplat
         public uint SplatCount => m_renderer != null ? m_renderer.GsplatResource?.UploadedCount ?? 0 : 0;
 
         public ISorterResource SorterResource => m_renderer.SorterResource;
+
+        public uint RemainingCount
+        {
+            get => m_renderer.m_remainingCount;
+            set => m_renderer.m_remainingCount = value;
+        }
+
+        public Bounds Bounds
+        {
+            get => m_renderer.m_bounds;
+            set => m_renderer.m_bounds = value;
+        }
+
+        public GsplatCutout[] Cutouts
+        {
+            get
+            {
+                var cutouts = GsplatCutout.m_RegisteredCutouts
+                    .Where(component => component.enabled)
+                    .Where(component =>
+                        component.m_Target == GsplatCutout.Target.All ||
+                        (component.m_Target == GsplatCutout.Target.Parent && component.transform.parent == transform) ||
+                        (component.m_Target == GsplatCutout.Target.Specific && component.m_SpecifcRenderer == this)
+                    );
+                return cutouts.ToArray();
+            }
+        }
 
         public void ComputeDepth(CommandBuffer cmd, Matrix4x4 matrixMv) => m_renderer.ComputeDepth(cmd, matrixMv);
 
@@ -44,7 +80,33 @@ namespace Gsplat
             m_renderer = null;
         }
 
-        void Update()
+#if UNITY_EDITOR
+        public void OnDrawGizmos()
+        {
+            if (GsplatSettings.Instance.DisplayBoundingBoxes && Valid && isActiveAndEnabled)
+            {
+                Gizmos.matrix = transform.localToWorldMatrix;
+                Gizmos.color = Color.green;
+                Gizmos.DrawWireCube(Bounds.center, Bounds.size);
+            }
+        }
+
+        [SerializeField, HideInInspector] string m_assetGuid;
+        public string AssetGuid => m_assetGuid;
+        void OnValidate()
+        {
+            if (GsplatAsset &&
+                AssetDatabase.TryGetGUIDAndLocalFileIdentifier(GsplatAsset, out var guid, out var localId))
+                m_assetGuid = guid;
+        }
+#endif // #if UNITY_EDITOR
+
+        public void ReloadAsset()
+        {
+            m_prevAsset = null;
+        }
+
+        public void Update()
         {
             if (!GsplatAsset)
                 m_prevAsset = null;
@@ -55,9 +117,9 @@ namespace Gsplat
                 if (GsplatAsset)
                 {
                     if (m_renderer == null)
-                        m_renderer = new GsplatRendererImpl(GsplatAsset.SplatCount, GsplatAsset.SHBands);
+                        m_renderer = new GsplatRendererImpl(GsplatAsset.SplatCount);
                     else
-                        m_renderer.RecreateResources(GsplatAsset.SplatCount, GsplatAsset.SHBands);
+                        m_renderer.RecreateResources(GsplatAsset.SplatCount);
 #if UNITY_EDITOR
                     var asyncUpload = AsyncUpload && Application.isPlaying;
 #else
@@ -67,25 +129,12 @@ namespace Gsplat
                 }
             }
 
-            if (Valid)
-                m_renderer.Render(SplatCount, transform, GsplatAsset.Bounds,
-                    gameObject.layer, GammaToLinear, SHDegree, Brightness, 1.0f - SplatDownscaleFactor);
-        }
-
-#if UNITY_EDITOR
-        [SerializeField, HideInInspector] string m_assetGuid;
-        public string AssetGuid => m_assetGuid;
-        void OnValidate()
-        {
-            if (GsplatAsset &&
-                AssetDatabase.TryGetGUIDAndLocalFileIdentifier(GsplatAsset, out var guid, out long localId))
-                m_assetGuid = guid;
-        }
-#endif
-
-        public void ReloadAsset()
-        {
-            m_prevAsset = null;
+            if (Valid && GsplatSettings.Instance.Valid && GsplatSorter.Instance.Valid)
+            {
+                m_renderer.DispatchInitOrder(Cutouts, transform.localToWorldMatrix, CutoutsUpdateBounds);
+                m_renderer.Render(transform, gameObject.layer, GammaToLinear, SHDegree, Brightness,
+                    1.0f - SplatDownscaleFactor, RenderOrder);
+            }
         }
     }
 }

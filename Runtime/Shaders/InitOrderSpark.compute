@@ -1,0 +1,56 @@
+// Copyright (c) 2026 Arthur Aillet
+// SPDX-License-Identifier: MIT
+
+#define GROUP_SIZE 1024
+
+#pragma kernel InitOrder
+
+#pragma multi_compile __ UPDATE_BOUNDS
+
+uint _SplatCount;
+
+AppendStructuredBuffer<uint> _OrderBuffer;
+StructuredBuffer<uint4> _PackedSplatsBuffer;
+
+struct GaussianCutoutShaderData
+{
+    float4x4 mat;
+    uint typeAndFlags;
+};
+
+uint _CutoutsCount;
+StructuredBuffer<GaussianCutoutShaderData> _CutoutsBuffer;
+
+#ifdef UPDATE_BOUNDS
+RWStructuredBuffer<uint> _BoundsBuffer;
+#endif
+
+#include "GsplatCutout.hlsl"
+
+[numthreads(GROUP_SIZE,1,1)]
+void InitOrder(uint3 id : SV_DispatchThreadID)
+{
+    uint idx = id.x;
+    if (idx >= _SplatCount)
+        return;
+
+    uint4 packedSplat = _PackedSplatsBuffer[idx];
+    uint word1 = packedSplat.y;
+    uint word2 = packedSplat.z;
+
+    float3 splatPos = float3(f16tof32(word1 & 0xFFFFU), f16tof32((word1 >> 16u) & 0xFFFFU), f16tof32(word2 & 0xFFFFU));
+
+    if (!IsSplatCut(splatPos))
+    {
+        _OrderBuffer.Append(idx);
+
+#ifdef UPDATE_BOUNDS
+        InterlockedMin(_BoundsBuffer[0], FloatToSortableUint(splatPos.x));
+        InterlockedMin(_BoundsBuffer[1], FloatToSortableUint(splatPos.y));
+        InterlockedMin(_BoundsBuffer[2], FloatToSortableUint(splatPos.z));
+        InterlockedMax(_BoundsBuffer[3], FloatToSortableUint(splatPos.x));
+        InterlockedMax(_BoundsBuffer[4], FloatToSortableUint(splatPos.y));
+        InterlockedMax(_BoundsBuffer[5], FloatToSortableUint(splatPos.z));
+#endif
+    }
+}

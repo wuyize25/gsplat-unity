@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 using System;
+using Unity.Mathematics;
 using UnityEngine;
 
 namespace Gsplat
@@ -10,6 +11,21 @@ namespace Gsplat
     {
         public const string k_PackagePath = "Packages/wu.yize.gsplat/";
         public static readonly Version k_Version = new("1.2.1");
+
+        // radix sort etc. friendly, see http://stereopsis.com/radix.html
+        public static uint FloatToSortableUint(float f)
+        {
+            
+            uint fu = math.asuint(f);
+            uint mask = (uint)(-((int)(fu >> 31)) | 0x80000000);
+            return fu ^ mask;
+        }
+
+        public static float SortableUintToFloat(uint v)
+        {
+            uint mask = ((v >> 31) - 1) | 0x80000000u;
+            return math.asfloat(v ^ mask);
+        }
 
         /// <summary>
         /// Convert float ranging between -1..1 to a -127..127 sint8

@@ -12,9 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b7c727244cd14cfd896562aa99c958f3, type: 3}
   m_Name: GsplatSpark
   m_EditorClassIdentifier: 
-  Materials:
-  - {fileID: 2100000, guid: 0fd25878460c14a46946f5bffc5ee42f, type: 2}
-  - {fileID: 2100000, guid: efae82ae7daf6714ab9c1c8b0beca225, type: 2}
-  - {fileID: 2100000, guid: f859fd53d32fcdf48aaa083cfa3d6fe1, type: 2}
-  - {fileID: 2100000, guid: 10d60be3c1bad6f4a9c2bcd3980cd2c3, type: 2}
+  DefaultMaterial: {fileID: 2100000, guid: 0fd25878460c14a46946f5bffc5ee42f, type: 2}
   CalcDepthShader: {fileID: 7200000, guid: f234fe86176948548be7fad55f5d6147, type: 3}
+  InitOrderShader: {fileID: 7200000, guid: 9f8e041cb7bfae141b2e6ee80402bf45, type: 3}

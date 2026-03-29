@@ -54,10 +54,11 @@ namespace Gsplat
             }
         }
 
-
         public ComputeShader ComputeShader;
         public uint SplatInstanceSize = 128;
         public uint UploadBatchSize = 100000;
+        [Range(1, 20)] public uint MaxRenderOrder = 1;
+        public bool DisplayBoundingBoxes = false;
         public bool ShowImportErrors = true;
         public GsplatMaterial[] Materials;
         public Mesh Mesh { get; private set; }
@@ -147,6 +148,12 @@ namespace Gsplat
                 CreateMeshInstance();
                 m_prevSplatInstanceSize = SplatInstanceSize;
             }
+#if UNITY_EDITOR
+            foreach (var mat in Materials)
+            {
+                mat.Reset();
+            }
+#endif
         }
 
         void OnEnable()

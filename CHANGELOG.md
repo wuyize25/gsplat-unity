@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `GsplatCutout` component to edit the Gaussian splattings dynamically. A compute shader prepass is done before rendering that creates the order buffer, ignoring splats contained in cutout shapes and removing them from further calculations. ([#19](https://github.com/wuyize25/gsplat-unity/pull/19) by [@Arthur-Aillet](https://github.com/Arthur-Aillet))
+
+- Multiple materials generated automatically to let the user define a custom render order. Max Render order defined in `GsplatSettings`. ([#19](https://github.com/wuyize25/gsplat-unity/pull/19) by [@Arthur-Aillet](https://github.com/Arthur-Aillet))
+
 - PLY importer and shaders extended to also pack Splats Spherical Harmonics as 2 uint for SH1, 6 uint for SH2 and 10 uint for SH3. The implementation is also heavily inspired by the SparkJS [packing implementation](https://github.com/sparkjsdev/spark/blob/main/src/SplatMesh.ts#L754). ([#14](https://github.com/wuyize25/gsplat-unity/pull/14) by [@Arthur-Aillet](https://github.com/Arthur-Aillet))
 
 ## [1.2.1] - 2026-03-26

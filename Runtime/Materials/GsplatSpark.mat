@@ -7,7 +7,7 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: GsplatSpark0
+  m_Name: GsplatSpark
   m_Shader: {fileID: 4800000, guid: 37be4d9e326b8db49996c5c89f7854dd, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0

@@ -134,7 +134,6 @@ namespace Gsplat
                 cs.DisableKeyword(vulkanKeyword);
         }
 
-
         // fill the payload buffer with 0, 1, 2, ..., count-1
         public void InitPayload(CommandBuffer cmd, GraphicsBuffer payloadBuffer, uint count)
         {

@@ -12,9 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b7c727244cd14cfd896562aa99c958f3, type: 3}
   m_Name: GsplatUncompressed
   m_EditorClassIdentifier: 
-  Materials:
-  - {fileID: 2100000, guid: 0065a348838e5474f802212446cf1ddd, type: 2}
-  - {fileID: 2100000, guid: 0d9ed3d9ff1d8ef40b3a34d239fbe01b, type: 2}
-  - {fileID: 2100000, guid: 6891c4ed0fb75164c8f86fdd3ec98f07, type: 2}
-  - {fileID: 2100000, guid: b9a329e4e9d906a46bb80b9d30c0d3c1, type: 2}
+  DefaultMaterial: {fileID: 2100000, guid: 0065a348838e5474f802212446cf1ddd, type: 2}
   CalcDepthShader: {fileID: 7200000, guid: 03396f0af8c54a3093503c0c27511df3, type: 3}
+  InitOrderShader: {fileID: 7200000, guid: 71f302cf0e7c6254e9bae3e5c94b77d6, type: 3}

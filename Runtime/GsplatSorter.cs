@@ -11,7 +11,7 @@ namespace Gsplat
     public interface IGsplat
     {
         public Transform transform { get; }
-        public uint SplatCount { get; }
+        public uint RemainingCount { get; }
         public ISorterResource SorterResource { get; }
         public bool isActiveAndEnabled { get; }
         public bool Valid { get; }
@@ -22,6 +22,7 @@ namespace Gsplat
     {
         public GraphicsBuffer OrderBuffer { get; }
         public GraphicsBuffer InputKeys { get; }
+        public bool Initialized { get; set; }
         public void Dispose();
     }
 
@@ -35,13 +36,14 @@ namespace Gsplat
 
             public GraphicsBuffer InputKeys { get; private set; }
             public GsplatSortPass.SupportResources Resources { get; }
-            public bool Initialized;
+            public bool Initialized { get; set; }
 
             public Resource(uint count, GraphicsBuffer orderBuffer)
             {
                 OrderBuffer = orderBuffer;
                 InputKeys = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)count, sizeof(uint));
                 Resources = GsplatSortPass.SupportResources.Load(count);
+                Initialized = false;
             }
 
             public void Dispose()
@@ -137,6 +139,10 @@ namespace Gsplat
             foreach (var gs in m_activeGsplats)
             {
                 var res = (Resource)gs.SorterResource;
+
+                if (gs.RemainingCount <= 0)
+                    continue;
+
                 if (!res.Initialized)
                 {
                     m_sortPass.InitPayload(cmd, res.OrderBuffer, (uint)res.OrderBuffer.count);
@@ -145,7 +151,7 @@ namespace Gsplat
 
                 var sorterArgs = new GsplatSortPass.Args
                 {
-                    Count = gs.SplatCount,
+                    Count = gs.RemainingCount,
                     MatrixMv = camera.worldToCameraMatrix * gs.transform.localToWorldMatrix,
                     InputKeys = res.InputKeys,
                     InputValues = res.OrderBuffer,

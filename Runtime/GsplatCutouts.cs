@@ -31,9 +31,9 @@ namespace Gsplat
         public bool m_Invert = false;
         public Type m_Type = Type.Ellipsoid;
         public Target m_Target = Target.Parent;
-        [HideInInspector] public GsplatRenderer m_SpecifcRenderer = null;
+        [HideInInspector] public GsplatRenderer m_SpecifcRenderer;
 
-        public static int ShaderDataSize { get { return UnsafeUtility.SizeOf<ShaderData>(); } }
+        public static int ShaderDataSize => UnsafeUtility.SizeOf<ShaderData>();
 
         public struct ShaderData
         {
@@ -66,10 +66,12 @@ namespace Gsplat
             {
                 sd.matrix = transform.worldToLocalMatrix * rendererMatrix;
                 sd.typeAndFlags = ((uint)m_Type) | (m_Invert ? 0x100u : 0u);
-            } else
+            }
+            else
             {
                 sd.typeAndFlags = ~0u;
             }
+
             return sd;
         }
 
@@ -117,6 +119,7 @@ namespace Gsplat
             {
                 Gizmos.DrawWireSphere(Vector3.zero, 1.0f);
             }
+
             if (m_Type == Type.Box)
             {
                 Gizmos.DrawWireCube(Vector3.zero, Vector3.one * 2);

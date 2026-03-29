@@ -33,8 +33,8 @@ namespace Gsplat
         static readonly int k_brightness = Shader.PropertyToID("_Brightness");
         static readonly int k_scaleFactor = Shader.PropertyToID("_ScaleFactor");
 
-        private bool m_handlingCutouts = true;
-        private GsplatCutout.ShaderData[] m_cutoutsData;
+        bool m_handlingCutouts = true;
+        GsplatCutout.ShaderData[] m_cutoutsData;
 
         public GsplatRendererImpl(uint splatCount)
         {
@@ -62,12 +62,14 @@ namespace Gsplat
             BoundsBuffer.GetData(boundsData);
 
             Bounds bounds = default;
-            Vector3 bmin = new(GsplatUtils.SortableUintToFloat(boundsData[0]), GsplatUtils.SortableUintToFloat(boundsData[1]), GsplatUtils.SortableUintToFloat(boundsData[2]));
-            Vector3 bmax = new(GsplatUtils.SortableUintToFloat(boundsData[3]), GsplatUtils.SortableUintToFloat(boundsData[4]), GsplatUtils.SortableUintToFloat(boundsData[5]));
+            Vector3 bmin = new(GsplatUtils.SortableUintToFloat(boundsData[0]),
+                GsplatUtils.SortableUintToFloat(boundsData[1]), GsplatUtils.SortableUintToFloat(boundsData[2]));
+            Vector3 bmax = new(GsplatUtils.SortableUintToFloat(boundsData[3]),
+                GsplatUtils.SortableUintToFloat(boundsData[4]), GsplatUtils.SortableUintToFloat(boundsData[5]));
             bounds.SetMinMax(bmin, bmax);
 
             if (bounds.extents.sqrMagnitude < 0.01)
-                bounds.extents = new Vector3(0.1f,0.1f,0.1f);
+                bounds.extents = new Vector3(0.1f, 0.1f, 0.1f);
             return bounds;
         }
 
@@ -79,30 +81,30 @@ namespace Gsplat
             return count[0];
         }
 
-        public void DispatchInitOrder(GsplatCutout[] Cutouts, Matrix4x4 matrixWorld, bool cutoutsUpdateBounds)
+        public void DispatchInitOrder(GsplatCutout[] cutouts, Matrix4x4 matrixWorld, bool cutoutsUpdateBounds)
         {
-            if (Cutouts.Length == 0)
+            if (cutouts.Length == 0)
             {
-                if (m_handlingCutouts)
-                {
-                    m_handlingCutouts = false;
-                    SorterResource.Initialized = false;
-                    m_cutoutsData = new GsplatCutout.ShaderData[0];
-                    m_remainingCount = m_gsplatAsset.SplatCount;
-                    m_bounds = m_gsplatAsset.Bounds;
-                }
+                if (!m_handlingCutouts) return;
+                m_handlingCutouts = false;
+                SorterResource.Initialized = false;
+                m_cutoutsData = Array.Empty<GsplatCutout.ShaderData>();
+                m_remainingCount = m_gsplatAsset.SplatCount;
+                m_bounds = m_gsplatAsset.Bounds;
                 return;
             }
+
             SorterResource.Initialized = true;
             m_handlingCutouts = true;
 
-            bool cutoutsUnchanged = m_cutoutsData.Length == Cutouts.Length;
-            GsplatCutout.ShaderData[] updatedCutoutsData = new GsplatCutout.ShaderData[Cutouts.Length];
-            for (int i = 0; i != Cutouts.Length; i++)
+            bool cutoutsUnchanged = m_cutoutsData.Length == cutouts.Length;
+            GsplatCutout.ShaderData[] updatedCutoutsData = new GsplatCutout.ShaderData[cutouts.Length];
+            for (int i = 0; i != cutouts.Length; i++)
             {
-                updatedCutoutsData[i] = Cutouts[i].GetShaderData(matrixWorld);
+                updatedCutoutsData[i] = cutouts[i].GetShaderData(matrixWorld);
                 if (cutoutsUnchanged)
-                    if (updatedCutoutsData[i].matrix != m_cutoutsData[i].matrix || updatedCutoutsData[i].typeAndFlags != m_cutoutsData[i].typeAndFlags)
+                    if (updatedCutoutsData[i].matrix != m_cutoutsData[i].matrix ||
+                        updatedCutoutsData[i].typeAndFlags != m_cutoutsData[i].typeAndFlags)
                         cutoutsUnchanged = false;
             }
 
@@ -115,10 +117,7 @@ namespace Gsplat
                 m_gsplatAsset.UpdateBoundsBuffer(BoundsBuffer);
             m_gsplatAsset.InitOrder(SorterResource, GsplatResource, cutoutsUpdateBounds);
             m_remainingCount = ExtractOrderSize(SorterResource.OrderBuffer);
-            if (cutoutsUpdateBounds)
-                m_bounds = ExtractBounds();
-            else
-                m_bounds = m_gsplatAsset.Bounds;
+            m_bounds = cutoutsUpdateBounds ? ExtractBounds() : m_gsplatAsset.Bounds;
         }
 
         public void BindGsplatAsset(GsplatAsset gsplatAsset, bool asyncUpload = false)

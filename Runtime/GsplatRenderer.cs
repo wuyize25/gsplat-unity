@@ -83,7 +83,7 @@ namespace Gsplat
 #if UNITY_EDITOR
         public void OnDrawGizmos()
         {
-            if (GsplatSettings.Instance.DisplayGSplatsBoundingBoxes && Valid && isActiveAndEnabled)
+            if (GsplatSettings.Instance.DisplayBoundingBoxes && Valid && isActiveAndEnabled)
             {
                 Gizmos.matrix = transform.localToWorldMatrix;
                 Gizmos.color = Color.green;

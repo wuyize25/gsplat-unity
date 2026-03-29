@@ -43,9 +43,6 @@ Shader "Gsplat/Standard"
             float _Brightness;
             float _ScaleFactor;
             StructuredBuffer<uint> _OrderBuffer;
-            #ifndef SH_BANDS_0
-            StructuredBuffer<float3> _SHBuffer;
-            #endif
 
             struct appdata
             {
@@ -102,8 +99,7 @@ Shader "Gsplat/Standard"
                 // calculate the model-space view direction
                 float3 dir = normalize(mul(center.view, (float3x3)center.modelView));
                 float3 sh[SH_COEFFS];
-                for (int i = 0; i < SH_COEFFS; i++)
-                    sh[i] = _SHBuffer[source.id * SH_COEFFS + i];
+                InitSH(source.id, sh);
                 color.rgb += EvalSH(sh, dir, _SHDegree);
                 #endif
 

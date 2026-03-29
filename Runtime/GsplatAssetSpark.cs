@@ -42,11 +42,15 @@ namespace Gsplat
     {
         public override CompressionMode Compression => CompressionMode.Spark;
 
-        [HideInInspector] public Vector3[] SHs;
+        [HideInInspector] public uint[] PackedSH1;
+        [HideInInspector] public uint[] PackedSH2;
+        [HideInInspector] public uint[] PackedSH3;
         [HideInInspector] public uint4[] PackedSplats;
 
         static readonly int k_packedSplatsBuffer = Shader.PropertyToID("_PackedSplatsBuffer");
-        static readonly int k_shBuffer = Shader.PropertyToID("_SHBuffer");
+        static readonly int k_packedSH1Buffer = Shader.PropertyToID("_PackedSH1Buffer");
+        static readonly int k_packedSH2Buffer = Shader.PropertyToID("_PackedSH2Buffer");
+        static readonly int k_packedSH3Buffer = Shader.PropertyToID("_PackedSH3Buffer");
         static readonly int k_splatCount = Shader.PropertyToID("_SplatCount");
         static readonly int k_matrixMv = Shader.PropertyToID("_MatrixMV");
         static readonly int k_depthBuffer = Shader.PropertyToID("_DepthBuffer");
@@ -55,8 +59,12 @@ namespace Gsplat
         public override void Allocate()
         {
             PackedSplats = new uint4[SplatCount];
-            if (SHBands > 0)
-                SHs = new Vector3[SplatCount * GsplatUtils.SHBandsToCoefficientCount(SHBands)];
+            if (SHBands >= 1)
+                PackedSH1 = new uint[SplatCount * 2];
+            if (SHBands >= 2)
+                PackedSH2 = new uint[SplatCount * 4];
+            if (SHBands >= 3)
+                PackedSH3 = new uint[SplatCount * 4];
         }
 
         public override GsplatResource CreateResource()
@@ -68,8 +76,12 @@ namespace Gsplat
         {
             var res = (GsplatResourceSpark)resource;
             res.PackedSplatsBuffer.SetData(PackedSplats);
-            if (SHBands > 0)
-                res.SHBuffer.SetData(SHs);
+            if (SHBands >= 1)
+                res.PackedSH1Buffer.SetData(PackedSH1);
+            if (SHBands >= 2)
+                res.PackedSH2Buffer.SetData(PackedSH2);
+            if (SHBands == 3)
+                res.PackedSH3Buffer.SetData(PackedSH3);
         }
 
         protected override async Task _UploadDataAsync(GsplatResource resource)
@@ -80,12 +92,15 @@ namespace Gsplat
                 var batchSize = (int)Math.Min(GsplatSettings.Instance.UploadBatchSize, SplatCount - res.UploadedCount);
                 res.PackedSplatsBuffer.SetData(PackedSplats, (int)res.UploadedCount, (int)res.UploadedCount, batchSize);
 
-                if (SHBands > 0)
-                {
-                    var coefficientCount = GsplatUtils.SHBandsToCoefficientCount(SHBands);
-                    res.SHBuffer.SetData(SHs, coefficientCount * (int)res.UploadedCount,
-                        coefficientCount * (int)res.UploadedCount, coefficientCount * batchSize);
-                }
+                if (SHBands >= 1)
+                    res.PackedSH1Buffer.SetData(PackedSH1, 2 * (int)res.UploadedCount, 2 * (int)res.UploadedCount,
+                        2 * batchSize);
+                if (SHBands >= 2)
+                    res.PackedSH2Buffer.SetData(PackedSH2, 4 * (int)res.UploadedCount, 4 * (int)res.UploadedCount,
+                        4 * batchSize);
+                if (SHBands >= 3)
+                    res.PackedSH3Buffer.SetData(PackedSH3, 4 * (int)res.UploadedCount, 4 * (int)res.UploadedCount,
+                        4 * batchSize);
 
                 res.UploadedCount += (uint)batchSize;
                 await Task.Yield();
@@ -97,8 +112,12 @@ namespace Gsplat
         {
             var res = (GsplatResourceSpark)resource;
             propertyBlock.SetBuffer(k_packedSplatsBuffer, res.PackedSplatsBuffer);
-            if (SHBands > 0)
-                propertyBlock.SetBuffer(k_shBuffer, res.SHBuffer);
+            if (SHBands >= 1)
+                propertyBlock.SetBuffer(k_packedSH1Buffer, res.PackedSH1Buffer);
+            if (SHBands >= 2)
+                propertyBlock.SetBuffer(k_packedSH2Buffer, res.PackedSH2Buffer);
+            if (SHBands >= 3)
+                propertyBlock.SetBuffer(k_packedSH3Buffer, res.PackedSH3Buffer);
         }
 
         public override void ComputeDepth(GsplatMaterial material, CommandBuffer cmd, Matrix4x4 matrixMv,
@@ -143,11 +162,27 @@ namespace Gsplat
                     throw new EndOfStreamException($"unexpected end of file, got {readBytes} bytes at vertex {i}");
 
                 var properties = MemoryMarshal.Cast<byte, float>(buffer);
-                for (var j = 0; j < shCoeffs; j++)
-                    SHs[i * shCoeffs + j] = new Vector3(
-                        properties[j + plyInfo.SHOffset],
-                        properties[j + plyInfo.SHOffset + shCoeffs],
-                        properties[j + plyInfo.SHOffset + shCoeffs * 2]);
+
+                for (int j = 1, shReadOffset = 0; j <= SHBands; j++)
+                {
+                    var bandSize = j * 2 + 1;
+                    var shBandData = new float[bandSize * 3]; // x3 for rgb
+                    for (int k = 0; k < bandSize; k++)
+                    {
+                        shBandData[k * 3] = properties[shReadOffset + k + plyInfo.SHOffset];
+                        shBandData[k * 3 + 1] = properties[shReadOffset + k + plyInfo.SHOffset + shCoeffs];
+                        shBandData[k * 3 + 2] = properties[shReadOffset + k + plyInfo.SHOffset + shCoeffs * 2];
+                    }
+
+                    if (j == 1)
+                        Array.Copy(PackSH1(shBandData), 0, PackedSH1, i * 2, 2);
+                    if (j == 2)
+                        Array.Copy(PackSH2(shBandData), 0, PackedSH2, i * 4, 4);
+                    if (j == 3)
+                        Array.Copy(PackSH3(shBandData), 0, PackedSH3, i * 4, 4);
+
+                    shReadOffset += bandSize;
+                }
 
                 var color = new Vector4(
                     properties[plyInfo.ColorOffset],
@@ -310,6 +345,102 @@ namespace Gsplat
                 uPosZ | (uint)(quantU << 16) | (uint)(quantV << 24),
                 uScaleX | (uint)(uScaleY << 8) | (uint)(uScaleZ << 16) | (uint)(angleInt << 24)
             );
+        }
+
+        /// <summary>
+        /// Inspired from SparkJs encodeSh1Rgb implementation
+        ///
+        /// Encode an array of 9 signed RGB SH1 coefficients (clamped to [-1,1]) into
+        /// a pair of uint32 values, where each coefficient is stored as a sint7
+        /// </summary>
+        static uint[] PackSH1(float[] sh)
+        {
+            uint[] packedSH = new uint[2];
+
+            for (var i = 0; i < 9; ++i)
+            {
+                float shScaled = sh[i] * 63.0f;
+                int shBounded = (int)Math.Round(Math.Max(-63.0f, Math.Min(63.0f, shScaled)));
+                int sint7SH = shBounded & 0x7f;
+
+                int bitStart = i * 7;
+                int bitEnd = bitStart + 7;
+
+                int wordStart = (int)Math.Floor((double)(bitStart / 32));
+                int bitOffset = bitStart - wordStart * 32;
+                uint firstWord = (uint)((sint7SH << bitOffset) & 0xffffffff);
+                packedSH[wordStart] |= firstWord;
+
+                if (bitEnd > wordStart * 32 + 32)
+                {
+                    uint secondWord = ((uint)sint7SH >> (32 - bitOffset)) & 0xffffffff;
+                    packedSH[wordStart + 1] |= secondWord;
+                }
+            }
+
+            return packedSH;
+        }
+
+        static uint PackSint8Bytes(float b0, float b1, float b2, float b3)
+        {
+            sbyte clampedB0 = GsplatUtils.FloatToSByte(b0);
+            sbyte clampedB1 = GsplatUtils.FloatToSByte(b1);
+            sbyte clampedB2 = GsplatUtils.FloatToSByte(b2);
+            sbyte clampedB3 = GsplatUtils.FloatToSByte(b3);
+            byte uB0 = (byte)(clampedB0 & 0xff);
+            byte uB1 = (byte)(clampedB1 & 0xff);
+            byte uB2 = (byte)(clampedB2 & 0xff);
+            byte uB3 = (byte)(clampedB3 & 0xff);
+            return (uint)(uB0 | (uB1 << 8) | (uB2 << 16) | (uB3 << 24));
+        }
+
+        /// <summary>
+        /// Inspired from SparkJs encodeSh2Rgb implementation
+        ///
+        /// Encode an array of 15 signed RGB SH2 coefficients (clamped to [-1,1]) into
+        /// an array of 4 uint32 values, where each coefficient is stored as a sint8.
+        /// </summary>
+        static uint[] PackSH2(float[] sh)
+        {
+            uint[] packedSH = new uint[4];
+            packedSH[0] = PackSint8Bytes(sh[0], sh[1], sh[2], sh[3]);
+            packedSH[1] = PackSint8Bytes(sh[4], sh[5], sh[6], sh[7]);
+            packedSH[2] = PackSint8Bytes(sh[8], sh[9], sh[10], sh[11]);
+            packedSH[3] = PackSint8Bytes(sh[12], sh[13], sh[14], 0);
+            return packedSH;
+        }
+
+        /// <summary>
+        /// Inspired from SparkJs encodeSh3Rgb implementation
+        ///
+        /// Encode an array of 21 signed RGB SH3 coefficients (clamped to [-1,1]) into
+        /// an array of 4 uint32 values, where each coefficient is stored as a sint6.
+        /// </summary>
+        static uint[] PackSH3(float[] sh)
+        {
+            uint[] packedSH = new uint[4];
+
+            for (var i = 0; i < 21; ++i)
+            {
+                float shScaled = sh[i] * 31.0f;
+                int shBounded = (int)Math.Round(Math.Max(-31.0f, Math.Min(31.0f, shScaled)));
+                int sint6SH = shBounded & 0x3f;
+                int bitStart = i * 6;
+                int bitEnd = bitStart + 6;
+
+                int wordStart = (int)Math.Floor((double)(bitStart / 32));
+                int bitOffset = bitStart - wordStart * 32;
+                uint firstWord = (uint)((sint6SH << bitOffset) & 0xffffffff);
+
+                packedSH[wordStart] |= firstWord;
+                if (bitEnd > wordStart * 32 + 32)
+                {
+                    uint secondWord = ((uint)sint6SH >> (32 - bitOffset)) & 0xffffffff;
+                    packedSH[wordStart + 1] |= secondWord;
+                }
+            }
+
+            return packedSH;
         }
     }
 }

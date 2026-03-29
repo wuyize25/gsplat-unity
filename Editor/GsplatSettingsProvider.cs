@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 
 using System.Collections.Generic;
-using System.IO;
 using UnityEditor;
 using UnityEngine;
 
@@ -24,15 +23,30 @@ namespace Gsplat.Editor
 
         public override void OnGUI(string searchContext)
         {
-            EditorGUILayout.PropertyField(m_gsplatSettings.FindProperty(nameof(GsplatSettings.Shader)));
             EditorGUILayout.PropertyField(m_gsplatSettings.FindProperty(nameof(GsplatSettings.ComputeShader)));
             EditorGUILayout.PropertyField(m_gsplatSettings.FindProperty(nameof(GsplatSettings.SplatInstanceSize)));
+            EditorGUILayout.PropertyField(m_gsplatSettings.FindProperty(nameof(GsplatSettings.UploadBatchSize)));
             EditorGUILayout.PropertyField(m_gsplatSettings.FindProperty(nameof(GsplatSettings.ShowImportErrors)));
+            EditorGUILayout.PropertyField(m_gsplatSettings.FindProperty(nameof(GsplatSettings.Materials)));
+            EditorGUILayout.Space();
+            GUILayout.BeginHorizontal();
+            GUILayout.FlexibleSpace();
+            if (GUILayout.Button("Reset", GUILayout.Width(60)))
+                ResetToDefaults();
+            GUILayout.EndHorizontal();
             m_gsplatSettings.ApplyModifiedProperties();
         }
 
+        void ResetToDefaults()
+        {
+            Undo.RecordObject(GsplatSettings.Instance, "Reset Gsplat Settings");
+            GsplatSettings.Instance.Reset();
+            EditorUtility.SetDirty(GsplatSettings.Instance);
+            m_gsplatSettings = new SerializedObject(GsplatSettings.Instance);
+        }
+
         [SettingsProvider]
-        public static SettingsProvider CreateMyCustomSettingsProvider()
+        public static SettingsProvider CreateGsplatSettingsProvider()
         {
             var provider = new GsplatSettingsProvider("Project/Gsplat");
             return provider;

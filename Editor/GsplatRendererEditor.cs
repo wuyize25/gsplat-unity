@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 
 using UnityEditor;
-using UnityEngine;
 
 namespace Gsplat.Editor
 {
@@ -13,25 +12,30 @@ namespace Gsplat.Editor
         {
             serializedObject.Update();
 
-            DrawPropertiesExcluding(serializedObject, "m_Script", nameof(GsplatRenderer.UploadBatchSize),
-                nameof(GsplatRenderer.RenderBeforeUploadComplete));
+            DrawPropertiesExcluding(serializedObject, "m_Script",
+                nameof(GsplatRenderer.AsyncUpload),
+                nameof(GsplatRenderer.RenderBeforeUploadComplete),
+                nameof(GsplatRenderer.Brightness)
+            );
 
-            var renderer = (GsplatRenderer)target;
+            var brightnessProp = serializedObject.FindProperty(nameof(GsplatRenderer.Brightness));
+            float brightness = brightnessProp.floatValue;
 
-            // Cap the SHDegree slider to the asset SHBands
-            if (renderer.GsplatAsset != null && renderer.GsplatAsset.SHBands > 0)
-                renderer.SHDegree = (byte)EditorGUILayout.IntSlider(new GUIContent("SH Degree"), renderer.SHDegree, 0, renderer.GsplatAsset.SHBands);
-            else
-            {
-                EditorGUI.BeginDisabledGroup(true);
-                EditorGUILayout.IntSlider(new GUIContent("SH Degree"), 0, 0, 0);
-                EditorGUI.EndDisabledGroup();
-            }
+            // Use log scale for the slider UX
+            // range from -3 (~5%) to 3 (~20x)
+            float logVal = UnityEngine.Mathf.Log(
+                UnityEngine.Mathf.Max(0.001f, brightness)
+            );
+            logVal = EditorGUILayout.Slider("Log Brightness", logVal, -4.0f, 3.0f);
+            brightness = EditorGUILayout.FloatField(
+                "Brightness", UnityEngine.Mathf.Exp(logVal)
+            );
+            brightnessProp.floatValue = brightness;
 
+            EditorGUILayout.PropertyField(serializedObject.FindProperty(nameof(GsplatRenderer.AsyncUpload)));
             if (serializedObject.FindProperty(nameof(GsplatRenderer.AsyncUpload)).boolValue)
             {
                 EditorGUI.indentLevel++;
-                EditorGUILayout.PropertyField(serializedObject.FindProperty(nameof(GsplatRenderer.UploadBatchSize)));
                 EditorGUILayout.PropertyField(
                     serializedObject.FindProperty(nameof(GsplatRenderer.RenderBeforeUploadComplete)));
                 EditorGUI.indentLevel--;

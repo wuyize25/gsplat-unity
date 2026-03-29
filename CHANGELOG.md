@@ -7,15 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- PLY importer and shaders extended to also pack Splats Spherical Harmonics as 2 uint for SH1, 6 uint for SH2 and 10 uint for SH3.
+  The implementation is also heavily inspired by the SparkJS [packing implementation](https://github.com/sparkjsdev/spark/blob/main/src/SplatMesh.ts#L754). ([#14](https://github.com/wuyize25/gsplat-unity/pull/14) by [@Arthur-Aillet](https://github.com/Arthur-Aillet))
+
+## [1.2.1] - 2026-03-26
+
 ### Added
 
-- PLY importer and shaders extended to also pack Splats Spherical Harmonics as 2 uint for SH1, 6 uint for SH2 and 10 uint for SH3.
-The implementation is also heavily inspired by the SparkJS [packing implementation](https://github.com/sparkjsdev/spark/blob/main/src/SplatMesh.ts#L754).
+- Added a downscale factor for individual splats to the GsplatRenderer. Improves rendering speed while trying to maintain visual fidelity as much as possible. ([#18](https://github.com/wuyize25/gsplat-unity/pull/18) by [@Arthur-Aillet](https://github.com/Arthur-Aillet)).
 
-- PLY importer and shaders extended to pack Gaussian Splat data in 4 uint ([#12](https://github.com/wuyize25/gsplat-unity/pull/12)).
-Implementation heavily inspired by the SparkJS packing implementation.
+### Fixed
+
+- Fixed a bug where using an unspecified var type when calling `TryGetGUIDAndLocalFileIdentifier` in `GsplatRenderer` caused an error in Unity 2022/2021. ([#22](https://github.com/wuyize25/gsplat-unity/pull/22) by [@Arthur-Aillet](https://github.com/Arthur-Aillet))
+
+## [1.2.0] - 2026-03-22
+
+### Added
+
+- Per\-asset GPU data buffers are now allocated and cached by `GsplatResourceManager` (reference counted). When multiple instances of the same `GsplatAsset` are present in a scene, they can share the same GraphicsBuffers.
+
+- PLY importer and shaders extended to pack Gaussian Splat data in 4 uint ([#12](https://github.com/wuyize25/gsplat-unity/pull/12) by [@Arthur-Aillet](https://github.com/Arthur-Aillet)).
+  Implementation heavily inspired by the SparkJS packing implementation. An option `Compression` is added to `GsplatImporter` to choose between `Uncompressed` and `Spark` (packed) modes.
+
+- Added a brightness slider in `GsplatRenderer` to allow post-hoc scaling of the Gsplat Asset's brightness. ([#17](https://github.com/wuyize25/gsplat-unity/pull/17) by [@Indivicivet](https://github.com/Indivicivet))
 
 - Supports streaming data from RAM to VRAM ([#6](https://github.com/wuyize25/gsplat-unity/issues/6)). An option `Async Upload` is added to `GsplatRenderer` to enable this feature.
+
+### Changed
+
+- The PLY file will be imported using Spark compression mode by default. Assets imported in the previous versions will be automatically re-imported in the new mode, but `GsplatRenderer` references to the `GsplatAsset` may be lost and need to be manually re-assigned.
+
+### Removed
+
+- Switching `GsplatAsset` instances with the same point count and the same SH bands on `GsplatRenderer` no longer supports the behavior of reusing existing per\-asset GPU data buffers without recreating them.
 
 ## [1.1.2] - 2025-11-20
 
@@ -68,7 +92,9 @@ Implementation heavily inspired by the SparkJS packing implementation.
 - This is the first release of Gsplat, as a Package.
 
 
-[unreleased]: https://github.com/wuyize25/gsplat-unity/compare/v1.1.2...HEAD
+[unreleased]: https://github.com/wuyize25/gsplat-unity/compare/v1.2.1...HEAD
+[1.2.1]: https://github.com/wuyize25/gsplat-unity/compare/v1.2.0...v1.2.1
+[1.2.0]: https://github.com/wuyize25/gsplat-unity/compare/v1.1.2...v1.2.0
 [1.1.2]: https://github.com/wuyize25/gsplat-unity/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/wuyize25/gsplat-unity/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/wuyize25/gsplat-unity/compare/v1.0.3...v1.1.0

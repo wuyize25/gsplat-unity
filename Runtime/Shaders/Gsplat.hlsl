@@ -219,41 +219,41 @@ float3 EvalSH(const inout float3 sh[SH_COEFFS], float3 dir, int degree = 3)
     if (degree == 1)
         return result;
 
-#if defined(SH_BANDS_2) || defined(SH_BANDS_3)
-// 2nd degree
-float xx = x * x;
-float yy = y * y;
-float zz = z * z;
-float xy = x * y;
-float yz = y * z;
-float xz = x * z;
+    #if defined(SH_BANDS_2) || defined(SH_BANDS_3)
+    // 2nd degree
+    float xx = x * x;
+    float yy = y * y;
+    float zz = z * z;
+    float xy = x * y;
+    float yz = y * z;
+    float xz = x * z;
 
-result= result+ (
-    sh[3]* (SH_C2_0 *xy)+
-sh [4]* (SH_C2_1 *yz)+
-sh [5]* (SH_C2_2 *(2.0 * zz- xx- yy))+
-sh [6]* (SH_C2_3 *xz)+
-sh [7]* (SH_C2_4 *(xx- yy))
+    result = result + (
+        sh[3] * (SH_C2_0 * xy) +
+        sh[4] * (SH_C2_1 * yz) +
+        sh[5] * (SH_C2_2 * (2.0 * zz - xx - yy)) +
+        sh[6] * (SH_C2_3 * xz) +
+        sh[7] * (SH_C2_4 * (xx - yy))
     );
 
-    if (degree== 2)
+    if (degree == 2)
         return result;
-#endif
+    #endif
 
-#ifdef SH_BANDS_3
-// 3rd degree
-result= result+ (
-    sh[8]* (SH_C3_0 * y *(3.0 * xx- yy))+
-sh [9]* (SH_C3_1 * xy *z)+
-sh [10]* (SH_C3_2 * y *(4.0 * zz- xx- yy))+
-sh [11]* (SH_C3_3 * z *(2.0 * zz- 3.0 * xx- 3.0 * yy))+
-sh [12]* (SH_C3_4 * x *(4.0 * zz- xx- yy))+
-sh [13]* (SH_C3_5 * z *(xx- yy))+
-sh [14]* (SH_C3_6 * x *(xx- 3.0 * yy))
+    #ifdef SH_BANDS_3
+    // 3rd degree
+    result = result + (
+        sh[8] * (SH_C3_0 * y * (3.0 * xx - yy)) +
+        sh[9] * (SH_C3_1 * xy * z) +
+        sh[10] * (SH_C3_2 * y * (4.0 * zz - xx - yy)) +
+        sh[11] * (SH_C3_3 * z * (2.0 * zz - 3.0 * xx - 3.0 * yy)) +
+        sh[12] * (SH_C3_4 * x * (4.0 * zz - xx - yy)) +
+        sh[13] * (SH_C3_5 * z * (xx - yy)) +
+        sh[14] * (SH_C3_6 * x * (xx - 3.0 * yy))
     );
-#endif
+    #endif
 
-return result;
+    return result;
 }
 #endif
 

@@ -15,13 +15,19 @@ namespace Gsplat
         [Range(0, 3)] public int SHDegree = 3;
         [HideInInspector] public uint RenderOrder = 0;
         public float Brightness = 1.0f;
-        [Tooltip("Improves rendering speed by shrinking Gaussian splats while trying to keep the impact on visual quality as small as possible.")]
-        [Range(0, 1)] public float SplatDownscaleFactor = 0.0f;
+
+        [Tooltip(
+            "Improves rendering speed by shrinking Gaussian splats while trying to keep the impact on visual quality as small as possible.")]
+        [Range(0, 1)]
+        public float SplatDownscaleFactor = 0.0f;
+
         public bool GammaToLinear;
         public bool AsyncUpload;
         public bool RenderBeforeUploadComplete = true;
+
         [Tooltip("Does cutouts update the Gsplat world bounds? (Costly on moving cutouts)")]
         public bool CutoutsUpdateBounds = true;
+
         GsplatAsset m_prevAsset;
         GsplatRendererImpl m_renderer;
 
@@ -31,8 +37,19 @@ namespace Gsplat
         public uint SplatCount => m_renderer != null ? m_renderer.GsplatResource?.UploadedCount ?? 0 : 0;
 
         public ISorterResource SorterResource => m_renderer.SorterResource;
-        public uint RemainingCount { get => m_renderer.m_remainingCount; set => m_renderer.m_remainingCount = value; }
-        public Bounds Bounds { get => m_renderer.m_bounds; set => m_renderer.m_bounds = value; }
+
+        public uint RemainingCount
+        {
+            get => m_renderer.m_remainingCount;
+            set => m_renderer.m_remainingCount = value;
+        }
+
+        public Bounds Bounds
+        {
+            get => m_renderer.m_bounds;
+            set => m_renderer.m_bounds = value;
+        }
+
         public GsplatCutout[] Cutouts
         {
             get
@@ -47,6 +64,7 @@ namespace Gsplat
                 return cutouts.ToArray();
             }
         }
+
         public void ComputeDepth(CommandBuffer cmd, Matrix4x4 matrixMv) => m_renderer.ComputeDepth(cmd, matrixMv);
 
         void OnEnable()
@@ -114,7 +132,8 @@ namespace Gsplat
             if (Valid && GsplatSettings.Instance.Valid && GsplatSorter.Instance.Valid)
             {
                 m_renderer.DispatchInitOrder(Cutouts, transform.localToWorldMatrix, CutoutsUpdateBounds);
-                m_renderer.Render(transform, gameObject.layer, GammaToLinear, SHDegree, Brightness, 1.0f - SplatDownscaleFactor, RenderOrder);
+                m_renderer.Render(transform, gameObject.layer, GammaToLinear, SHDegree, Brightness,
+                    1.0f - SplatDownscaleFactor, RenderOrder);
             }
         }
     }

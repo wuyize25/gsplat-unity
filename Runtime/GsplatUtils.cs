@@ -10,7 +10,7 @@ namespace Gsplat
     public static class GsplatUtils
     {
         public const string k_PackagePath = "Packages/wu.yize.gsplat/";
-        public static readonly Version k_Version = new("1.2.0");
+        public static readonly Version k_Version = new("1.2.1");
 
         // radix sort etc. friendly, see http://stereopsis.com/radix.html
         public static uint FloatToSortableUint(float f)

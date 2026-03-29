@@ -2,11 +2,11 @@
 
 [![Changelog](https://img.shields.io/badge/changelog-f15d30.svg)](./CHANGELOG.md) [![Version](https://img.shields.io/badge/version-v1.2.1-blue.svg)](https://github.com/wuyize25/gsplat-unity/releases/tag/v1.2.1) [![License](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE.md)
 
-A Unity package for rendering [3D Gaussian Splatting](https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/) (3DGS). Supports Unity 2021 and later.
+A Unity package for rendering [3D Gaussian Splatting](https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/) (3DGS). Supports Unity 2021 and later. 
 
 ![lego](Documentation~/Images/lego.png)
 
-The 3DGS rendering pipeline design of this package is inspired by [PlayCanvas](https://github.com/playcanvas/engine), which treats 3DGS objects similarly to transparent meshes that use a custom shader. With this approach, only an additional sorting pass needs to be inserted into each camera's command buffer. This design makes it easier to integrate 3DGS rendering into an existing pipeline, allows the draw calls for 3DGS objects to be correctly inserted into the existing rendering queue for transparent meshes (based on their bounding boxes), rather than rendering all 3DGS objects to a separate render texture as is done in [aras-p/UnityGaussianSplatting](https://github.com/aras-p/UnityGaussianSplatting).
+The 3DGS rendering pipeline design of this package is inspired by [PlayCanvas](https://github.com/playcanvas/engine), which treats 3DGS objects similarly to transparent meshes that use a custom shader. With this approach, only an additional sorting pass needs to be inserted into each camera's command buffer. This design makes it easier to integrate 3DGS rendering into an existing pipeline, allows the draw calls for 3DGS objects to be correctly inserted into the existing rendering queue for transparent meshes (based on their bounding boxes), rather than rendering all 3DGS objects to a separate render texture as is done in [aras-p/UnityGaussianSplatting](https://github.com/aras-p/UnityGaussianSplatting). 
 
 That sounds great, but at what cost?
 
@@ -26,10 +26,10 @@ Most 3DGS assets are trained in Gamma space, following the official implementati
 
 - Compatible with XR
 
-    - | XR Render Mode        | BiRP | URP  | HDRP |
-          | --------------------- | ---- | ---- | ---- |
-      | Multi-pass            | ✓    | ✓    | ✗    |
-      | Single Pass Instanced | ✗    | ✓    | ✗    |
+  - | XR Render Mode        | BiRP | URP  | HDRP |
+    | --------------------- | ---- | ---- | ---- |
+    | Multi-pass            | ✓    | ✓    | ✗    |
+    | Single Pass Instanced | ✗    | ✓    | ✗    |
 
 ## Platform Compatibility
 
@@ -43,7 +43,7 @@ After cloning or downloading this repository, open your Unity project (or create
 
 ### Setup
 
-First, ensure your project is using a supported Graphics API. For Windows: in `Edit > Project Settings > Player > Other Settings`, uncheck `Auto Graphics API for Windows`. Then, in the `Graphics APIs for Windows` list, add `Vulkan` or `Direct3D12` and remove any other options. Unity will require a restart to switch the Graphics API. You may need to perform similar steps for other platforms.
+First, ensure your project is using a supported Graphics API. For Windows: in `Edit > Project Settings > Player > Other Settings`, uncheck `Auto Graphics API for Windows`. Then, in the `Graphics APIs for Windows` list, add `Vulkan` or `Direct3D12` and remove any other options. Unity will require a restart to switch the Graphics API. You may need to perform similar steps for other platforms. 
 
 Note that for Android, you also need to uncheck `Apply display rotation during rendering` in `Player > Settings for Android > Other Settings > Vulkan Settings`, as this package currently does not support rendering in the native display orientation.
 
@@ -51,8 +51,8 @@ The next steps depend on the Render Pipeline you are using:
 
 - BiRP: Does not need any extra setup.
 - URP: Add `Gsplat URP Feature` to the URP renderer settings.
-    - Find the `Universal Renderer Data` your project is using, click the `Add Renderer Feature` button, and choose `Gsplat URP Feature.`
-    - If you are using Unity 6 or later, the Render Graph "Compatibility Mode" in URP settings must be turned off!
+  - Find the `Universal Renderer Data` your project is using, click the `Add Renderer Feature` button, and choose `Gsplat URP Feature.`
+  - If you are using Unity 6 or later, the Render Graph "Compatibility Mode" in URP settings must be turned off!
 - HDRP: Add `Custom Pass` volume object in your scene and a `Gsplat HDRP Pass` entry to it. The injection Point should be set to `Before Transparent`.
 
 ### Import Assets

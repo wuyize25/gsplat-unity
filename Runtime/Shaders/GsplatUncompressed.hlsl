@@ -26,4 +26,14 @@ bool InitSplatData(SplatSource source, float4x4 modelView, out SplatCenter cente
     return true;
 }
 
+#ifndef SH_BANDS_0
+StructuredBuffer<float3> _SHBuffer;
+
+void InitSH(uint id, out float3 sh[SH_COEFFS])
+{
+    for (int i = 0; i < SH_COEFFS; i++)
+        sh[i] = _SHBuffer[id * SH_COEFFS + i];
+}
+#endif
+
 #endif

@@ -57,7 +57,7 @@ namespace Gsplat.Editor
             brightnessProp.floatValue = brightness;
 
             EditorGUILayout.PropertyField(serializedObject.FindProperty(nameof(GsplatRenderer.AsyncUpload)));
-
+            
             var renderOrderProp = serializedObject.FindProperty(nameof(GsplatRenderer.RenderOrder));
             uint renderOrder = renderOrderProp.uintValue;
 

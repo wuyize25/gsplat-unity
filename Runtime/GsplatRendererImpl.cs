@@ -40,9 +40,9 @@ namespace Gsplat
         public bool ComputeSortRequired = true;
         public bool ComputeCutoutsRequired = true;
         private Dictionary<int, (Vector3, Vector3)> m_prevCamTransforms;
-
-        private bool m_handlingCutouts = true;
-        private GsplatCutout.ShaderData[] m_cutoutsData;
+        
+        GsplatCutout.ShaderData[] m_cutoutsData;
+        uint m_prevSplatCount;
 
         public GsplatRendererImpl(uint splatCount)
         {
@@ -88,49 +88,44 @@ namespace Gsplat
             return count[0];
         }
 
-        public void DispatchInitOrder(GsplatCutout[] Cutouts, Matrix4x4 matrixWorld, bool cutoutsUpdateBounds)
+        public void DispatchInitOrder(GsplatCutout[] cutouts, Matrix4x4 matrixWorld, bool cutoutsUpdateBounds)
         {
-            if (!ComputeCutoutsRequired)
-                return;
-
-            if (Cutouts.Length == 0)
+            if (cutouts.Length == 0)
             {
-                if (m_handlingCutouts)
-                {
-                    m_handlingCutouts = false;
-                    SorterResource.Initialized = false;
-                    m_cutoutsData = new GsplatCutout.ShaderData[0];
-                    m_remainingCount = m_gsplatAsset.SplatCount;
-                    m_bounds = m_gsplatAsset.Bounds;
-                }
+                SorterResource.Initialized = false;
+                m_cutoutsData = Array.Empty<GsplatCutout.ShaderData>();
+                m_remainingCount = GsplatResource.UploadedCount;
+                m_bounds = m_gsplatAsset.Bounds;
                 return;
             }
-            SorterResource.Initialized = true;
-            m_handlingCutouts = true;
 
-            bool cutoutsUnchanged = m_cutoutsData.Length == Cutouts.Length;
-            GsplatCutout.ShaderData[] updatedCutoutsData = new GsplatCutout.ShaderData[Cutouts.Length];
-            for (int i = 0; i != Cutouts.Length; i++)
+            if (!ComputeCutoutsRequired)
+                return;
+            
+            SorterResource.Initialized = true;
+
+            var cutoutsUnchanged = m_cutoutsData.Length == cutouts.Length;
+            var updatedCutoutsData = new GsplatCutout.ShaderData[cutouts.Length];
+            for (int i = 0; i != cutouts.Length; i++)
             {
-                updatedCutoutsData[i] = Cutouts[i].GetShaderData(matrixWorld);
+                updatedCutoutsData[i] = cutouts[i].GetShaderData(matrixWorld);
                 if (cutoutsUnchanged)
-                    if (updatedCutoutsData[i].matrix != m_cutoutsData[i].matrix || updatedCutoutsData[i].typeAndFlags != m_cutoutsData[i].typeAndFlags)
+                    if (updatedCutoutsData[i].matrix != m_cutoutsData[i].matrix ||
+                        updatedCutoutsData[i].typeAndFlags != m_cutoutsData[i].typeAndFlags)
                         cutoutsUnchanged = false;
             }
 
-            if (cutoutsUnchanged)
+            if (cutoutsUnchanged && m_prevSplatCount == GsplatResource.UploadedCount)
                 return;
-
+            
+            m_prevSplatCount = GsplatResource.UploadedCount;
             m_cutoutsData = updatedCutoutsData;
             CutoutsBuffer = m_gsplatAsset.UpdateCutoutsBuffer(CutoutsBuffer, m_cutoutsData);
             if (cutoutsUpdateBounds)
                 m_gsplatAsset.UpdateBoundsBuffer(BoundsBuffer);
             m_gsplatAsset.InitOrder(SorterResource, GsplatResource, cutoutsUpdateBounds);
             m_remainingCount = ExtractOrderSize(SorterResource.OrderBuffer);
-            if (cutoutsUpdateBounds)
-                m_bounds = ExtractBounds();
-            else
-                m_bounds = m_gsplatAsset.Bounds;
+            m_bounds = cutoutsUpdateBounds ? ExtractBounds() : m_gsplatAsset.Bounds;
         }
 
         public void BindGsplatAsset(GsplatAsset gsplatAsset, bool asyncUpload = false)
@@ -158,7 +153,7 @@ namespace Gsplat
         {
             OrderBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Append, (int)splatCount, sizeof(uint));
             SorterResource = GsplatSorter.Instance.CreateSorterResource(splatCount, OrderBuffer);
-            m_cutoutsData = new GsplatCutout.ShaderData[0];
+            m_cutoutsData = Array.Empty<GsplatCutout.ShaderData>();
             CutoutsBuffer = null;
             OrderSizeBuffer = new GraphicsBuffer(GraphicsBuffer.Target.IndirectArguments, 1, sizeof(uint));
             BoundsBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, 6, sizeof(uint));

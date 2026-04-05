@@ -35,12 +35,12 @@ namespace Gsplat
         static readonly int k_brightness = Shader.PropertyToID("_Brightness");
         static readonly int k_scaleFactor = Shader.PropertyToID("_ScaleFactor");
 
-        private uint m_framesBeforeRecomputeSort = 0;
-        private uint m_sortsBeforeRecomputeCutouts = 0;
+        uint m_framesBeforeRecomputeSort = 0;
+        uint m_sortsBeforeRecomputeCutouts = 0;
         public bool ComputeSortRequired = true;
         public bool ComputeCutoutsRequired = true;
-        private Dictionary<int, (Vector3, Vector3)> m_prevCamTransforms;
-        
+        Dictionary<int, (Vector3, Vector3)> m_prevCamTransforms;
+
         GsplatCutout.ShaderData[] m_cutoutsData;
         uint m_prevSplatCount;
 
@@ -71,12 +71,14 @@ namespace Gsplat
             BoundsBuffer.GetData(boundsData);
 
             Bounds bounds = default;
-            Vector3 bmin = new(GsplatUtils.SortableUintToFloat(boundsData[0]), GsplatUtils.SortableUintToFloat(boundsData[1]), GsplatUtils.SortableUintToFloat(boundsData[2]));
-            Vector3 bmax = new(GsplatUtils.SortableUintToFloat(boundsData[3]), GsplatUtils.SortableUintToFloat(boundsData[4]), GsplatUtils.SortableUintToFloat(boundsData[5]));
+            Vector3 bmin = new(GsplatUtils.SortableUintToFloat(boundsData[0]),
+                GsplatUtils.SortableUintToFloat(boundsData[1]), GsplatUtils.SortableUintToFloat(boundsData[2]));
+            Vector3 bmax = new(GsplatUtils.SortableUintToFloat(boundsData[3]),
+                GsplatUtils.SortableUintToFloat(boundsData[4]), GsplatUtils.SortableUintToFloat(boundsData[5]));
             bounds.SetMinMax(bmin, bmax);
 
             if (bounds.extents.sqrMagnitude < 0.01)
-                bounds.extents = new Vector3(0.1f,0.1f,0.1f);
+                bounds.extents = new Vector3(0.1f, 0.1f, 0.1f);
             return bounds;
         }
 
@@ -101,7 +103,7 @@ namespace Gsplat
 
             if (!ComputeCutoutsRequired)
                 return;
-            
+
             SorterResource.Initialized = true;
 
             var cutoutsUnchanged = m_cutoutsData.Length == cutouts.Length;
@@ -117,7 +119,7 @@ namespace Gsplat
 
             if (cutoutsUnchanged && m_prevSplatCount == GsplatResource.UploadedCount)
                 return;
-            
+
             m_prevSplatCount = GsplatResource.UploadedCount;
             m_cutoutsData = updatedCutoutsData;
             CutoutsBuffer = m_gsplatAsset.UpdateCutoutsBuffer(CutoutsBuffer, m_cutoutsData);
@@ -191,12 +193,14 @@ namespace Gsplat
             foreach (var cam in Camera.allCameras)
             {
                 var id = cam.GetInstanceID();
-                if (m_prevCamTransforms.TryGetValue(id, out (Vector3, Vector3)prevCamTransform))
+                if (m_prevCamTransforms.TryGetValue(id, out (Vector3, Vector3) prevCamTransform))
                 {
                     (Vector3 prevCamPos, Vector3 prevCamRot) = prevCamTransform;
 
-                    if ((cam.transform.position - prevCamPos).magnitude > GsplatSettings.Instance.CameraTranslationRefreshTreshold
-                        || (cam.transform.eulerAngles - prevCamRot).magnitude > GsplatSettings.Instance.CameraRotationRefreshTreshold)
+                    if ((cam.transform.position - prevCamPos).magnitude >
+                        GsplatSettings.Instance.CameraTranslationRefreshTreshold
+                        || (cam.transform.eulerAngles - prevCamRot).magnitude >
+                        GsplatSettings.Instance.CameraRotationRefreshTreshold)
                     {
                         m_prevCamTransforms[id] = (cam.transform.position, cam.transform.eulerAngles);
                         ForceRefresh();
@@ -210,13 +214,15 @@ namespace Gsplat
             }
         }
 
-        public void EvaluateRefreshRequired(GsplatRenderer.GsplatSortMode mode, uint sortRefreshRate, uint cutoutsRefreshRate)
+        public void EvaluateRefreshRequired(GsplatRenderer.GsplatSortMode mode, uint sortRefreshRate,
+            uint cutoutsRefreshRate)
         {
             if (mode == GsplatRenderer.GsplatSortMode.Always)
             {
                 sortRefreshRate = 0;
                 cutoutsRefreshRate = 0;
             }
+
             if (mode == GsplatRenderer.GsplatSortMode.SortEveryNFrames)
             {
                 cutoutsRefreshRate = 0;

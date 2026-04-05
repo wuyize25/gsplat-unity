@@ -100,31 +100,27 @@ namespace Gsplat
             var res = (GsplatResourceUncompressed)resource;
             var cs = GsplatMaterial.CalcDepthShader;
             var kernelCalcDepth = 0;
-            cmd.SetComputeIntParam(cs, k_splatCount, (int)SplatCount);
+            cmd.SetComputeIntParam(cs, k_splatCount, (int)res.UploadedCount);
             cmd.SetComputeMatrixParam(cs, k_matrixMv, matrixMv);
             cmd.SetComputeBufferParam(cs, kernelCalcDepth, k_positionBuffer, res.PositionBuffer);
             cmd.SetComputeBufferParam(cs, kernelCalcDepth, k_depthBuffer, sorterResource.InputKeys);
             cmd.SetComputeBufferParam(cs, kernelCalcDepth, k_orderBuffer, sorterResource.OrderBuffer);
-            cmd.DispatchCompute(cs, kernelCalcDepth, (int)GsplatUtils.DivRoundUp(SplatCount, 1024), 1, 1);
+            cmd.DispatchCompute(cs, kernelCalcDepth, (int)GsplatUtils.DivRoundUp(res.UploadedCount, 1024), 1, 1);
         }
 
         public override void InitOrder(ISorterResource sorterResource, GsplatResource resource, bool updateBounds)
         {
             var cs = GsplatMaterial.InitOrderShader;
             var res = (GsplatResourceUncompressed)resource;
-
             sorterResource.OrderBuffer.SetCounterValue(0);
-
-            uint threadBlocks = GsplatUtils.DivRoundUp(SplatCount, 1024);
-
-            cs.SetInt(k_splatCount, (int)SplatCount);
+            cs.SetInt(k_splatCount, (int)res.UploadedCount);
             cs.SetBuffer(m_kernelInitOrder, k_orderBuffer, sorterResource.OrderBuffer);
             cs.SetBuffer(m_kernelInitOrder, k_positionBuffer, res.PositionBuffer);
             if (updateBounds)
                 cs.EnableKeyword("UPDATE_BOUNDS");
             else
                 cs.DisableKeyword("UPDATE_BOUNDS");
-            cs.Dispatch(m_kernelInitOrder, (int)threadBlocks, 1, 1);
+            cs.Dispatch(m_kernelInitOrder, (int)GsplatUtils.DivRoundUp(res.UploadedCount, 1024), 1, 1);
         }
 
         public override void LoadFromPly(string plyPath, ProgressCallback progressCallback = null)

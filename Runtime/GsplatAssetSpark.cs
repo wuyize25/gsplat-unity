@@ -128,31 +128,27 @@ namespace Gsplat
             var res = (GsplatResourceSpark)resource;
             var cs = GsplatMaterial.CalcDepthShader;
             const int kernelCalcDepthSpark = 0;
-            cmd.SetComputeIntParam(cs, k_splatCount, (int)SplatCount);
+            cmd.SetComputeIntParam(cs, k_splatCount, (int)res.UploadedCount);
             cmd.SetComputeMatrixParam(cs, k_matrixMv, matrixMv);
             cmd.SetComputeBufferParam(cs, kernelCalcDepthSpark, k_packedSplatsBuffer, res.PackedSplatsBuffer);
             cmd.SetComputeBufferParam(cs, kernelCalcDepthSpark, k_depthBuffer, sorterResource.InputKeys);
             cmd.SetComputeBufferParam(cs, kernelCalcDepthSpark, k_orderBuffer, sorterResource.OrderBuffer);
-            cmd.DispatchCompute(cs, kernelCalcDepthSpark, (int)GsplatUtils.DivRoundUp(SplatCount, 1024), 1, 1);
+            cmd.DispatchCompute(cs, kernelCalcDepthSpark, (int)GsplatUtils.DivRoundUp(res.UploadedCount, 1024), 1, 1);
         }
 
         public override void InitOrder(ISorterResource sorterResource, GsplatResource resource, bool updateBounds)
         {
             var cs = GsplatMaterial.InitOrderShader;
             var res = (GsplatResourceSpark)resource;
-
             sorterResource.OrderBuffer.SetCounterValue(0);
-
-            uint threadBlocks = GsplatUtils.DivRoundUp(SplatCount, 1024);
-
-            cs.SetInt(k_splatCount, (int)SplatCount);
+            cs.SetInt(k_splatCount, (int)res.UploadedCount);
             cs.SetBuffer(m_kernelInitOrder, k_orderBuffer, sorterResource.OrderBuffer);
             cs.SetBuffer(m_kernelInitOrder, k_packedSplatsBuffer, res.PackedSplatsBuffer);
             if (updateBounds)
                 cs.EnableKeyword("UPDATE_BOUNDS");
             else
                 cs.DisableKeyword("UPDATE_BOUNDS");
-            cs.Dispatch(m_kernelInitOrder, (int)threadBlocks, 1, 1);
+            cs.Dispatch(m_kernelInitOrder, (int)GsplatUtils.DivRoundUp(res.UploadedCount, 1024), 1, 1);
         }
 
         public override void LoadFromPly(string plyPath, ProgressCallback progressCallback = null)

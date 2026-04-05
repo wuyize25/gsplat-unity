@@ -33,8 +33,8 @@ namespace Gsplat
         static readonly int k_brightness = Shader.PropertyToID("_Brightness");
         static readonly int k_scaleFactor = Shader.PropertyToID("_ScaleFactor");
 
-        bool m_handlingCutouts = true;
         GsplatCutout.ShaderData[] m_cutoutsData;
+        uint m_prevSplatCount;
 
         public GsplatRendererImpl(uint splatCount)
         {
@@ -85,20 +85,17 @@ namespace Gsplat
         {
             if (cutouts.Length == 0)
             {
-                if (!m_handlingCutouts) return;
-                m_handlingCutouts = false;
                 SorterResource.Initialized = false;
                 m_cutoutsData = Array.Empty<GsplatCutout.ShaderData>();
-                m_remainingCount = m_gsplatAsset.SplatCount;
+                m_remainingCount = GsplatResource.UploadedCount;
                 m_bounds = m_gsplatAsset.Bounds;
                 return;
             }
 
             SorterResource.Initialized = true;
-            m_handlingCutouts = true;
 
-            bool cutoutsUnchanged = m_cutoutsData.Length == cutouts.Length;
-            GsplatCutout.ShaderData[] updatedCutoutsData = new GsplatCutout.ShaderData[cutouts.Length];
+            var cutoutsUnchanged = m_cutoutsData.Length == cutouts.Length;
+            var updatedCutoutsData = new GsplatCutout.ShaderData[cutouts.Length];
             for (int i = 0; i != cutouts.Length; i++)
             {
                 updatedCutoutsData[i] = cutouts[i].GetShaderData(matrixWorld);
@@ -108,9 +105,10 @@ namespace Gsplat
                         cutoutsUnchanged = false;
             }
 
-            if (cutoutsUnchanged)
+            if (cutoutsUnchanged && m_prevSplatCount == GsplatResource.UploadedCount)
                 return;
-
+            
+            m_prevSplatCount = GsplatResource.UploadedCount;
             m_cutoutsData = updatedCutoutsData;
             CutoutsBuffer = m_gsplatAsset.UpdateCutoutsBuffer(CutoutsBuffer, m_cutoutsData);
             if (cutoutsUpdateBounds)
@@ -145,7 +143,7 @@ namespace Gsplat
         {
             OrderBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Append, (int)splatCount, sizeof(uint));
             SorterResource = GsplatSorter.Instance.CreateSorterResource(splatCount, OrderBuffer);
-            m_cutoutsData = new GsplatCutout.ShaderData[0];
+            m_cutoutsData = Array.Empty<GsplatCutout.ShaderData>();
             CutoutsBuffer = null;
             OrderSizeBuffer = new GraphicsBuffer(GraphicsBuffer.Target.IndirectArguments, 1, sizeof(uint));
             BoundsBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, 6, sizeof(uint));

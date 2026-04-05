@@ -11,6 +11,13 @@ namespace Gsplat
     [ExecuteAlways]
     public class GsplatRenderer : MonoBehaviour, IGsplat
     {
+        public enum GsplatSortMode
+        {
+            Always,
+            SortEveryNFrames,
+            CutoutsEveryNSorts,
+        }
+
         public GsplatAsset GsplatAsset;
         [Range(0, 3)] public int SHDegree = 3;
         [HideInInspector] public uint RenderOrder = 0;
@@ -65,6 +72,12 @@ namespace Gsplat
             }
         }
 
+        public bool ComputeSortRequired => m_renderer.ComputeSortRequired;
+        public bool ComputeCutoutsRequired => m_renderer.ComputeCutoutsRequired;
+        public GsplatSortMode SortMode = GsplatSortMode.Always;
+        [HideInInspector] public uint SortRefreshRate = 1;
+        [HideInInspector] public uint CutoutsRefreshRate = 1;
+
         public void ComputeDepth(CommandBuffer cmd, Matrix4x4 matrixMv) => m_renderer.ComputeDepth(cmd, matrixMv);
 
         void OnEnable()
@@ -80,6 +93,11 @@ namespace Gsplat
             m_renderer = null;
         }
 
+        public void ForceRefresh()
+        {
+            m_renderer?.ForceRefresh();
+        }
+
 #if UNITY_EDITOR
         public void OnDrawGizmos()
         {
@@ -93,13 +111,17 @@ namespace Gsplat
 
         [SerializeField, HideInInspector] string m_assetGuid;
         public string AssetGuid => m_assetGuid;
+#endif // #if UNITY_EDITOR
+
         void OnValidate()
         {
+            ForceRefresh();
+#if UNITY_EDITOR
             if (GsplatAsset &&
                 AssetDatabase.TryGetGUIDAndLocalFileIdentifier(GsplatAsset, out var guid, out var localId))
                 m_assetGuid = guid;
-        }
 #endif // #if UNITY_EDITOR
+        }
 
         public void ReloadAsset()
         {
@@ -131,6 +153,7 @@ namespace Gsplat
 
             if (Valid && GsplatSettings.Instance.Valid && GsplatSorter.Instance.Valid)
             {
+                m_renderer.EvaluateRefreshRequired(SortMode, SortRefreshRate - 1, CutoutsRefreshRate - 1);
                 m_renderer.DispatchInitOrder(Cutouts, transform.localToWorldMatrix, CutoutsUpdateBounds);
                 m_renderer.Render(transform, gameObject.layer, GammaToLinear, SHDegree, Brightness,
                     1.0f - SplatDownscaleFactor, RenderOrder);

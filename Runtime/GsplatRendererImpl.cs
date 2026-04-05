@@ -2,8 +2,10 @@
 // SPDX-License-Identifier: MIT
 
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
+using Vector3 = UnityEngine.Vector3;
 
 namespace Gsplat
 {
@@ -33,12 +35,19 @@ namespace Gsplat
         static readonly int k_brightness = Shader.PropertyToID("_Brightness");
         static readonly int k_scaleFactor = Shader.PropertyToID("_ScaleFactor");
 
+        uint m_framesBeforeRecomputeSort = 0;
+        uint m_sortsBeforeRecomputeCutouts = 0;
+        public bool ComputeSortRequired = true;
+        public bool ComputeCutoutsRequired = true;
+        Dictionary<int, (Vector3, Vector3)> m_prevCamTransforms;
+
         GsplatCutout.ShaderData[] m_cutoutsData;
         uint m_prevSplatCount;
 
         public GsplatRendererImpl(uint splatCount)
         {
             SplatCount = splatCount;
+            m_prevCamTransforms = new Dictionary<int, (Vector3, Vector3)>();
             CreateResources(splatCount);
             CreatePropertyBlock();
         }
@@ -92,6 +101,9 @@ namespace Gsplat
                 return;
             }
 
+            if (!ComputeCutoutsRequired)
+                return;
+
             SorterResource.Initialized = true;
 
             var cutoutsUnchanged = m_cutoutsData.Length == cutouts.Length;
@@ -107,7 +119,7 @@ namespace Gsplat
 
             if (cutoutsUnchanged && m_prevSplatCount == GsplatResource.UploadedCount)
                 return;
-            
+
             m_prevSplatCount = GsplatResource.UploadedCount;
             m_cutoutsData = updatedCutoutsData;
             CutoutsBuffer = m_gsplatAsset.UpdateCutoutsBuffer(CutoutsBuffer, m_cutoutsData);
@@ -168,6 +180,73 @@ namespace Gsplat
             OrderSizeBuffer = null;
             BoundsBuffer?.Dispose();
             BoundsBuffer = null;
+        }
+
+        public void ForceRefresh()
+        {
+            m_framesBeforeRecomputeSort = 0;
+            m_sortsBeforeRecomputeCutouts = 0;
+        }
+
+        public void RefreshOnCameraMove()
+        {
+            foreach (var cam in Camera.allCameras)
+            {
+                var id = cam.GetInstanceID();
+                if (m_prevCamTransforms.TryGetValue(id, out (Vector3, Vector3) prevCamTransform))
+                {
+                    (Vector3 prevCamPos, Vector3 prevCamRot) = prevCamTransform;
+
+                    if ((cam.transform.position - prevCamPos).magnitude >
+                        GsplatSettings.Instance.CameraTranslationRefreshTreshold
+                        || (cam.transform.eulerAngles - prevCamRot).magnitude >
+                        GsplatSettings.Instance.CameraRotationRefreshTreshold)
+                    {
+                        m_prevCamTransforms[id] = (cam.transform.position, cam.transform.eulerAngles);
+                        ForceRefresh();
+                    }
+                }
+                else
+                {
+                    m_prevCamTransforms.Add(cam.GetInstanceID(), (cam.transform.position, cam.transform.eulerAngles));
+                    ForceRefresh();
+                }
+            }
+        }
+
+        public void EvaluateRefreshRequired(GsplatRenderer.GsplatSortMode mode, uint sortRefreshRate,
+            uint cutoutsRefreshRate)
+        {
+            if (mode == GsplatRenderer.GsplatSortMode.Always)
+            {
+                sortRefreshRate = 0;
+                cutoutsRefreshRate = 0;
+            }
+
+            if (mode == GsplatRenderer.GsplatSortMode.SortEveryNFrames)
+            {
+                cutoutsRefreshRate = 0;
+            }
+
+            RefreshOnCameraMove();
+
+            ComputeSortRequired = false;
+            ComputeCutoutsRequired = false;
+
+            if (m_framesBeforeRecomputeSort == 0)
+            {
+                m_framesBeforeRecomputeSort = sortRefreshRate;
+                ComputeSortRequired = true;
+                if (m_sortsBeforeRecomputeCutouts == 0)
+                {
+                    m_sortsBeforeRecomputeCutouts = cutoutsRefreshRate;
+                    ComputeCutoutsRequired = true;
+                }
+                else
+                    m_sortsBeforeRecomputeCutouts -= 1;
+            }
+            else
+                m_framesBeforeRecomputeSort -= 1;
         }
 
         /// <summary>

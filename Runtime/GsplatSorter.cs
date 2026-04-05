@@ -15,6 +15,7 @@ namespace Gsplat
         public ISorterResource SorterResource { get; }
         public bool isActiveAndEnabled { get; }
         public bool Valid { get; }
+        public bool ComputeSortRequired { get; }
         public void ComputeDepth(CommandBuffer cmd, Matrix4x4 matrixMv);
     }
 
@@ -140,7 +141,7 @@ namespace Gsplat
             {
                 var res = (Resource)gs.SorterResource;
 
-                if (gs.RemainingCount <= 0)
+                if (!gs.ComputeSortRequired || gs.RemainingCount <= 0)
                     continue;
 
                 if (!res.Initialized)

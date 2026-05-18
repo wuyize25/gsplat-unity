@@ -13,9 +13,6 @@ namespace Gsplat.Editor
     [ScriptedImporter(1, new[] { "ply", "spz" })]
     public class GsplatImporter : ScriptedImporter
     {
-        // Set to true (recompile) to log per-asset import statistics to the Console.
-        const bool k_verboseImportLogging = false;
-
         public CompressionMode Compression = CompressionMode.Spark;
 
         [Tooltip("The coordinate frame the source asset was authored in.\n\n" +
@@ -40,7 +37,11 @@ namespace Gsplat.Editor
                 _ => throw new ArgumentOutOfRangeException()
             };
 
-            Stopwatch swTotal = k_verboseImportLogging ? Stopwatch.StartNew() : null;
+#if GSPLAT_VERBOSE_IMPORT_LOGGING
+            Stopwatch swTotal = Stopwatch.StartNew();
+#else
+            Stopwatch swTotal = null;
+#endif
             SpzPhaseTimings spzTimings = default;
             try
             {
@@ -57,8 +58,14 @@ namespace Gsplat.Editor
                     if (!spzAsset.TryLoadFromCache(cachePath))
                     {
                         spzTimings = spzAsset.LoadFromSpz(ctx.assetPath, SourceCoordinates, progress);
-                        try { spzAsset.SaveToCache(cachePath); }
-                        catch (Exception e) { UnityEngine.Debug.LogWarning($"[Gsplat Import] Cache write failed: {e.Message}"); }
+                        try
+                        {
+                            spzAsset.SaveToCache(cachePath);
+                        }
+                        catch (Exception e)
+                        {
+                            UnityEngine.Debug.LogWarning($"[Gsplat Import] Cache write failed: {e.Message}");
+                        }
                     }
                 }
                 else
@@ -73,6 +80,7 @@ namespace Gsplat.Editor
                     UnityEngine.Debug.LogError($"{ctx.assetPath} import error:");
                     UnityEngine.Debug.LogException(e);
                 }
+
                 return;
             }
             finally
@@ -84,8 +92,9 @@ namespace Gsplat.Editor
             ctx.AddObjectToAsset("gsplatAsset", gsplatAsset);
             ctx.SetMainObject(gsplatAsset);
 
-            if (k_verboseImportLogging)
-                LogImportStats(ctx.assetPath, gsplatAsset, isSpz, spzTimings, swTotal!.ElapsedMilliseconds);
+#if GSPLAT_VERBOSE_IMPORT_LOGGING
+            LogImportStats(ctx.assetPath, gsplatAsset, isSpz, spzTimings, swTotal!.ElapsedMilliseconds);
+#endif
         }
 
         // Cache key combines filename, file size, last-write time, compression mode, and

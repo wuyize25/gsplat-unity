@@ -119,7 +119,7 @@ namespace Gsplat
             ForceRefresh();
 #if UNITY_EDITOR
             if (GsplatAsset &&
-                AssetDatabase.TryGetGUIDAndLocalFileIdentifier(GsplatAsset, out var guid, out var localId))
+                AssetDatabase.TryGetGUIDAndLocalFileIdentifier(GsplatAsset, out var guid, out long localId))
                 m_assetGuid = guid;
 #endif // #if UNITY_EDITOR
         }

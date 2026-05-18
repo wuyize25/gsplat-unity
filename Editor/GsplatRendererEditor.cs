@@ -71,11 +71,11 @@ namespace Gsplat.Editor
             }
             
             var renderOrderProp = serializedObject.FindProperty(nameof(GsplatRenderer.RenderOrder));
-            uint renderOrder = renderOrderProp.uintValue;
+            uint renderOrder = (uint)renderOrderProp.intValue;
 
             // RenderOrder slider depend on the MaxRenderOrder setting
             if (GsplatSettings.Instance.MaxRenderOrder > 1)
-                renderOrderProp.uintValue = (uint)EditorGUILayout.IntSlider(new GUIContent("Render Order"),
+                renderOrderProp.intValue = EditorGUILayout.IntSlider(new GUIContent("Render Order"),
                     (int)renderOrder, 0, (int)GsplatSettings.Instance.MaxRenderOrder - 1);
 
             EditorGUILayout.PropertyField(serializedObject.FindProperty(nameof(GsplatRenderer.AsyncUpload)));

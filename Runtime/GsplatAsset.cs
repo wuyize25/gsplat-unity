@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2025 Yize Wu
+// Copyright (c) 2025 Yize Wu
 // SPDX-License-Identifier: MIT
 
 using System;
@@ -16,6 +16,42 @@ namespace Gsplat
     {
         Uncompressed,
         Spark
+    }
+
+    /// <summary>
+    /// The coordinate frame the source asset was authored in, using the same naming
+    /// convention as the Niantic SPZ library: three letters for X (L/R), Y (U/D), Z (F/B).
+    /// The importer converts to Unity (RUF) by applying the appropriate sign flips to
+    /// positions, rotation quaternions, and spherical-harmonic coefficients at import time.
+    /// </summary>
+    public enum SourceCoordinates
+    {
+        [InspectorName("Unspecified (treated as RUB)")]
+        Unspecified = 0,
+
+        [InspectorName("LDB — Left-Down-Back")]
+        LDB,
+
+        [InspectorName("RDB — Right-Down-Back")]
+        RDB,
+
+        [InspectorName("LUB — Left-Up-Back")]
+        LUB,
+
+        [InspectorName("RUB — Right-Up-Back  (3DGS, OpenGL, SPZ)")]
+        RUB,
+
+        [InspectorName("LDF — Left-Down-Front")]
+        LDF,
+
+        [InspectorName("RDF — Right-Down-Front  (OpenCV, COLMAP)")]
+        RDF,
+
+        [InspectorName("LUF — Left-Up-Front  (GLB, glTF)")]
+        LUF,
+
+        [InspectorName("RUF — Right-Up-Front  (Unity — no conversion)")]
+        RUF,
     }
 
     public class PlyHeaderInfo
@@ -96,7 +132,7 @@ namespace Gsplat
     public abstract class GsplatAsset : ScriptableObject
     {
         public uint SplatCount;
-        public byte SHBands; // 0, 1, 2, or 3
+        public byte SHBands; // 0, 1, 2, 3, or 4
         public Bounds Bounds;
         public abstract CompressionMode Compression { get; }
 
@@ -109,7 +145,8 @@ namespace Gsplat
         public Material[] Materials => GsplatMaterial.Materials[SHBands];
 
         public abstract void Allocate();
-        public abstract void LoadFromPly(string plyPath, ProgressCallback progressCallback = null);
+        public abstract void LoadFromPly(string plyPath, ProgressCallback progressCallback = null,
+            SourceCoordinates sourceCoordinates = SourceCoordinates.RUF);
 
         public abstract GsplatResource CreateResource();
 

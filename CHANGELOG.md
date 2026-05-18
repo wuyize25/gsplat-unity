@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added support for the Niantic [SPZ](https://github.com/nianticlabs/spz) format (`.spz`). The `GsplatImporter` now also handles `.spz` assets, decoding into the existing Spark or Uncompressed pipelines. SPZ versions 1–4 are supported: v1–3 use the gzip container, and v4 uses the NGSP/ZSTD container (decoded via the vendored `ZstdSharp` library under `Runtime/Plugins/ZstdSharp/`). A binary import cache under `Library/GsplatCache/` skips the decode/pack step on subsequent reimports. ([#26](https://github.com/wuyize25/gsplat-unity/pull/26) by [@KeirRice](https://github.com/KeirRice))
+
+- Added rendering support for SH degree 4 (band 4), available only for SPZ v4 files that carry it. Adds `PackSH4` (27 sint4 values → 4 uint32 per splat, matching the SPZ writer's `shRestBits=4` default precision), a new `_PackedSH4Buffer` GPU binding, an `SH_BANDS_4` shader variant, and band-4 evaluation in `EvalSH`. The `GsplatRenderer` SH degree slider's maximum now follows the bound asset's `SHBands` — a degree-3 PLY shows a 0–3 slider; a degree-4 SPZ shows 0–4. PLY import continues to cap at degree 3. ([#26](https://github.com/wuyize25/gsplat-unity/pull/26) by [@KeirRice](https://github.com/KeirRice))
+
+- Added a `SourceCoordinates` option to `GsplatImporter`. Positions, rotation quaternions, and SH coefficients are converted from the source frame (e.g. RUB for 3DGS / SPZ) to Unity (RUF) at import time. ([#26](https://github.com/wuyize25/gsplat-unity/pull/26) by [@KeirRice](https://github.com/KeirRice))
+
 - Added an activatable refresh rate slider, running the sorting every Nth frame and the cutouts computation every Nth sort. Force a sort computation when a camera moves or rotates past a customizable threshold. ([#20](https://github.com/wuyize25/gsplat-unity/pull/20) by [@Arthur-Aillet](https://github.com/Arthur-Aillet))
 
 - `GsplatCutout` component to edit the Gaussian Splattings dynamically. A compute shader prepass is done before rendering that creates the order buffer, ignoring splats contained in cutout shapes and removing them from further calculations. ([#19](https://github.com/wuyize25/gsplat-unity/pull/19) by [@Arthur-Aillet](https://github.com/Arthur-Aillet))

@@ -44,12 +44,14 @@ namespace Gsplat
         [HideInInspector] public uint[] PackedSH1;
         [HideInInspector] public uint[] PackedSH2;
         [HideInInspector] public uint[] PackedSH3;
+        [HideInInspector] public uint[] PackedSH4;
         [HideInInspector] public uint4[] PackedSplats;
 
         static readonly int k_packedSplatsBuffer = Shader.PropertyToID("_PackedSplatsBuffer");
         static readonly int k_packedSH1Buffer = Shader.PropertyToID("_PackedSH1Buffer");
         static readonly int k_packedSH2Buffer = Shader.PropertyToID("_PackedSH2Buffer");
         static readonly int k_packedSH3Buffer = Shader.PropertyToID("_PackedSH3Buffer");
+        static readonly int k_packedSH4Buffer = Shader.PropertyToID("_PackedSH4Buffer");
         static readonly int k_splatCount = Shader.PropertyToID("_SplatCount");
         static readonly int k_matrixMv = Shader.PropertyToID("_MatrixMV");
         static readonly int k_depthBuffer = Shader.PropertyToID("_DepthBuffer");
@@ -64,6 +66,8 @@ namespace Gsplat
                 PackedSH2 = new uint[SplatCount * 4];
             if (SHBands >= 3)
                 PackedSH3 = new uint[SplatCount * 4];
+            if (SHBands >= 4)
+                PackedSH4 = new uint[SplatCount * 4];
         }
 
         public override GsplatResource CreateResource()
@@ -79,8 +83,10 @@ namespace Gsplat
                 res.PackedSH1Buffer.SetData(PackedSH1);
             if (SHBands >= 2)
                 res.PackedSH2Buffer.SetData(PackedSH2);
-            if (SHBands == 3)
+            if (SHBands >= 3)
                 res.PackedSH3Buffer.SetData(PackedSH3);
+            if (SHBands >= 4)
+                res.PackedSH4Buffer.SetData(PackedSH4);
         }
 
         protected override async Task _UploadDataAsync(GsplatResource resource)
@@ -99,6 +105,9 @@ namespace Gsplat
                         4 * batchSize);
                 if (SHBands >= 3)
                     res.PackedSH3Buffer.SetData(PackedSH3, 4 * (int)res.UploadedCount, 4 * (int)res.UploadedCount,
+                        4 * batchSize);
+                if (SHBands >= 4)
+                    res.PackedSH4Buffer.SetData(PackedSH4, 4 * (int)res.UploadedCount, 4 * (int)res.UploadedCount,
                         4 * batchSize);
 
                 res.UploadedCount += (uint)batchSize;
@@ -120,6 +129,8 @@ namespace Gsplat
                 propertyBlock.SetBuffer(k_packedSH2Buffer, res.PackedSH2Buffer);
             if (SHBands >= 3)
                 propertyBlock.SetBuffer(k_packedSH3Buffer, res.PackedSH3Buffer);
+            if (SHBands >= 4)
+                propertyBlock.SetBuffer(k_packedSH4Buffer, res.PackedSH4Buffer);
         }
 
         public override void ComputeDepth(CommandBuffer cmd, Matrix4x4 matrixMv,
@@ -151,7 +162,8 @@ namespace Gsplat
             cs.Dispatch(m_kernelInitOrder, (int)GsplatUtils.DivRoundUp(res.UploadedCount, 1024), 1, 1);
         }
 
-        public override void LoadFromPly(string plyPath, ProgressCallback progressCallback = null)
+        public override void LoadFromPly(string plyPath, ProgressCallback progressCallback = null,
+            SourceCoordinates sourceCoordinates = SourceCoordinates.RUF)
         {
             using var fs = new FileStream(plyPath, FileMode.Open, FileAccess.Read);
             // C# arrays and NativeArrays make it hard to have a "byte" array larger than 2GB :/
@@ -163,15 +175,23 @@ namespace Gsplat
             SplatCount = plyInfo.VertexCount;
             SHBands = GsplatUtils.CalcSHBandsFromSHPropertyCount(plyInfo.SHPropertyCount);
 
-            if (SHBands > 3 || GsplatUtils.SHBandsToCoefficientCount(SHBands) * 3 != plyInfo.SHPropertyCount)
+            if (SHBands > 4 || GsplatUtils.SHBandsToCoefficientCount(SHBands) * 3 != plyInfo.SHPropertyCount)
                 throw new NotSupportedException($"unexpected SH property count {plyInfo.SHPropertyCount}");
 
             if (plyInfo.PositionOffset == -1 || plyInfo.ColorOffset == -1 || plyInfo.OpacityOffset == -1 ||
                 plyInfo.ScaleOffset == -1 || plyInfo.RotationOffset == -1)
                 throw new NotSupportedException("missing required properties in PLY header");
 
+            // Decompose source frame into per-axis sign flips relative to Unity (RUF).
+            var (posXSign, posYSign, posZSign) = GsplatUtils.AxisSigns(sourceCoordinates);
+            // Quaternion conjugation: each imaginary component gets the product of the OTHER two axis signs.
+            float rotXSign = posYSign * posZSign;
+            float rotYSign = posXSign * posZSign;
+            float rotZSign = posXSign * posYSign;
+
             Allocate();
             var buffer = new byte[plyInfo.PropertyCount * sizeof(float)];
+            var shBandData = new float[9 * 3]; // max band 4: 9 coeffs × 3 channels; reused each splat
             for (uint i = 0; i < plyInfo.VertexCount; i++)
             {
                 var readBytes = fs.Read(buffer);
@@ -183,20 +203,18 @@ namespace Gsplat
                 for (int j = 1, shReadOffset = 0; j <= SHBands; j++)
                 {
                     var bandSize = j * 2 + 1;
-                    var shBandData = new float[bandSize * 3]; // x3 for rgb
                     for (int k = 0; k < bandSize; k++)
                     {
-                        shBandData[k * 3] = properties[shReadOffset + k + plyInfo.SHOffset];
-                        shBandData[k * 3 + 1] = properties[shReadOffset + k + plyInfo.SHOffset + shCoeffs];
-                        shBandData[k * 3 + 2] = properties[shReadOffset + k + plyInfo.SHOffset + shCoeffs * 2];
+                        float sign = GsplatUtils.ShSign(sourceCoordinates, j, k);
+                        shBandData[k * 3]     = sign * properties[shReadOffset + k + plyInfo.SHOffset];
+                        shBandData[k * 3 + 1] = sign * properties[shReadOffset + k + plyInfo.SHOffset + shCoeffs];
+                        shBandData[k * 3 + 2] = sign * properties[shReadOffset + k + plyInfo.SHOffset + shCoeffs * 2];
                     }
 
-                    if (j == 1)
-                        Array.Copy(PackSH1(shBandData), 0, PackedSH1, i * 2, 2);
-                    if (j == 2)
-                        Array.Copy(PackSH2(shBandData), 0, PackedSH2, i * 4, 4);
-                    if (j == 3)
-                        Array.Copy(PackSH3(shBandData), 0, PackedSH3, i * 4, 4);
+                    if (j == 1) PackSH1(shBandData, PackedSH1.AsSpan((int)i * 2, 2));
+                    if (j == 2) PackSH2(shBandData, PackedSH2.AsSpan((int)i * 4, 4));
+                    if (j == 3) PackSH3(shBandData, PackedSH3.AsSpan((int)i * 4, 4));
+                    if (j == 4) PackSH4(shBandData, PackedSH4.AsSpan((int)i * 4, 4));
 
                     shReadOffset += bandSize;
                 }
@@ -208,9 +226,9 @@ namespace Gsplat
                     properties[plyInfo.OpacityOffset]);
 
                 var position = new Vector3(
-                    properties[plyInfo.PositionOffset],
-                    properties[plyInfo.PositionOffset + 1],
-                    properties[plyInfo.PositionOffset + 2]);
+                    posXSign * properties[plyInfo.PositionOffset],
+                    posYSign * properties[plyInfo.PositionOffset + 1],
+                    posZSign * properties[plyInfo.PositionOffset + 2]);
 
                 if (i == 0) Bounds = new Bounds(position, Vector3.zero);
                 else Bounds.Encapsulate(position);
@@ -220,10 +238,11 @@ namespace Gsplat
                     properties[plyInfo.ScaleOffset + 1],
                     properties[plyInfo.ScaleOffset + 2]);
 
-                var rotation = new Quaternion(properties[plyInfo.RotationOffset],
-                    properties[plyInfo.RotationOffset + 1],
-                    properties[plyInfo.RotationOffset + 2],
-                    properties[plyInfo.RotationOffset + 3]);
+                var rotation = new Quaternion(
+                    properties[plyInfo.RotationOffset],
+                    rotXSign * properties[plyInfo.RotationOffset + 1],
+                    rotYSign * properties[plyInfo.RotationOffset + 2],
+                    rotZSign * properties[plyInfo.RotationOffset + 3]);
 
                 PackedSplats[i] = PackSplat(color, position, scale, rotation);
                 progressCallback?.Invoke("Reading vertices", i / (float)plyInfo.VertexCount);
@@ -370,10 +389,9 @@ namespace Gsplat
         /// Encode an array of 9 signed RGB SH1 coefficients (clamped to [-1,1]) into
         /// a pair of uint32 values, where each coefficient is stored as a sint7
         /// </summary>
-        static uint[] PackSH1(float[] sh)
+        protected static void PackSH1(float[] sh, Span<uint> output)
         {
-            uint[] packedSH = new uint[2];
-
+            output.Clear();
             for (var i = 0; i < 9; ++i)
             {
                 float shScaled = sh[i] * 63.0f;
@@ -386,16 +404,14 @@ namespace Gsplat
                 int wordStart = (int)Math.Floor((double)(bitStart / 32));
                 int bitOffset = bitStart - wordStart * 32;
                 uint firstWord = (uint)((sint7SH << bitOffset) & 0xffffffff);
-                packedSH[wordStart] |= firstWord;
+                output[wordStart] |= firstWord;
 
                 if (bitEnd > wordStart * 32 + 32)
                 {
                     uint secondWord = ((uint)sint7SH >> (32 - bitOffset)) & 0xffffffff;
-                    packedSH[wordStart + 1] |= secondWord;
+                    output[wordStart + 1] |= secondWord;
                 }
             }
-
-            return packedSH;
         }
 
         static uint PackSint8Bytes(float b0, float b1, float b2, float b3)
@@ -417,14 +433,37 @@ namespace Gsplat
         /// Encode an array of 15 signed RGB SH2 coefficients (clamped to [-1,1]) into
         /// an array of 4 uint32 values, where each coefficient is stored as a sint8.
         /// </summary>
-        static uint[] PackSH2(float[] sh)
+        protected static void PackSH2(float[] sh, Span<uint> output)
         {
-            uint[] packedSH = new uint[4];
-            packedSH[0] = PackSint8Bytes(sh[0], sh[1], sh[2], sh[3]);
-            packedSH[1] = PackSint8Bytes(sh[4], sh[5], sh[6], sh[7]);
-            packedSH[2] = PackSint8Bytes(sh[8], sh[9], sh[10], sh[11]);
-            packedSH[3] = PackSint8Bytes(sh[12], sh[13], sh[14], 0);
-            return packedSH;
+            output[0] = PackSint8Bytes(sh[0], sh[1], sh[2], sh[3]);
+            output[1] = PackSint8Bytes(sh[4], sh[5], sh[6], sh[7]);
+            output[2] = PackSint8Bytes(sh[8], sh[9], sh[10], sh[11]);
+            output[3] = PackSint8Bytes(sh[12], sh[13], sh[14], 0);
+        }
+
+        /// <summary>
+        /// Encode an array of 27 signed RGB SH4 coefficients (clamped to [-1,1]) into
+        /// an array of 4 uint32 values, where each coefficient is stored as a sint4.
+        /// Matches the SPZ writer's shRestBits=4 default precision so there is no
+        /// information loss vs the source SPZ data.
+        /// </summary>
+        protected static void PackSH4(float[] sh, Span<uint> output)
+        {
+            output.Clear();
+            for (var i = 0; i < 27; ++i)
+            {
+                float shScaled = sh[i] * 7.0f;
+                int shBounded = (int)Math.Round(Math.Max(-7.0f, Math.Min(7.0f, shScaled)));
+                int sint4SH = shBounded & 0x0f;
+                int bitStart = i * 4;
+                int wordStart = bitStart / 32;
+                int bitOffset = bitStart - wordStart * 32;
+                output[wordStart] |= (uint)(sint4SH << bitOffset);
+                // With 4-bit values and 32-bit words no value straddles a boundary
+                // (32 % 4 == 0); the carry branch is kept for symmetry with PackSH1/3.
+                if (bitOffset + 4 > 32)
+                    output[wordStart + 1] |= ((uint)sint4SH >> (32 - bitOffset));
+            }
         }
 
         /// <summary>
@@ -433,10 +472,9 @@ namespace Gsplat
         /// Encode an array of 21 signed RGB SH3 coefficients (clamped to [-1,1]) into
         /// an array of 4 uint32 values, where each coefficient is stored as a sint6.
         /// </summary>
-        static uint[] PackSH3(float[] sh)
+        protected static void PackSH3(float[] sh, Span<uint> output)
         {
-            uint[] packedSH = new uint[4];
-
+            output.Clear();
             for (var i = 0; i < 21; ++i)
             {
                 float shScaled = sh[i] * 31.0f;
@@ -449,15 +487,98 @@ namespace Gsplat
                 int bitOffset = bitStart - wordStart * 32;
                 uint firstWord = (uint)((sint6SH << bitOffset) & 0xffffffff);
 
-                packedSH[wordStart] |= firstWord;
+                output[wordStart] |= firstWord;
                 if (bitEnd > wordStart * 32 + 32)
                 {
                     uint secondWord = ((uint)sint6SH >> (32 - bitOffset)) & 0xffffffff;
-                    packedSH[wordStart + 1] |= secondWord;
+                    output[wordStart + 1] |= secondWord;
                 }
             }
+        }
 
-            return packedSH;
+        // ─── Binary import cache ───────────────────────────────────────────────────
+
+        const uint CacheMagic = 0x43435347u; // "GSCC" little-endian
+        // v2: added optional PackedSH4 region (only present when SHBands == 4).
+        const uint CacheFormatVersion = 2u;
+
+        /// <summary>
+        /// Attempts to populate this asset's packed arrays from a previously saved cache
+        /// file. Returns true and leaves the asset fully loaded on success; returns false
+        /// (and leaves the asset unmodified) if the file is absent, corrupt, or version-
+        /// mismatched.
+        /// </summary>
+        public bool TryLoadFromCache(string cachePath)
+        {
+            if (!File.Exists(cachePath)) return false;
+            try
+            {
+                using var fs = new FileStream(cachePath, FileMode.Open, FileAccess.Read);
+                using var br = new BinaryReader(fs);
+
+                if (br.ReadUInt32() != CacheMagic) return false;
+                if (br.ReadUInt32() != CacheFormatVersion) return false;
+
+                SplatCount = br.ReadUInt32();
+                SHBands    = br.ReadByte();
+                br.ReadByte(); br.ReadByte(); br.ReadByte(); // 3-byte padding
+
+                var center = new Vector3(br.ReadSingle(), br.ReadSingle(), br.ReadSingle());
+                var size   = new Vector3(br.ReadSingle(), br.ReadSingle(), br.ReadSingle());
+                Bounds = new Bounds(center, size);
+
+                Allocate();
+
+                ReadExactBytes(fs, MemoryMarshal.AsBytes(PackedSplats.AsSpan()));
+                if (SHBands >= 1) ReadExactBytes(fs, MemoryMarshal.AsBytes(PackedSH1.AsSpan()));
+                if (SHBands >= 2) ReadExactBytes(fs, MemoryMarshal.AsBytes(PackedSH2.AsSpan()));
+                if (SHBands >= 3) ReadExactBytes(fs, MemoryMarshal.AsBytes(PackedSH3.AsSpan()));
+                if (SHBands >= 4) ReadExactBytes(fs, MemoryMarshal.AsBytes(PackedSH4.AsSpan()));
+
+                return true;
+            }
+            catch
+            {
+                // Corrupt or incompatible cache — fall through to full reimport.
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Writes the current packed arrays to a binary cache file so that future imports
+        /// of the same asset can skip the expensive pack step.
+        /// </summary>
+        public void SaveToCache(string cachePath)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(cachePath)!);
+            using var fs = new FileStream(cachePath, FileMode.Create, FileAccess.Write);
+            using var bw = new BinaryWriter(fs);
+
+            bw.Write(CacheMagic);
+            bw.Write(CacheFormatVersion);
+            bw.Write(SplatCount);
+            bw.Write((byte)SHBands);
+            bw.Write((byte)0); bw.Write((byte)0); bw.Write((byte)0); // 3-byte padding
+
+            bw.Write(Bounds.center.x); bw.Write(Bounds.center.y); bw.Write(Bounds.center.z);
+            bw.Write(Bounds.size.x);   bw.Write(Bounds.size.y);   bw.Write(Bounds.size.z);
+
+            fs.Write(MemoryMarshal.AsBytes(PackedSplats.AsSpan()));
+            if (SHBands >= 1) fs.Write(MemoryMarshal.AsBytes(PackedSH1.AsSpan()));
+            if (SHBands >= 2) fs.Write(MemoryMarshal.AsBytes(PackedSH2.AsSpan()));
+            if (SHBands >= 3) fs.Write(MemoryMarshal.AsBytes(PackedSH3.AsSpan()));
+            if (SHBands >= 4) fs.Write(MemoryMarshal.AsBytes(PackedSH4.AsSpan()));
+        }
+
+        static void ReadExactBytes(Stream stream, Span<byte> buffer)
+        {
+            int offset = 0;
+            while (offset < buffer.Length)
+            {
+                int read = stream.Read(buffer.Slice(offset));
+                if (read == 0) throw new EndOfStreamException("Unexpected end of Gsplat cache file");
+                offset += read;
+            }
         }
     }
 }

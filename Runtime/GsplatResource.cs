@@ -56,6 +56,7 @@ namespace Gsplat
         public GraphicsBuffer PackedSH1Buffer { get; private set; }
         public GraphicsBuffer PackedSH2Buffer { get; private set; }
         public GraphicsBuffer PackedSH3Buffer { get; private set; }
+        public GraphicsBuffer PackedSH4Buffer { get; private set; }
 
         public GsplatResourceSpark(uint splatCount, byte shBands) : base()
         {
@@ -72,6 +73,9 @@ namespace Gsplat
             if (shBands >= 3)
                 PackedSH3Buffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)splatCount,
                     sizeof(uint) * 4);
+            if (shBands >= 4)
+                PackedSH4Buffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)splatCount,
+                    sizeof(uint) * 4);
         }
 
         public override void Dispose()
@@ -84,6 +88,8 @@ namespace Gsplat
             PackedSH2Buffer = null;
             PackedSH3Buffer?.Dispose();
             PackedSH3Buffer = null;
+            PackedSH4Buffer?.Dispose();
+            PackedSH4Buffer = null;
         }
     }
 }

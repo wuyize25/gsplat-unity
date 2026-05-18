@@ -19,7 +19,8 @@ namespace Gsplat
         }
 
         public GsplatAsset GsplatAsset;
-        [Range(0, 3)] public int SHDegree = 3;
+        // Range is enforced by GsplatRendererEditor based on the bound asset's SHBands.
+        public int SHDegree = 3;
         [HideInInspector] public uint RenderOrder = 0;
         public float Brightness = 1.0f;
 

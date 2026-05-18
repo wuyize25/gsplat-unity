@@ -183,6 +183,8 @@ void ClipCorner(inout SplatCorner corner, float alpha)
 #define SH_COEFFS 8
 #elif defined(SH_BANDS_3)
 #define SH_COEFFS 15
+#elif defined(SH_BANDS_4)
+#define SH_COEFFS 24
 #else
 #define SH_COEFFS 0
 #endif
@@ -203,6 +205,18 @@ void ClipCorner(inout SplatCorner corner, float alpha)
 #define SH_C3_4 -0.4570457994644658f
 #define SH_C3_5 1.445305721320277f
 #define SH_C3_6 -0.5900435899266435f
+// Band-4 constants follow the same convention as SH_C3_*: K_{l,|m|} * (-1)^|m|.
+// K values cross-checked against gsplat (Berkeley) SphericalHarmonicsCUDA.cu; sign
+// pattern matches graphdeco-inria's SH3 (Condon-Shortley phase for m≠0).
+#define SH_C4_0 0.6258357354491761f      // m=-4: +K_{4,4}
+#define SH_C4_1 -1.7701307697799304f     // m=-3: -K_{4,3}
+#define SH_C4_2 0.9461746957575601f      // m=-2: +K_{4,2-}, polynomial xy(7z²-1)
+#define SH_C4_3 -0.6690465435572892f     // m=-1: -K_{4,1}
+#define SH_C4_4 0.10578554691520431f     // m= 0: +K_{4,0}
+#define SH_C4_5 -0.6690465435572892f     // m=+1: -K_{4,1}
+#define SH_C4_6 0.47308734787878004f     // m=+2: +K_{4,2+}, polynomial (x²-y²)(7z²-1)
+#define SH_C4_7 -1.7701307697799304f     // m=+3: -K_{4,3}
+#define SH_C4_8 0.6258357354491761f      // m=+4: +K_{4,4}
 
 // see https://github.com/graphdeco-inria/gaussian-splatting/blob/main/utils/sh_utils.py
 float3 EvalSH(const inout float3 sh[SH_COEFFS], float3 dir, int degree = 3)
@@ -219,7 +233,7 @@ float3 EvalSH(const inout float3 sh[SH_COEFFS], float3 dir, int degree = 3)
     if (degree == 1)
         return result;
 
-    #if defined(SH_BANDS_2) || defined(SH_BANDS_3)
+    #if defined(SH_BANDS_2) || defined(SH_BANDS_3) || defined(SH_BANDS_4)
     // 2nd degree
     float xx = x * x;
     float yy = y * y;
@@ -240,7 +254,7 @@ float3 EvalSH(const inout float3 sh[SH_COEFFS], float3 dir, int degree = 3)
         return result;
     #endif
 
-    #ifdef SH_BANDS_3
+    #if defined(SH_BANDS_3) || defined(SH_BANDS_4)
     // 3rd degree
     result = result + (
         sh[8] * (SH_C3_0 * y * (3.0 * xx - yy)) +
@@ -250,6 +264,25 @@ float3 EvalSH(const inout float3 sh[SH_COEFFS], float3 dir, int degree = 3)
         sh[12] * (SH_C3_4 * x * (4.0 * zz - xx - yy)) +
         sh[13] * (SH_C3_5 * z * (xx - yy)) +
         sh[14] * (SH_C3_6 * x * (xx - 3.0 * yy))
+    );
+
+    if (degree == 3)
+        return result;
+    #endif
+
+    #ifdef SH_BANDS_4
+    // 4th degree. Polynomials use unit-sphere substitutions (7z²-1 → 6zz-xx-yy,
+    // 7z³-3z → z*(4zz-3xx-3yy)) for consistency with the SH3 block above.
+    result = result + (
+        sh[15] * (SH_C4_0 * xy * (xx - yy)) +
+        sh[16] * (SH_C4_1 * yz * (3.0 * xx - yy)) +
+        sh[17] * (SH_C4_2 * xy * (6.0 * zz - xx - yy)) +
+        sh[18] * (SH_C4_3 * yz * (4.0 * zz - 3.0 * xx - 3.0 * yy)) +
+        sh[19] * (SH_C4_4 * (35.0 * zz * zz - 30.0 * zz + 3.0)) +
+        sh[20] * (SH_C4_5 * xz * (4.0 * zz - 3.0 * xx - 3.0 * yy)) +
+        sh[21] * (SH_C4_6 * (xx - yy) * (6.0 * zz - xx - yy)) +
+        sh[22] * (SH_C4_7 * xz * (xx - 3.0 * yy)) +
+        sh[23] * (SH_C4_8 * (xx * xx - 6.0 * xx * yy + yy * yy))
     );
     #endif
 

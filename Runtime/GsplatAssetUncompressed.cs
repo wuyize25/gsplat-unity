@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2025 Yize Wu
+// Copyright (c) 2025 Yize Wu
 // SPDX-License-Identifier: MIT
 
 using System;
@@ -123,7 +123,8 @@ namespace Gsplat
             cs.Dispatch(m_kernelInitOrder, (int)GsplatUtils.DivRoundUp(res.UploadedCount, 1024), 1, 1);
         }
 
-        public override void LoadFromPly(string plyPath, ProgressCallback progressCallback = null)
+        public override void LoadFromPly(string plyPath, ProgressCallback progressCallback = null,
+            SourceCoordinates sourceCoordinates = SourceCoordinates.RUF)
         {
             using var fs = new FileStream(plyPath, FileMode.Open, FileAccess.Read);
             // C# arrays and NativeArrays make it hard to have a "byte" array larger than 2GB :/
@@ -135,12 +136,17 @@ namespace Gsplat
             SplatCount = plyInfo.VertexCount;
             SHBands = GsplatUtils.CalcSHBandsFromSHPropertyCount(plyInfo.SHPropertyCount);
 
-            if (SHBands > 3 || GsplatUtils.SHBandsToCoefficientCount(SHBands) * 3 != plyInfo.SHPropertyCount)
+            if (SHBands > 4 || GsplatUtils.SHBandsToCoefficientCount(SHBands) * 3 != plyInfo.SHPropertyCount)
                 throw new NotSupportedException($"unexpected SH property count {plyInfo.SHPropertyCount}");
 
             if (plyInfo.PositionOffset == -1 || plyInfo.ColorOffset == -1 || plyInfo.OpacityOffset == -1 ||
                 plyInfo.ScaleOffset == -1 || plyInfo.RotationOffset == -1)
                 throw new NotSupportedException("missing required properties in PLY header");
+
+            var (posXSign, posYSign, posZSign) = GsplatUtils.AxisSigns(sourceCoordinates);
+            float rotXSign = posYSign * posZSign;
+            float rotYSign = posXSign * posZSign;
+            float rotZSign = posXSign * posYSign;
 
             Allocate();
             var buffer = new byte[plyInfo.PropertyCount * sizeof(float)];
@@ -152,28 +158,39 @@ namespace Gsplat
 
                 var properties = MemoryMarshal.Cast<byte, float>(buffer);
                 Positions[i] = new Vector3(
-                    properties[plyInfo.PositionOffset],
-                    properties[plyInfo.PositionOffset + 1],
-                    properties[plyInfo.PositionOffset + 2]);
+                    posXSign * properties[plyInfo.PositionOffset],
+                    posYSign * properties[plyInfo.PositionOffset + 1],
+                    posZSign * properties[plyInfo.PositionOffset + 2]);
                 Colors[i] = new Vector4(
                     properties[plyInfo.ColorOffset],
                     properties[plyInfo.ColorOffset + 1],
                     properties[plyInfo.ColorOffset + 2],
                     GsplatUtils.Sigmoid(properties[plyInfo.OpacityOffset]));
-                for (int j = 0; j < shCoeffs; j++)
-                    SHs[i * shCoeffs + j] = new Vector3(
-                        properties[j + plyInfo.SHOffset],
-                        properties[j + plyInfo.SHOffset + shCoeffs],
-                        properties[j + plyInfo.SHOffset + shCoeffs * 2]);
+
+                for (int j = 0, bandOffset = 0; j < SHBands; j++)
+                {
+                    int bandSize = (j + 1) * 2 + 1; // band l = j+1 has 2l+1 coefficients
+                    for (int k = 0; k < bandSize; k++)
+                    {
+                        float sign = GsplatUtils.ShSign(sourceCoordinates, j + 1, k);
+                        int idx = (int)i * shCoeffs + bandOffset + k;
+                        SHs[idx] = sign * new Vector3(
+                            properties[bandOffset + k + plyInfo.SHOffset],
+                            properties[bandOffset + k + plyInfo.SHOffset + shCoeffs],
+                            properties[bandOffset + k + plyInfo.SHOffset + shCoeffs * 2]);
+                    }
+                    bandOffset += bandSize;
+                }
+
                 Scales[i] = new Vector3(
                     Mathf.Exp(properties[plyInfo.ScaleOffset]),
                     Mathf.Exp(properties[plyInfo.ScaleOffset + 1]),
                     Mathf.Exp(properties[plyInfo.ScaleOffset + 2]));
                 Rotations[i] = new Vector4(
                     properties[plyInfo.RotationOffset],
-                    properties[plyInfo.RotationOffset + 1],
-                    properties[plyInfo.RotationOffset + 2],
-                    properties[plyInfo.RotationOffset + 3]).normalized;
+                    rotXSign * properties[plyInfo.RotationOffset + 1],
+                    rotYSign * properties[plyInfo.RotationOffset + 2],
+                    rotZSign * properties[plyInfo.RotationOffset + 3]).normalized;
 
                 if (i == 0) Bounds = new Bounds(Positions[i], Vector3.zero);
                 else Bounds.Encapsulate(Positions[i]);

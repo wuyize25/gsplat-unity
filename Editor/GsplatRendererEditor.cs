@@ -14,11 +14,20 @@ namespace Gsplat.Editor
             serializedObject.Update();
 
             DrawPropertiesExcluding(serializedObject, "m_Script",
+                nameof(GsplatRenderer.SHDegree),
                 nameof(GsplatRenderer.AsyncUpload),
                 nameof(GsplatRenderer.RenderBeforeUploadComplete),
                 nameof(GsplatRenderer.Brightness),
                 nameof(GsplatRenderer.SortMode)
             );
+
+            // SH degree: slider max equals the bound asset's SHBands (so a degree-3 asset
+            // shows 0–3, a degree-4 SPZ shows 0–4). Without an asset, fall back to 3.
+            var rendererTarget = (GsplatRenderer)target;
+            int maxShBands = rendererTarget.GsplatAsset ? rendererTarget.GsplatAsset.SHBands : 3;
+            var shDegreeProp = serializedObject.FindProperty(nameof(GsplatRenderer.SHDegree));
+            shDegreeProp.intValue = EditorGUILayout.IntSlider(
+                "SH Degree", shDegreeProp.intValue, 0, maxShBands);
 
             var brightnessProp = serializedObject.FindProperty(nameof(GsplatRenderer.Brightness));
             float brightness = brightnessProp.floatValue;

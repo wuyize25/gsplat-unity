@@ -58,7 +58,7 @@ namespace Gsplat
         public ComputeShader ComputeShader;
         public GsplatGlobalMaterial GlobalMaterial;
         [Tooltip("When enabled, 2+ active Gaussian splat renderers are merged into a single globally depth-sorted draw call.")]
-        public bool EnableGlobalSort = true;
+        public bool EnableGlobalSort = false;
         public uint SplatInstanceSize = 128;
         public uint UploadBatchSize = 100000;
         [Range(1, 20)] public uint MaxRenderOrder = 1;
@@ -166,6 +166,8 @@ namespace Gsplat
             {
                 mat.Reset();
             }
+            if (GlobalMaterial)
+                GlobalMaterial.Reset();
 #endif
         }
 

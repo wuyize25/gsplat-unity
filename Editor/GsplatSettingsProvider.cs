@@ -34,6 +34,21 @@ namespace Gsplat.Editor
             EditorGUILayout.PropertyField(m_gsplatSettings.FindProperty(nameof(GsplatSettings.DisplayBoundingBoxes)));
             EditorGUILayout.PropertyField(m_gsplatSettings.FindProperty(nameof(GsplatSettings.ShowImportErrors)));
             EditorGUILayout.PropertyField(m_gsplatSettings.FindProperty(nameof(GsplatSettings.Materials)));
+
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Global Sort", EditorStyles.boldLabel);
+            var enableGlobalSortProp = m_gsplatSettings.FindProperty(nameof(GsplatSettings.EnableGlobalSort));
+            EditorGUILayout.PropertyField(enableGlobalSortProp);
+            if (enableGlobalSortProp.boolValue)
+            {
+                EditorGUILayout.HelpBox(
+                    "Only Spark-compressed assets participate in the unified depth sort. " +
+                    "Renderers using uncompressed assets fall back to per-renderer sorting and " +
+                    "may not interleave correctly with the merged draw.",
+                    MessageType.Info);
+                EditorGUILayout.PropertyField(m_gsplatSettings.FindProperty(nameof(GsplatSettings.GlobalMaterial)));
+            }
+
             EditorGUILayout.Space();
             GUILayout.BeginHorizontal();
             GUILayout.FlexibleSpace();

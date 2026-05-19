@@ -46,6 +46,20 @@ namespace Gsplat
 
         public ISorterResource SorterResource => m_renderer.SorterResource;
 
+        // IGsplat global-merge members: expose per-renderer GPU buffers for the global sorter.
+        public GraphicsBuffer PackedSplatsBuffer =>
+            (m_renderer?.GsplatResource as GsplatResourceSpark)?.PackedSplatsBuffer;
+        public GraphicsBuffer SH1Buffer =>
+            (m_renderer?.GsplatResource as GsplatResourceSpark)?.PackedSH1Buffer;
+        public GraphicsBuffer SH2Buffer =>
+            (m_renderer?.GsplatResource as GsplatResourceSpark)?.PackedSH2Buffer;
+        public GraphicsBuffer SH3Buffer =>
+            (m_renderer?.GsplatResource as GsplatResourceSpark)?.PackedSH3Buffer;
+        public GraphicsBuffer SH4Buffer =>
+            (m_renderer?.GsplatResource as GsplatResourceSpark)?.PackedSH4Buffer;
+        public byte SHBands => GsplatAsset?.SHBands ?? 0;
+
+        
         public uint RemainingCount
         {
             get => m_renderer.m_remainingCount;
@@ -119,7 +133,7 @@ namespace Gsplat
             ForceRefresh();
 #if UNITY_EDITOR
             if (GsplatAsset &&
-                AssetDatabase.TryGetGUIDAndLocalFileIdentifier(GsplatAsset, out var guid, out long localId))
+                AssetDatabase.TryGetGUIDAndLocalFileIdentifier(GsplatAsset, out var guid, out var localId))
                 m_assetGuid = guid;
 #endif // #if UNITY_EDITOR
         }
@@ -149,6 +163,7 @@ namespace Gsplat
                     var asyncUpload = AsyncUpload;
 #endif
                     m_renderer.BindGsplatAsset(GsplatAsset, asyncUpload);
+                    GsplatSorter.Instance.MarkGlobalBuffersDirty();
                 }
             }
 
@@ -156,8 +171,11 @@ namespace Gsplat
             {
                 m_renderer.EvaluateRefreshRequired(SortMode, SortRefreshRate - 1, CutoutsRefreshRate - 1);
                 m_renderer.DispatchInitOrder(Cutouts, transform.localToWorldMatrix, CutoutsUpdateBounds);
-                m_renderer.Render(transform, gameObject.layer, GammaToLinear, SHDegree, Brightness,
-                    1.0f - SplatDownscaleFactor, RenderOrder);
+                // When the global sorter has merged all renderers into a single draw call,
+                // skip the per-renderer draw — GsplatSorter.DrawAll handles rendering.
+                if (!GsplatSorter.Instance.GlobalRenderEnabled)
+                    m_renderer.Render(transform, gameObject.layer, GammaToLinear, SHDegree, Brightness,
+                        1.0f - SplatDownscaleFactor, RenderOrder);
             }
         }
     }

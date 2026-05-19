@@ -37,10 +37,11 @@ namespace Gsplat
                     AssetDatabase.CreateAsset(settings, k_gsplatSettingsPath);
                     AssetDatabase.SaveAssets();
                 }
-                else if (settings.Version < new Version("1.2.0"))
+                else if (settings.Version < new Version("1.3.0"))
                 {
                     Debug.Log($"Updated GsplatSettings from version {settings.Version}.");
                     settings.Materials = DefaultMaterials;
+                    settings.GlobalMaterial = DefaultGlobalMaterial;
                     settings.m_prevComputeShader = null;
                     settings.Version = GsplatUtils.k_Version;
                     settings.OnValidate();
@@ -55,6 +56,9 @@ namespace Gsplat
         }
 
         public ComputeShader ComputeShader;
+        public GsplatGlobalMaterial GlobalMaterial;
+        [Tooltip("When enabled, 2+ active Gaussian splat renderers are merged into a single globally depth-sorted draw call.")]
+        public bool EnableGlobalSort = true;
         public uint SplatInstanceSize = 128;
         public uint UploadBatchSize = 100000;
         [Range(1, 20)] public uint MaxRenderOrder = 1;
@@ -82,8 +86,10 @@ namespace Gsplat
 
 #if UNITY_EDITOR
         static ComputeShader DefaultComputeShader => AssetDatabase.LoadAssetAtPath<ComputeShader>(
-            GsplatUtils.k_PackagePath +
-            "Runtime/Shaders/Gsplat.compute");
+            GsplatUtils.k_PackagePath + "Runtime/Shaders/Gsplat.compute");
+
+        static GsplatGlobalMaterial DefaultGlobalMaterial => AssetDatabase.LoadAssetAtPath<GsplatGlobalMaterial>(
+            GsplatUtils.k_PackagePath + "Runtime/Materials/GsplatGlobal.asset");
 
         static GsplatMaterial[] DefaultMaterials
         {
@@ -104,6 +110,7 @@ namespace Gsplat
         {
             Version = GsplatUtils.k_Version;
             ComputeShader = DefaultComputeShader;
+            GlobalMaterial = DefaultGlobalMaterial;
             Materials = DefaultMaterials;
             m_prevComputeShader = null;
             m_prevSplatInstanceSize = 0;
@@ -146,6 +153,8 @@ namespace Gsplat
                 m_prevComputeShader = ComputeShader;
             }
 
+            GsplatSorter.Instance.InitGlobal(GlobalMaterial);
+
             if (SplatInstanceSize != m_prevSplatInstanceSize)
             {
                 DestroyImmediate(Mesh);
@@ -163,6 +172,7 @@ namespace Gsplat
         void OnEnable()
         {
             GsplatSorter.Instance.InitSorter(ComputeShader);
+            GsplatSorter.Instance.InitGlobal(GlobalMaterial);
             m_prevComputeShader = ComputeShader;
 
             CreateMeshInstance();

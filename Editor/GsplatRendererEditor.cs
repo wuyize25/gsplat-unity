@@ -13,6 +13,18 @@ namespace Gsplat.Editor
         {
             serializedObject.Update();
 
+            var rendererTargetEarly = (GsplatRenderer)target;
+            if (GsplatSettings.Instance.EnableGlobalSort
+                && rendererTargetEarly.GsplatAsset
+                && rendererTargetEarly.GsplatAsset.Compression == CompressionMode.Uncompressed)
+            {
+                EditorGUILayout.HelpBox(
+                    "Global sort is enabled, but this renderer uses an uncompressed asset and " +
+                    "will not participate in the unified depth-sorted draw. Re-import with Spark " +
+                    "compression to enable cross-renderer depth ordering.",
+                    MessageType.Warning);
+            }
+
             DrawPropertiesExcluding(serializedObject, "m_Script",
                 nameof(GsplatRenderer.SHDegree),
                 nameof(GsplatRenderer.AsyncUpload),

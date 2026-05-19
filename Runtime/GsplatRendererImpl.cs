@@ -94,7 +94,8 @@ namespace Gsplat
         {
             if (cutouts.Length == 0)
             {
-                SorterResource.Initialized = false;
+                if (m_cutoutsData.Length > 0)
+                    SorterResource.Initialized = false;
                 m_cutoutsData = Array.Empty<GsplatCutout.ShaderData>();
                 m_remainingCount = GsplatResource.UploadedCount;
                 m_bounds = m_gsplatAsset.Bounds;

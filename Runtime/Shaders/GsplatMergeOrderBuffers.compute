@@ -1,0 +1,139 @@
+// Copyright (c) 2026 Keir Rice
+// SPDX-License-Identifier: MIT
+//
+// K-way merge of per-renderer sorted depth/order buffers into a single GlobalOrderBuffer.
+//
+// Each entry in GlobalOrderBuffer is a packed uint:
+//   bits [31:24] = renderer_id  (0-255)
+//   bits [23: 0] = local_splat_id (filtered local index within that renderer's OrderBuffer)
+//
+// Workflow (dispatched by GsplatSorter):
+//   1. PackRendererOrders (one dispatch per renderer)
+//      Reads raw per-renderer OrderBuffer + InputKeys depths, writes packed orders + depths
+//      into a shared scratch buffer at the renderer's assigned offset.
+//   2. MergeTwoWithDepth (K-2 intermediate dispatches for K > 2)
+//      2-way parallel binary merge of two sorted sub-ranges → merged orders + depths.
+//      Result written to a ping-pong scratch buffer pair.
+//   3. MergeTwo (final dispatch)
+//      2-way parallel binary merge → GlobalOrderBuffer only (no depth output needed).
+//
+// All depth lists are sorted ascending (back-to-front: smallest depth = farthest splat).
+
+#define GROUP_SIZE 256
+#define FLOAT_MAX  3.402823466e+38f
+
+#pragma kernel PackRendererOrders
+#pragma kernel MergeTwo
+#pragma kernel MergeTwoWithDepth
+
+// -----------------------------------------------------------------------
+// PackRendererOrders
+// Packs one renderer's raw OrderBuffer and InputKeys into a shared scratch
+// buffer at the given offset, embedding the renderer ID into the high bits.
+// -----------------------------------------------------------------------
+StructuredBuffer<uint>    _RawOrders;     // per-renderer OrderBuffer (local splat IDs)
+StructuredBuffer<float>   _RawDepths;     // per-renderer InputKeys  (sorted depths)
+RWStructuredBuffer<uint>  _PackedOrders;  // scratch packed orders
+RWStructuredBuffer<float> _PackedDepths;  // scratch depths
+
+uint _RendererIdx;   // renderer ID to embed in bits [31:24]
+uint _SrcCount;      // number of valid elements to pack
+uint _DstOffset;     // element start index in the scratch buffers
+
+[numthreads(GROUP_SIZE, 1, 1)]
+void PackRendererOrders(uint3 id : SV_DispatchThreadID)
+{
+    uint i = id.x;
+    if (i >= _SrcCount) return;
+    _PackedOrders[_DstOffset + i] = (_RendererIdx << 24u) | (_RawOrders[i] & 0x00FFFFFFu);
+    _PackedDepths[_DstOffset + i] = _RawDepths[i];
+}
+
+// -----------------------------------------------------------------------
+// Shared merge parameters
+// Two sorted sub-ranges of the input buffers:
+//   A: [_OffsetA, _OffsetA + _CountA)
+//   B: [_OffsetB, _OffsetB + _CountB)
+// Output: [_OutputOffset, _OutputOffset + _CountA + _CountB)
+// -----------------------------------------------------------------------
+StructuredBuffer<float>   _DepthsA;
+StructuredBuffer<uint>    _OrdersA;       // packed (renderer_id:8 | local_splat_id:24)
+StructuredBuffer<float>   _DepthsB;
+StructuredBuffer<uint>    _OrdersB;
+
+uint _OffsetA;
+uint _OffsetB;
+uint _CountA;
+uint _CountB;
+uint _OutputOffset;
+
+RWStructuredBuffer<uint>  _OutputOrders;
+RWStructuredBuffer<float> _OutputDepths;  // written only by MergeTwoWithDepth
+
+// Binary search for the number of elements from A that precede merged output position p.
+// Both lists sorted ascending; we want the p-th smallest element overall.
+uint MergePathSplit(uint p)
+{
+    // Clamp to valid range of i (elements drawn from A).
+    uint lo = (p >= _CountB) ? p - _CountB : 0u;
+    uint hi = min(p, _CountA);
+
+    while (lo < hi)
+    {
+        uint mid  = lo + (hi - lo) / 2u;
+        float dA  = _DepthsA[_OffsetA + mid];
+        uint  jB  = p - mid - 1u;
+        float dB  = (jB < _CountB) ? _DepthsB[_OffsetB + jB] : -FLOAT_MAX;
+
+        // A[mid] <= B[p-mid-1] means mid can still precede position p: try larger i.
+        if (dA <= dB)
+            lo = mid + 1u;
+        else
+            hi = mid;
+    }
+
+    return lo;
+}
+
+// Final merge pass — writes to GlobalOrderBuffer only.
+[numthreads(GROUP_SIZE, 1, 1)]
+void MergeTwo(uint3 id : SV_DispatchThreadID)
+{
+    uint p     = id.x;
+    uint total = _CountA + _CountB;
+    if (p >= total) return;
+
+    uint i = MergePathSplit(p);
+    uint j = p - i;
+
+    float dA = (i < _CountA) ? _DepthsA[_OffsetA + i] : FLOAT_MAX;
+    float dB = (j < _CountB) ? _DepthsB[_OffsetB + j] : FLOAT_MAX;
+
+    _OutputOrders[_OutputOffset + p] = (dA <= dB) ? _OrdersA[_OffsetA + i] : _OrdersB[_OffsetB + j];
+}
+
+// Intermediate merge pass — writes merged orders AND depths to scratch.
+[numthreads(GROUP_SIZE, 1, 1)]
+void MergeTwoWithDepth(uint3 id : SV_DispatchThreadID)
+{
+    uint p     = id.x;
+    uint total = _CountA + _CountB;
+    if (p >= total) return;
+
+    uint i = MergePathSplit(p);
+    uint j = p - i;
+
+    float dA = (i < _CountA) ? _DepthsA[_OffsetA + i] : FLOAT_MAX;
+    float dB = (j < _CountB) ? _DepthsB[_OffsetB + j] : FLOAT_MAX;
+
+    if (dA <= dB)
+    {
+        _OutputOrders[_OutputOffset + p] = _OrdersA[_OffsetA + i];
+        _OutputDepths[_OutputOffset + p] = dA;
+    }
+    else
+    {
+        _OutputOrders[_OutputOffset + p] = _OrdersB[_OffsetB + j];
+        _OutputDepths[_OutputOffset + p] = dB;
+    }
+}

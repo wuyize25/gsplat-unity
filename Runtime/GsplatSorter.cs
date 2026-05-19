@@ -288,8 +288,38 @@ namespace Gsplat
             foreach (var gs in m_gsplats.Where(gs => gs is { isActiveAndEnabled: true, Valid: true }))
                 m_activeGsplats.Add(gs);
 
-            GlobalRenderEnabled = GlobalValid && GsplatSettings.Instance.EnableGlobalSort && m_activeGsplats.Count >= 2;
+            GlobalRenderEnabled = GlobalValid
+                                  && GsplatSettings.Instance.EnableGlobalSort
+                                  && m_activeGsplats.Count >= 2
+                                  && CanRenderGlobally();
             return m_activeGsplats.Count != 0;
+        }
+
+        // Decides scene-wide whether the global merge can run this frame. Must run before
+        // DrawAllIfEnabled (which the URP feature calls in OnCameraPreCull, before DispatchSort)
+        // so that the draw is correctly suppressed when global mode is unsupported.
+        bool CanRenderGlobally()
+        {
+            // renderer_id is packed into 8 bits ([31:24]); max 255 renderers.
+            if (m_activeGsplats.Count > 255)
+            {
+                Debug.LogError("[GsplatSorter] Global merge supports at most 255 renderers. Falling back to per-renderer rendering.");
+                return false;
+            }
+
+            // Global merge requires every active renderer to use SPARK compression.
+            foreach (var gs in m_activeGsplats)
+            {
+                if (gs.PackedSplatsBuffer == null)
+                {
+                    var obj = gs as UnityEngine.Object;
+                    int id  = obj ? obj.GetInstanceID() : 0;
+                    if (m_warnedUncompressed.Add(id))
+                        Debug.LogWarning($"[GsplatSorter] '{obj?.name}' uses an uncompressed asset; global sort requires every active renderer to use SPARK compression. Disabling global sort for this scene — all renderers fall back to per-renderer rendering.");
+                    return false;
+                }
+            }
+            return true;
         }
 
         void InitialClearCmdBuffer(Camera cam)
@@ -400,27 +430,8 @@ namespace Gsplat
 
             if (m_totalSplatCount == 0) return;
 
-            // Guard: renderer_id is packed into 8 bits ([31:24]); max 255 renderers.
-            if (m_activeGsplats.Count > 255)
-            {
-                Debug.LogError("[GsplatSorter] Global merge supports at most 255 renderers. Falling back to per-renderer rendering.");
-                m_globalBuffersDirty = true;
-                return;
-            }
-
-            // Guard: global merge only supports SPARK-compressed assets.
-            foreach (var gs in m_activeGsplats)
-            {
-                if (gs.PackedSplatsBuffer == null)
-                {
-                    var obj = gs as UnityEngine.Object;
-                    int id  = obj ? obj.GetInstanceID() : 0;
-                    if (m_warnedUncompressed.Add(id))
-                        Debug.LogWarning($"[GsplatSorter] '{obj?.name}' uses an uncompressed asset; global sort requires SPARK compression. Falling back to per-renderer rendering for this renderer.");
-                    m_globalBuffersDirty = true;
-                    return;
-                }
-            }
+            // CanRenderGlobally() in Gather already guarded count<=255 and Spark-only;
+            // GlobalRenderEnabled would be false and we wouldn't be here otherwise.
 
             var st = GraphicsBuffer.Target.Structured;
             m_globalPackedBuffer       = new GraphicsBuffer(st, (int)m_totalSplatCount, sizeof(uint) * 4) { name = "Gsplat.GlobalPacked" };
@@ -604,7 +615,10 @@ namespace Gsplat
 
         void DrawAll(CommandBuffer cmd, Camera camera)
         {
-            if (m_globalOrderBuffer == null || m_totalRemainingCount == 0) return;
+            // m_globalBuffersDirty: the active renderer set changed and the next DispatchSort
+            // hasn't validated/rebuilt the buffers yet. Drawing now would bind stale buffers
+            // (under URP, DrawAllIfEnabled fires before DispatchSort each frame).
+            if (m_globalBuffersDirty || m_globalOrderBuffer == null || m_totalRemainingCount == 0) return;
 
             cmd?.BeginSample(k_samplerDraw.name);
 

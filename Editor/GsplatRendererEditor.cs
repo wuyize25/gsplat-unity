@@ -19,8 +19,9 @@ namespace Gsplat.Editor
                 && rendererTargetEarly.GsplatAsset.Compression == CompressionMode.Uncompressed)
             {
                 EditorGUILayout.HelpBox(
-                    "Global sort is enabled, but this renderer uses an uncompressed asset and " +
-                    "will not participate in the unified depth-sorted draw. Re-import with Spark " +
+                    "Global sort is enabled, but this renderer uses an uncompressed asset. " +
+                    "Global sort is all-or-nothing: if any active renderer is uncompressed, the " +
+                    "whole scene falls back to per-renderer rendering. Re-import with Spark " +
                     "compression to enable cross-renderer depth ordering.",
                     MessageType.Warning);
             }

@@ -42,9 +42,9 @@ namespace Gsplat.Editor
             if (enableGlobalSortProp.boolValue)
             {
                 EditorGUILayout.HelpBox(
-                    "Only Spark-compressed assets participate in the unified depth sort. " +
-                    "Renderers using uncompressed assets fall back to per-renderer sorting and " +
-                    "may not interleave correctly with the merged draw.",
+                    "Global sort requires every active renderer to use Spark compression. " +
+                    "If any active renderer uses an uncompressed asset, global sort is disabled " +
+                    "for the whole scene and all renderers fall back to per-renderer rendering.",
                     MessageType.Info);
                 EditorGUILayout.PropertyField(m_gsplatSettings.FindProperty(nameof(GsplatSettings.GlobalMaterial)));
             }

@@ -116,6 +116,7 @@ namespace Gsplat
         GraphicsBuffer m_mergeScratchDepths;
         uint           m_scratchCapacity;
         Matrix4x4[]    m_rendererTransformsCache;
+        MaterialPropertyBlock m_globalPropertyBlock;
 
         /// <summary>True when 2+ active renderers are being globally merged this frame.</summary>
         public bool GlobalRenderEnabled { get; private set; }
@@ -623,36 +624,44 @@ namespace Gsplat
             cmd?.BeginSample(k_samplerDraw.name);
 
             var mat = m_globalMaterial.Materials[m_globalSHBands];
-            mat.SetBuffer(k_globalOrderBuffer,      m_globalOrderBuffer);
-            mat.SetBuffer(k_globalPackedBuffer,     m_globalPackedBuffer);
-            mat.SetBuffer(k_rendererOffsetsProp,    m_rendererOffsetsBuffer);
-            mat.SetBuffer(k_rendererTransformsProp, m_rendererTransformsBuffer);
-            mat.SetInt(k_totalSplatCount,           (int)m_totalRemainingCount);
-            mat.SetInt(k_splatInstanceSize,         (int)GsplatSettings.Instance.SplatInstanceSize);
+
+            // Bind buffers via a MaterialPropertyBlock rather than on the material itself, so
+            // each queued draw captures its own bindings and multiple cameras (Game + SceneView,
+            // or any multi-camera setup) don't overwrite one another's state before the GPU
+            // executes them.
+            m_globalPropertyBlock ??= new MaterialPropertyBlock();
+            m_globalPropertyBlock.Clear();
+            m_globalPropertyBlock.SetBuffer(k_globalOrderBuffer,      m_globalOrderBuffer);
+            m_globalPropertyBlock.SetBuffer(k_globalPackedBuffer,     m_globalPackedBuffer);
+            m_globalPropertyBlock.SetBuffer(k_rendererOffsetsProp,    m_rendererOffsetsBuffer);
+            m_globalPropertyBlock.SetBuffer(k_rendererTransformsProp, m_rendererTransformsBuffer);
+            m_globalPropertyBlock.SetInteger(k_totalSplatCount,       (int)m_totalRemainingCount);
+            m_globalPropertyBlock.SetInteger(k_splatInstanceSize,     (int)GsplatSettings.Instance.SplatInstanceSize);
 
             if (m_globalSH1Buffer != null)
-                mat.SetBuffer(k_globalSH1Buffer, m_globalSH1Buffer);
+                m_globalPropertyBlock.SetBuffer(k_globalSH1Buffer, m_globalSH1Buffer);
             if (m_globalSH2Buffer != null)
-                mat.SetBuffer(k_globalSH2Buffer, m_globalSH2Buffer);
+                m_globalPropertyBlock.SetBuffer(k_globalSH2Buffer, m_globalSH2Buffer);
             if (m_globalSH3Buffer != null)
-                mat.SetBuffer(k_globalSH3Buffer, m_globalSH3Buffer);
+                m_globalPropertyBlock.SetBuffer(k_globalSH3Buffer, m_globalSH3Buffer);
             if (m_globalSH4Buffer != null)
-                mat.SetBuffer(k_globalSH4Buffer, m_globalSH4Buffer);
+                m_globalPropertyBlock.SetBuffer(k_globalSH4Buffer, m_globalSH4Buffer);
 
             // Use the first renderer's visual settings as representative.
             var rep = m_activeGsplats[0] as GsplatRenderer;
             if (rep != null)
             {
-                mat.SetFloat(k_brightness,  rep.Brightness);
-                mat.SetFloat(k_scaleFactor, 1.0f - rep.SplatDownscaleFactor);
-                mat.SetInt(k_gammaToLinear, rep.GammaToLinear ? 1 : 0);
-                mat.SetInt(k_shDegree,      Mathf.Min(rep.SHDegree, m_globalSHBands));
+                m_globalPropertyBlock.SetFloat(k_brightness,    rep.Brightness);
+                m_globalPropertyBlock.SetFloat(k_scaleFactor,   1.0f - rep.SplatDownscaleFactor);
+                m_globalPropertyBlock.SetInteger(k_gammaToLinear, rep.GammaToLinear ? 1 : 0);
+                m_globalPropertyBlock.SetInteger(k_shDegree,      Mathf.Min(rep.SHDegree, m_globalSHBands));
             }
 
             var rp = new RenderParams(mat)
             {
                 worldBounds = new Bounds(Vector3.zero, Vector3.one * 1e6f),
-                camera      = camera
+                camera      = camera,
+                matProps    = m_globalPropertyBlock
             };
 
             int instances = Mathf.CeilToInt(m_totalRemainingCount / (float)GsplatSettings.Instance.SplatInstanceSize);

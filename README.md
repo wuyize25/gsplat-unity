@@ -1,6 +1,6 @@
 # Gsplat
 
-[![Changelog](https://img.shields.io/badge/changelog-f15d30.svg)](./CHANGELOG.md) [![Version](https://img.shields.io/badge/version-v1.2.1-blue.svg)](https://github.com/wuyize25/gsplat-unity/releases/tag/v1.2.1) [![License](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE.md)
+[![Changelog](https://img.shields.io/badge/changelog-f15d30.svg)](./CHANGELOG.md) [![Version](https://img.shields.io/badge/version-v1.3.0-blue.svg)](https://github.com/wuyize25/gsplat-unity/releases/tag/v1.3.0) [![License](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE.md)
 
 A Unity package for rendering [3D Gaussian Splatting](https://repo-sam.inria.fr/fungraph/3d-gaussian-splatting/) (3DGS). Supports Unity 2021 and later. 
 
@@ -19,6 +19,8 @@ Most 3DGS assets are trained in Gamma space, following the official implementati
 - Gaussians can be correctly blended with transparent meshes based on their bounding boxes
 
 - Supports reading & rendering PLY files with SH degrees 0-3
+
+- Supports SPZ versions 1-4 with SH degrees 0-4
 
 - Supports orthographic projection
 

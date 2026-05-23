@@ -89,4 +89,5 @@ This project is released under the MIT license. It is built upon several other o
 -   [aras-p/UnityGaussianSplatting](https://github.com/aras-p/UnityGaussianSplatting), MIT License (c) 2023 Aras Pranckevičius
 -   [b0nes164/GPUSorting](https://github.com/b0nes164/GPUSorting), MIT License (c) 2024 Thomas Smith
 -   [sparkjsdev/spark](https://github.com/sparkjsdev/spark), MIT License (c) 2025 WORLD LABS TECHNOLOGIES, INC.
-
+-   [nianticlabs/spz](https://github.com/nianticlabs/spz), MIT License (c) 2024 Niantic Labs
+-   [oleg-st/ZstdSharp](https://github.com/oleg-st/ZstdSharp), MIT License (c) 2021 Oleg Stepanischev

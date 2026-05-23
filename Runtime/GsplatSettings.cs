@@ -55,15 +55,15 @@ namespace Gsplat
         }
 
         public ComputeShader ComputeShader;
-        public uint SplatInstanceSize = 128;
-        public uint UploadBatchSize = 100000;
-        [Range(1, 20)] public uint MaxRenderOrder = 1;
-        public bool DisplayBoundingBoxes = false;
+        public uint SplatInstanceSize;
+        public uint UploadBatchSize;
+        [Range(1, 20)] public uint MaxRenderOrder;
+        public bool DisplayBoundingBoxes;
         [Tooltip("If a camera moves more that this threshold, each GsplatRenderer compute sorting and cutouts regardless of refresh rate")]
-        [Range(0.05f, 1f)] public float CameraTranslationRefreshTreshold = 0.2f;
+        [Range(0.05f, 1f)] public float CameraTranslationRefreshTreshold;
         [Tooltip("If a camera rotates more that this threshold, each GsplatRenderer compute sorting and cutouts refresh regardless of refresh rate")]
-        [Range(0.2f, 30f)] public float CameraRotationRefreshTreshold = 10;
-        public bool ShowImportErrors = true;
+        [Range(0.2f, 30f)] public float CameraRotationRefreshTreshold;
+        public bool ShowImportErrors;
         public GsplatMaterial[] Materials;
         public Mesh Mesh { get; private set; }
 
@@ -105,6 +105,14 @@ namespace Gsplat
             Version = GsplatUtils.k_Version;
             ComputeShader = DefaultComputeShader;
             Materials = DefaultMaterials;
+            SplatInstanceSize = 128;
+            UploadBatchSize = 100000;
+            MaxRenderOrder = 1;
+            DisplayBoundingBoxes = false;
+            CameraTranslationRefreshTreshold = 0.2f;
+            CameraRotationRefreshTreshold = 10;
+            ShowImportErrors = true;
+
             m_prevComputeShader = null;
             m_prevSplatInstanceSize = 0;
             OnValidate();

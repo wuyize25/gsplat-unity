@@ -23,6 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - PLY importer and shaders extended to also pack Splats Spherical Harmonics as 2 uint for SH1, 6 uint for SH2 and 10 uint for SH3. The implementation is also heavily inspired by the SparkJS [packing implementation](https://github.com/sparkjsdev/spark/blob/main/src/SplatMesh.ts#L754). ([#14](https://github.com/wuyize25/gsplat-unity/pull/14) by [@Arthur-Aillet](https://github.com/Arthur-Aillet))
 
+### Fixed
+
+- The behavior of the `Reset` button in `Project Settings > Gsplat` was inconsistent with the inspector of `GsplatSettings`, and some properties were not being reset.
+
 ## [1.2.1] - 2026-03-26
 
 ### Added

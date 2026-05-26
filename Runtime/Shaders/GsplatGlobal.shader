@@ -31,11 +31,7 @@ Shader "Gsplat/Global"
 
             #include "UnityCG.cginc"
 
-            bool _GammaToLinear;
             int _SplatInstanceSize;
-            int _SHDegree;
-            float _Brightness;
-            float _ScaleFactor;
 
             #include "GsplatSparkGlobal.hlsl"
 
@@ -51,6 +47,7 @@ Shader "Gsplat/Global"
             struct v2f
             {
                 float2 uv : TEXCOORD0;
+                nointerpolation uint rendererId : TEXCOORD1;
                 float4 vertex : SV_POSITION;
                 float4 color : COLOR;
                 UNITY_VERTEX_OUTPUT_STEREO
@@ -71,7 +68,7 @@ Shader "Gsplat/Global"
                 #endif
 
                 GlobalSplatSource source;
-                if (!InitGlobalSource(instanceId, v.vertex.xyz, _ScaleFactor, source))
+                if (!InitGlobalSource(instanceId, v.vertex.xyz, source))
                     return o;
 
                 SplatCenter center;
@@ -85,7 +82,7 @@ Shader "Gsplat/Global"
                 float3 dir = normalize(mul(center.view, (float3x3)center.modelView));
                 float3 sh[SH_COEFFS];
                 InitGlobalSH(source, sh);
-                color.rgb += EvalSH(sh, dir, _SHDegree);
+                color.rgb += EvalSH(sh, dir, (int)_RendererParams[source.rendererId].shDegree);
                 #endif
 
                 ClipCorner(corner, color.a);
@@ -93,24 +90,27 @@ Shader "Gsplat/Global"
                 o.vertex = center.proj + float4(corner.offset.x, _ProjectionParams.x * corner.offset.y, 0, 0);
                 o.color  = color;
                 o.uv     = corner.uv;
+                o.rendererId = source.rendererId;
                 return o;
             }
 
             float4 frag(v2f i) : SV_Target
             {
+                RendererParams p = _RendererParams[i.rendererId];
+
                 float A = dot(i.uv, i.uv);
                 if (A > 1.0) discard;
 
                 float2 absUV = abs(i.uv);
                 float maxUV = max(absUV.x, absUV.y);
 
-                float falloff = -exp((maxUV - _ScaleFactor * 1.16) * 25 * _ScaleFactor);
+                float falloff = -exp((maxUV - p.scaleFactor * 1.16) * 25 * p.scaleFactor);
                 float alpha = (exp(-A * 4.0) + falloff) * i.color.a;
 
                 if (alpha < 1.0 / 255.0) discard;
-                if (_GammaToLinear)
-                    return float4(GammaToLinearSpace(i.color.rgb) * alpha * _Brightness, alpha);
-                return float4(i.color.rgb * alpha * _Brightness, alpha);
+                if (p.gammaToLinear)
+                    return float4(GammaToLinearSpace(i.color.rgb) * alpha * p.brightness, alpha);
+                return float4(i.color.rgb * alpha * p.brightness, alpha);
             }
             ENDHLSL
         }

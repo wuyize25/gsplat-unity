@@ -32,6 +32,16 @@ StructuredBuffer<uint4>    _GlobalSH4Buffer;
 StructuredBuffer<uint>     _RendererOffsets;    // splat start index in global buffers, per renderer
 StructuredBuffer<float4x4> _RendererTransforms; // localToWorldMatrix, per renderer
 
+// Per-renderer visual settings, looked up by renderer_id. Matches RendererParams in GsplatSorter.cs.
+struct RendererParams
+{
+    float brightness;
+    float scaleFactor;
+    uint  gammaToLinear;
+    uint  shDegree;
+};
+StructuredBuffer<RendererParams> _RendererParams;
+
 // Merged sorted index buffer (output of the merge pass).
 // Entry: (renderer_id:8 | local_splat_id:24)
 StructuredBuffer<uint>     _GlobalOrderBuffer;
@@ -47,7 +57,7 @@ struct GlobalSplatSource
     float2 cornerUV;
 };
 
-bool InitGlobalSource(uint instanceId, float3 vertex, float scaleFactor, out GlobalSplatSource source)
+bool InitGlobalSource(uint instanceId, float3 vertex, out GlobalSplatSource source)
 {
     source.order = instanceId * _SplatInstanceSize + asuint(vertex.z);
 
@@ -57,7 +67,7 @@ bool InitGlobalSource(uint instanceId, float3 vertex, float scaleFactor, out Glo
     uint packed     = _GlobalOrderBuffer[source.order];
     source.rendererId = packed >> 24u;
     source.id         = packed & 0x00FFFFFFu;
-    source.cornerUV   = float2(vertex.x, vertex.y) * scaleFactor;
+    source.cornerUV   = float2(vertex.x, vertex.y) * _RendererParams[source.rendererId].scaleFactor;
     return true;
 }
 

@@ -34,6 +34,21 @@ namespace Gsplat.Editor
             EditorGUILayout.PropertyField(m_gsplatSettings.FindProperty(nameof(GsplatSettings.DisplayBoundingBoxes)));
             EditorGUILayout.PropertyField(m_gsplatSettings.FindProperty(nameof(GsplatSettings.ShowImportErrors)));
             EditorGUILayout.PropertyField(m_gsplatSettings.FindProperty(nameof(GsplatSettings.Materials)));
+
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Global Sort", EditorStyles.boldLabel);
+            var enableGlobalSortProp = m_gsplatSettings.FindProperty(nameof(GsplatSettings.EnableGlobalSort));
+            EditorGUILayout.PropertyField(enableGlobalSortProp);
+            if (enableGlobalSortProp.boolValue)
+            {
+                EditorGUILayout.HelpBox(
+                    "Global sort requires every active renderer to use Spark compression. " +
+                    "If any active renderer uses an uncompressed asset, global sort is disabled " +
+                    "for the whole scene and all renderers fall back to per-renderer rendering.",
+                    MessageType.Info);
+                EditorGUILayout.PropertyField(m_gsplatSettings.FindProperty(nameof(GsplatSettings.GlobalMaterial)));
+            }
+
             EditorGUILayout.Space();
             GUILayout.BeginHorizontal();
             GUILayout.FlexibleSpace();

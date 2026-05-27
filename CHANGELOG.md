@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.3.0] - 2026-05-23
 
 ### Added
 
@@ -22,6 +22,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Multiple materials generated automatically to let the user define a custom render order. Max Render order defined in `GsplatSettings`. ([#19](https://github.com/wuyize25/gsplat-unity/pull/19) by [@Arthur-Aillet](https://github.com/Arthur-Aillet))
 
 - PLY importer and shaders extended to also pack Splats Spherical Harmonics as 2 uint for SH1, 6 uint for SH2 and 10 uint for SH3. The implementation is also heavily inspired by the SparkJS [packing implementation](https://github.com/sparkjsdev/spark/blob/main/src/SplatMesh.ts#L754). ([#14](https://github.com/wuyize25/gsplat-unity/pull/14) by [@Arthur-Aillet](https://github.com/Arthur-Aillet))
+
+### Fixed
+
+- The behavior of the `Reset` button in `Project Settings > Gsplat` was inconsistent with the inspector of `GsplatSettings`, and some properties were not being reset.
 
 ## [1.2.1] - 2026-03-26
 
@@ -104,7 +108,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - This is the first release of Gsplat, as a Package.
 
 
-[unreleased]: https://github.com/wuyize25/gsplat-unity/compare/v1.2.1...HEAD
+[unreleased]: https://github.com/wuyize25/gsplat-unity/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/wuyize25/gsplat-unity/compare/v1.2.1...v1.3.0
 [1.2.1]: https://github.com/wuyize25/gsplat-unity/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/wuyize25/gsplat-unity/compare/v1.1.2...v1.2.0
 [1.1.2]: https://github.com/wuyize25/gsplat-unity/compare/v1.1.1...v1.1.2

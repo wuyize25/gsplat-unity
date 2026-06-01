@@ -92,6 +92,7 @@ namespace Gsplat
 
         // CPU-side per-renderer metadata (rebuilt when renderers change).
         uint[] m_rendererOffsets;   // splat start index in global buffers, per active renderer
+        uint[] m_builtSplatCounts;  // per-renderer SplatCount captured when the global buffers were last built
         uint   m_totalSplatCount;
         uint   m_totalRemainingCount; // sum of RemainingCounts; valid entries in GlobalOrderBuffer after merge
         byte   m_globalSHBands;
@@ -421,13 +422,22 @@ namespace Gsplat
         // -----------------------------------------------------------------------
         void EnsureGlobalBuffers(CommandBuffer cmd)
         {
+            // A renderer streaming in its splats via async upload (AsyncUpload +
+            // RenderBeforeUploadComplete) grows its SplatCount frame to frame. Rebuild when an
+            // active renderer's count no longer matches what we last built with, otherwise the
+            // global sub-ranges keep only the splats present at the first build and the rest are
+            // never copied in (leaving the merge to read stale/under-sized global buffers).
+            if (!m_globalBuffersDirty && ActiveSplatCountsChanged())
+                m_globalBuffersDirty = true;
+
             if (!m_globalBuffersDirty) return;
             m_globalBuffersDirty = false;
 
             DisposeGlobalBuffers();
 
             m_totalSplatCount = 0;
-            m_rendererOffsets = new uint[m_activeGsplats.Count];
+            m_rendererOffsets  = new uint[m_activeGsplats.Count];
+            m_builtSplatCounts = new uint[m_activeGsplats.Count];
             // Size SH buffers to the highest band count in the set; lower-band renderers
             // occupy the extra slots but never read them, since each renderer's SHDegree is
             // clamped to its own asset bands in UpdateRendererParams.
@@ -438,8 +448,10 @@ namespace Gsplat
 
             for (int k = 0; k < m_activeGsplats.Count; k++)
             {
-                m_rendererOffsets[k] = m_totalSplatCount;
-                m_totalSplatCount   += m_activeGsplats[k].SplatCount;
+                uint count = m_activeGsplats[k].SplatCount;
+                m_rendererOffsets[k]  = m_totalSplatCount;
+                m_builtSplatCounts[k] = count;
+                m_totalSplatCount    += count;
             }
 
             if (m_totalSplatCount == 0) return;
@@ -490,6 +502,19 @@ namespace Gsplat
             m_mergeScratchOrders = new GraphicsBuffer(st, (int)m_totalSplatCount, sizeof(uint))  { name = "Gsplat.MergeScratchOrders" };
             m_mergeScratchDepths = new GraphicsBuffer(st, (int)m_totalSplatCount, sizeof(float)) { name = "Gsplat.MergeScratchDepths" };
             m_scratchCapacity    = m_totalSplatCount;
+        }
+
+        // True when an active renderer's SplatCount no longer matches what the global buffers were
+        // built with (e.g. an async upload has streamed in more splats since the last rebuild).
+        // Active-set size changes are already covered by MarkGlobalBuffersDirty on register/unregister.
+        bool ActiveSplatCountsChanged()
+        {
+            if (m_builtSplatCounts == null || m_builtSplatCounts.Length != m_activeGsplats.Count)
+                return true;
+            for (int k = 0; k < m_activeGsplats.Count; k++)
+                if (m_builtSplatCounts[k] != m_activeGsplats[k].SplatCount)
+                    return true;
+            return false;
         }
 
         void UpdateRendererTransforms()
@@ -732,6 +757,8 @@ namespace Gsplat
             m_mergeScratchOrders?.Dispose();        m_mergeScratchOrders       = null;
             m_mergeScratchDepths?.Dispose();        m_mergeScratchDepths       = null;
             m_scratchCapacity = 0;
+            // Drop the build snapshot so the next EnsureGlobalBuffers re-captures counts from scratch.
+            m_builtSplatCounts = null;
         }
 
         // -----------------------------------------------------------------------

@@ -36,10 +36,13 @@ namespace Gsplat
                     m_materials[i].DisableKeyword("SH_BANDS_4");
                     m_materials[i].EnableKeyword($"SH_BANDS_{i}");
                 }
+
                 return m_materials;
             }
         }
 
         public void Reset() => m_materials = null;
+
+        public bool Valid() => MergeShader && CopyBufferShader && DefaultMaterial;
     }
 }

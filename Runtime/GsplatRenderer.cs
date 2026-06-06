@@ -19,6 +19,7 @@ namespace Gsplat
         }
 
         public GsplatAsset GsplatAsset;
+
         // Range is enforced by GsplatRendererEditor based on the bound asset's SHBands.
         public int SHDegree = 3;
         [HideInInspector] public uint RenderOrder = 0;
@@ -47,19 +48,10 @@ namespace Gsplat
         public ISorterResource SorterResource => m_renderer.SorterResource;
 
         // IGsplat global-merge members: expose per-renderer GPU buffers for the global sorter.
-        public GraphicsBuffer PackedSplatsBuffer =>
-            (m_renderer?.GsplatResource as GsplatResourceSpark)?.PackedSplatsBuffer;
-        public GraphicsBuffer SH1Buffer =>
-            (m_renderer?.GsplatResource as GsplatResourceSpark)?.PackedSH1Buffer;
-        public GraphicsBuffer SH2Buffer =>
-            (m_renderer?.GsplatResource as GsplatResourceSpark)?.PackedSH2Buffer;
-        public GraphicsBuffer SH3Buffer =>
-            (m_renderer?.GsplatResource as GsplatResourceSpark)?.PackedSH3Buffer;
-        public GraphicsBuffer SH4Buffer =>
-            (m_renderer?.GsplatResource as GsplatResourceSpark)?.PackedSH4Buffer;
+        public GsplatResource GsplatResource => m_renderer?.GsplatResource;
         public byte SHBands => GsplatAsset?.SHBands ?? 0;
 
-        
+
         public uint RemainingCount
         {
             get => m_renderer.m_remainingCount;
@@ -133,7 +125,7 @@ namespace Gsplat
             ForceRefresh();
 #if UNITY_EDITOR
             if (GsplatAsset &&
-                AssetDatabase.TryGetGUIDAndLocalFileIdentifier(GsplatAsset, out var guid, out var localId))
+                AssetDatabase.TryGetGUIDAndLocalFileIdentifier(GsplatAsset, out var guid, out long localId))
                 m_assetGuid = guid;
 #endif // #if UNITY_EDITOR
         }

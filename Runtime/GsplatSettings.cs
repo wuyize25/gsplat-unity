@@ -37,16 +37,28 @@ namespace Gsplat
                     AssetDatabase.CreateAsset(settings, k_gsplatSettingsPath);
                     AssetDatabase.SaveAssets();
                 }
-                else if (settings.Version < new Version("1.3.0"))
+                else
                 {
-                    Debug.Log($"Updated GsplatSettings from version {settings.Version}.");
-                    settings.Materials = DefaultMaterials;
-                    settings.GlobalMaterial = DefaultGlobalMaterial;
-                    settings.m_prevComputeShader = null;
-                    settings.Version = GsplatUtils.k_Version;
-                    settings.OnValidate();
-                    EditorUtility.SetDirty(settings);
-                    AssetDatabase.SaveAssets();
+                    if (settings.Version < new Version("1.2.0"))
+                    {
+                        Debug.Log($"Updated GsplatSettings from version {settings.Version}.");
+                        settings.Materials = DefaultMaterials;
+                        settings.GlobalMaterial = DefaultGlobalMaterial;
+                        settings.m_prevComputeShader = null;
+                        settings.Version = GsplatUtils.k_Version;
+                        settings.OnValidate();
+                        EditorUtility.SetDirty(settings);
+                        AssetDatabase.SaveAssets();
+                    }
+                    else if (settings.Version < new Version("1.4.0"))
+                    {
+                        Debug.Log($"Updated GsplatSettings from version {settings.Version}.");
+                        settings.GlobalMaterial = DefaultGlobalMaterial;
+                        settings.Version = GsplatUtils.k_Version;
+                        settings.OnValidate();
+                        EditorUtility.SetDirty(settings);
+                        AssetDatabase.SaveAssets();
+                    }
                 }
 #endif
 
@@ -57,16 +69,26 @@ namespace Gsplat
 
         public ComputeShader ComputeShader;
         public GsplatGlobalMaterial GlobalMaterial;
-        [Tooltip("When enabled, 2+ active Gaussian splat renderers are merged into a single globally depth-sorted draw call.")]
+
+        [Tooltip(
+            "When enabled, 2+ active Gaussian splat renderers are merged into a single globally depth-sorted draw call.")]
         public bool EnableGlobalSort;
+
         public uint SplatInstanceSize;
         public uint UploadBatchSize;
         [Range(1, 20)] public uint MaxRenderOrder;
         public bool DisplayBoundingBoxes;
-        [Tooltip("If a camera moves more that this threshold, each GsplatRenderer compute sorting and cutouts regardless of refresh rate")]
-        [Range(0.05f, 1f)] public float CameraTranslationRefreshTreshold;
-        [Tooltip("If a camera rotates more that this threshold, each GsplatRenderer compute sorting and cutouts refresh regardless of refresh rate")]
-        [Range(0.2f, 30f)] public float CameraRotationRefreshTreshold;
+
+        [Tooltip(
+            "If a camera moves more that this threshold, each GsplatRenderer compute sorting and cutouts regardless of refresh rate")]
+        [Range(0.05f, 1f)]
+        public float CameraTranslationRefreshTreshold;
+
+        [Tooltip(
+            "If a camera rotates more that this threshold, each GsplatRenderer compute sorting and cutouts refresh regardless of refresh rate")]
+        [Range(0.2f, 30f)]
+        public float CameraRotationRefreshTreshold;
+
         public bool ShowImportErrors;
         public GsplatMaterial[] Materials;
         public Mesh Mesh { get; private set; }
@@ -174,6 +196,7 @@ namespace Gsplat
             {
                 mat.Reset();
             }
+
             if (GlobalMaterial)
                 GlobalMaterial.Reset();
 #endif

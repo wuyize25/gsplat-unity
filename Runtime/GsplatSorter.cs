@@ -140,16 +140,10 @@ namespace Gsplat
             foreach (var gs in m_gsplats.Where(gs => gs is { isActiveAndEnabled: true, Valid: true }))
                 m_activeGsplats.Add(gs);
 
-            GlobalRenderEnabled = m_globalRenderer.Valid
-                                  && GsplatSettings.Instance.EnableGlobalSort
-                                  && m_activeGsplats.Count >= 2
-                                  && CanRenderGlobally();
             return m_activeGsplats.Count != 0;
         }
 
-        // Decides scene-wide whether the global merge can run this frame. Must run before
-        // DrawAllIfEnabled (which the URP feature calls in OnCameraPreCull, before DispatchSort)
-        // so that the draw is correctly suppressed when global mode is unsupported.
+        // Decides scene-wide whether the global merge can run this frame. 
         bool CanRenderGlobally()
         {
             // renderer_id is packed into 8 bits ([31:24]); max 255 renderers.
@@ -197,12 +191,8 @@ namespace Gsplat
 
             InitialClearCmdBuffer(camera);
             DispatchSort(m_commandBuffer, camera);
-            DrawAllIfEnabled(m_commandBuffer, camera);
         }
 
-        // -----------------------------------------------------------------------
-        // Sort dispatch (with profiling markers)
-        // -----------------------------------------------------------------------
         public void DispatchSort(CommandBuffer cmd, Camera camera)
         {
             // --- Per-renderer depth computation ---
@@ -242,15 +232,22 @@ namespace Gsplat
             cmd.EndSample(k_samplerSort.name);
 
             // --- Global K-way merge ---
-            if (!GlobalRenderEnabled) return;
-
-            m_globalRenderer.Dispatch(cmd, m_activeGsplats);
+            if (GlobalRenderEnabled)
+                m_globalRenderer.DispatchMerge(cmd, m_activeGsplats);
         }
 
-        public void DrawAllIfEnabled(CommandBuffer cmd, Camera camera)
+        // Called by GsplatPlayerLoopHook once per frame, before Unity's PostLateUpdate phase
+        public void Update()
         {
-            if (GlobalRenderEnabled)
-                m_globalRenderer.DrawAll(cmd, camera);
+            GlobalRenderEnabled = m_globalRenderer.Valid && GsplatSettings.Instance.EnableGlobalSort &&
+                                  m_activeGsplats.Count >= 2;
+            if (!GlobalRenderEnabled) return;
+            m_activeGsplats.Clear();
+            foreach (var gs in m_gsplats.Where(gs => gs is { isActiveAndEnabled: true, Valid: true }))
+                m_activeGsplats.Add(gs);
+            GlobalRenderEnabled = GlobalRenderEnabled && CanRenderGlobally();
+            if (!GlobalRenderEnabled) return;
+            m_globalRenderer.Update(m_activeGsplats);
         }
 
         public ISorterResource CreateSorterResource(uint count, GraphicsBuffer orderBuffer)

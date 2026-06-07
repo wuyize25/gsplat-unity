@@ -57,7 +57,6 @@ namespace Gsplat
         public override void OnCameraPreCull(ScriptableRenderer renderer, in CameraData cameraData)
         {
             m_hasGsplats = GsplatSorter.Instance.GatherGsplatsForCamera(cameraData.camera);
-            GsplatSorter.Instance.DrawAllIfEnabled(null, cameraData.camera);
 #if !UNITY_6000_0_OR_NEWER
             m_pass.CommandBuffer ??= new CommandBuffer { name = "SortGsplats" };
             m_pass.CommandBuffer.Clear();

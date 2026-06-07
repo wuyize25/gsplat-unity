@@ -10,9 +10,6 @@ namespace Gsplat
 {
     public class GsplatGlobalRenderer
     {
-        // -----------------------------------------------------------------------
-        // Global merge state
-        // -----------------------------------------------------------------------
         GsplatGlobalMaterial m_globalMaterial;
 
         int m_kernelPackOrders = -1;
@@ -44,10 +41,10 @@ namespace Gsplat
         // Matches the RendererParams struct in GsplatSparkGlobal.hlsl (16-byte stride).
         struct RendererParams
         {
-            public float brightness;
-            public float scaleFactor;
-            public uint gammaToLinear;
-            public uint shDegree;
+            public float Brightness;
+            public float ScaleFactor;
+            public uint GammaToLinear;
+            public uint SHDegree;
         }
 
         // Scratch buffers for merge passes.
@@ -70,7 +67,6 @@ namespace Gsplat
                              && m_kernelCopyUint2 >= 0;
 
         static readonly ProfilingSampler k_samplerMerge = new("Gsplat.MergeKWay");
-        static readonly ProfilingSampler k_samplerDraw = new("Gsplat.DrawAll");
 
         // -----------------------------------------------------------------------
         // Shader property IDs — merge / pack
@@ -156,28 +152,32 @@ namespace Gsplat
             m_globalBuffersDirty = true;
         }
 
-        public void Dispatch(CommandBuffer cmd, List<IGsplat> activeGsplats)
+        public void Update(List<IGsplat> activeGsplats)
         {
-            cmd.BeginSample(k_samplerMerge.name);
-            EnsureGlobalBuffers(cmd, activeGsplats);
-            // If EnsureGlobalBuffers failed (uncompressed asset, >255 renderers, etc.),
-            // m_globalOrderBuffer is null.
-            if (m_globalOrderBuffer == null)
-            {
-                cmd.EndSample(k_samplerMerge.name);
-                return;
-            }
-
+            EnsureGlobalBuffers(activeGsplats);
+            if (m_totalSplatCount == 0) return;
             UpdateRendererTransforms(activeGsplats);
             UpdateRendererParams(activeGsplats);
-            DispatchMerge(cmd, activeGsplats);
+            Render();
+        }
+
+        public void DispatchMerge(CommandBuffer cmd, List<IGsplat> activeGsplats)
+        {
+            if (m_totalSplatCount == 0) return;
+            cmd.BeginSample(k_samplerMerge.name);
+            DispatchMergeInternal(cmd, activeGsplats);
             cmd.EndSample(k_samplerMerge.name);
         }
+
+        /// <summary>
+        /// Call when a renderer's asset changes so the global packed buffer is rebuilt next frame.
+        /// </summary>
+        public void MarkGlobalBuffersDirty() => m_globalBuffersDirty = true;
 
         // -----------------------------------------------------------------------
         // Global buffer management
         // -----------------------------------------------------------------------
-        void EnsureGlobalBuffers(CommandBuffer cmd, List<IGsplat> activeGsplats)
+        void EnsureGlobalBuffers(List<IGsplat> activeGsplats)
         {
             // A renderer streaming in its splats via async upload (AsyncUpload +
             // RenderBeforeUploadComplete) grows its SplatCount frame to frame. Rebuild when an
@@ -200,13 +200,12 @@ namespace Gsplat
             // clamped to its own asset bands in UpdateRendererParams.
             m_globalSHBands = 0;
 
-            foreach (var gs in activeGsplats)
-                if (gs.SHBands > m_globalSHBands)
-                    m_globalSHBands = gs.SHBands;
+            foreach (var gs in activeGsplats.Where(gs => gs.SHBands > m_globalSHBands))
+                m_globalSHBands = gs.SHBands;
 
             for (int k = 0; k < activeGsplats.Count; k++)
             {
-                uint count = activeGsplats[k].SplatCount;
+                var count = activeGsplats[k].SplatCount;
                 m_rendererOffsets[k] = m_totalSplatCount;
                 m_builtSplatCounts[k] = count;
                 m_totalSplatCount += count;
@@ -254,15 +253,15 @@ namespace Gsplat
 
                 var res = (GsplatResourceSpark)gs.GsplatResource;
 
-                CopyUint4(cmd, res.PackedSplatsBuffer, m_globalPackedBuffer, count, off);
+                CopyUint4(res.PackedSplatsBuffer, m_globalPackedBuffer, count, off);
                 if (m_globalSHBands >= 1 && res.PackedSH1Buffer != null)
-                    CopyUint2(cmd, res.PackedSH1Buffer, m_globalSH1Buffer, count, off);
+                    CopyUint2(res.PackedSH1Buffer, m_globalSH1Buffer, count, off);
                 if (m_globalSHBands >= 2 && res.PackedSH2Buffer != null)
-                    CopyUint4(cmd, res.PackedSH2Buffer, m_globalSH2Buffer, count, off);
+                    CopyUint4(res.PackedSH2Buffer, m_globalSH2Buffer, count, off);
                 if (m_globalSHBands >= 3 && res.PackedSH3Buffer != null)
-                    CopyUint4(cmd, res.PackedSH3Buffer, m_globalSH3Buffer, count, off);
+                    CopyUint4(res.PackedSH3Buffer, m_globalSH3Buffer, count, off);
                 if (m_globalSHBands >= 4 && res.PackedSH4Buffer != null)
-                    CopyUint4(cmd, res.PackedSH4Buffer, m_globalSH4Buffer, count, off);
+                    CopyUint4(res.PackedSH4Buffer, m_globalSH4Buffer, count, off);
             }
 
             // Allocate merge scratch buffers (always fresh after a dirty rebuild).
@@ -289,7 +288,7 @@ namespace Gsplat
         void UpdateRendererTransforms(List<IGsplat> activeGsplats)
         {
             if (m_rendererTransformsBuffer == null) return;
-            int count = activeGsplats.Count;
+            var count = activeGsplats.Count;
             if (m_rendererTransformsCache == null || m_rendererTransformsCache.Length != count)
                 m_rendererTransformsCache = new Matrix4x4[count];
             for (int k = 0; k < count; k++)
@@ -300,7 +299,7 @@ namespace Gsplat
         void UpdateRendererParams(List<IGsplat> activeGsplats)
         {
             if (m_rendererParamsBuffer == null) return;
-            int count = activeGsplats.Count;
+            var count = activeGsplats.Count;
             if (m_rendererParamsCache == null || m_rendererParamsCache.Length != count)
                 m_rendererParamsCache = new RendererParams[count];
             for (int k = 0; k < count; k++)
@@ -310,23 +309,23 @@ namespace Gsplat
                 {
                     m_rendererParamsCache[k] = new RendererParams
                     {
-                        brightness = gs.Brightness,
-                        scaleFactor = 1.0f - gs.SplatDownscaleFactor,
-                        gammaToLinear = gs.GammaToLinear ? 1u : 0u,
+                        Brightness = gs.Brightness,
+                        ScaleFactor = 1.0f - gs.SplatDownscaleFactor,
+                        GammaToLinear = gs.GammaToLinear ? 1u : 0u,
                         // Clamp to the asset's own bands so EvalSH never reads slots that
                         // weren't copied for this renderer (the global buffers are sized to
                         // the max bands across the set).
-                        shDegree = (uint)Mathf.Min(gs.SHDegree, activeGsplats[k].SHBands),
+                        SHDegree = (uint)Mathf.Min(gs.SHDegree, activeGsplats[k].SHBands),
                     };
                 }
                 else
                 {
                     m_rendererParamsCache[k] = new RendererParams
                     {
-                        brightness = 1.0f,
-                        scaleFactor = 1.0f,
-                        gammaToLinear = 0u,
-                        shDegree = activeGsplats[k].SHBands,
+                        Brightness = 1.0f,
+                        ScaleFactor = 1.0f,
+                        GammaToLinear = 0u,
+                        SHDegree = activeGsplats[k].SHBands,
                     };
                 }
             }
@@ -335,32 +334,32 @@ namespace Gsplat
         }
 
         // -----------------------------------------------------------------------
-        // Copy helpers (GPU-side via command buffer)
+        // Copy helpers
         // -----------------------------------------------------------------------
-        void CopyUint4(CommandBuffer cmd, GraphicsBuffer src, GraphicsBuffer dst, uint count, uint dstOff)
+        void CopyUint4(GraphicsBuffer src, GraphicsBuffer dst, uint count, uint dstOff)
         {
-            cmd.SetComputeIntParam(m_globalMaterial.CopyBufferShader, k_srcElementCount, (int)count);
-            cmd.SetComputeIntParam(m_globalMaterial.CopyBufferShader, k_dstElementOffset, (int)dstOff);
-            cmd.SetComputeBufferParam(m_globalMaterial.CopyBufferShader, m_kernelCopyUint4, k_srcUint4, src);
-            cmd.SetComputeBufferParam(m_globalMaterial.CopyBufferShader, m_kernelCopyUint4, k_dstUint4, dst);
-            cmd.DispatchCompute(m_globalMaterial.CopyBufferShader, m_kernelCopyUint4,
-                (int)GsplatUtils.DivRoundUp(count, 256), 1, 1);
+            var cs = m_globalMaterial.CopyBufferShader;
+            cs.SetInt(k_srcElementCount, (int)count);
+            cs.SetInt(k_dstElementOffset, (int)dstOff);
+            cs.SetBuffer(m_kernelCopyUint4, k_srcUint4, src);
+            cs.SetBuffer(m_kernelCopyUint4, k_dstUint4, dst);
+            cs.Dispatch(m_kernelCopyUint4, (int)GsplatUtils.DivRoundUp(count, 256), 1, 1);
         }
 
-        void CopyUint2(CommandBuffer cmd, GraphicsBuffer src, GraphicsBuffer dst, uint count, uint dstOff)
+        void CopyUint2(GraphicsBuffer src, GraphicsBuffer dst, uint count, uint dstOff)
         {
-            cmd.SetComputeIntParam(m_globalMaterial.CopyBufferShader, k_srcElementCount, (int)count);
-            cmd.SetComputeIntParam(m_globalMaterial.CopyBufferShader, k_dstElementOffset, (int)dstOff);
-            cmd.SetComputeBufferParam(m_globalMaterial.CopyBufferShader, m_kernelCopyUint2, k_srcUint2, src);
-            cmd.SetComputeBufferParam(m_globalMaterial.CopyBufferShader, m_kernelCopyUint2, k_dstUint2, dst);
-            cmd.DispatchCompute(m_globalMaterial.CopyBufferShader, m_kernelCopyUint2,
-                (int)GsplatUtils.DivRoundUp(count, 256), 1, 1);
+            var cs = m_globalMaterial.CopyBufferShader;
+            cs.SetInt(k_srcElementCount, (int)count);
+            cs.SetInt(k_dstElementOffset, (int)dstOff);
+            cs.SetBuffer(m_kernelCopyUint2, k_srcUint2, src);
+            cs.SetBuffer(m_kernelCopyUint2, k_dstUint2, dst);
+            cs.Dispatch(m_kernelCopyUint2, (int)GsplatUtils.DivRoundUp(count, 256), 1, 1);
         }
 
         // -----------------------------------------------------------------------
         // Merge dispatch
         // -----------------------------------------------------------------------
-        void DispatchMerge(CommandBuffer cmd, List<IGsplat> activeGsplats)
+        void DispatchMergeInternal(CommandBuffer cmd, List<IGsplat> activeGsplats)
         {
             int K = activeGsplats.Count;
             if (K < 2 || m_globalOrderBuffer == null) return;
@@ -460,18 +459,12 @@ namespace Gsplat
         // -----------------------------------------------------------------------
         // Global draw call
         // -----------------------------------------------------------------------
-
-
-        public void DrawAll(CommandBuffer cmd, Camera camera)
+        void Render()
         {
             // m_globalBuffersDirty: the active renderer set changed and the next DispatchSort
             // hasn't validated/rebuilt the buffers yet. Drawing now would bind stale buffers
             // (under URP, DrawAllIfEnabled fires before DispatchSort each frame).
             if (m_globalBuffersDirty || m_globalOrderBuffer == null || m_totalRemainingCount == 0) return;
-
-            cmd?.BeginSample(k_samplerDraw.name);
-
-            var mat = m_globalMaterial.Materials[m_globalSHBands];
 
             // Bind buffers via a MaterialPropertyBlock rather than on the material itself, so
             // each queued draw captures its own bindings and multiple cameras (Game + SceneView,
@@ -487,26 +480,23 @@ namespace Gsplat
             m_globalPropertyBlock.SetInteger(k_totalSplatCount, (int)m_totalRemainingCount);
             m_globalPropertyBlock.SetInteger(k_splatInstanceSize, (int)GsplatSettings.Instance.SplatInstanceSize);
 
-            if (m_globalSH1Buffer != null)
+            if (m_globalSHBands >= 1)
                 m_globalPropertyBlock.SetBuffer(k_globalSH1Buffer, m_globalSH1Buffer);
-            if (m_globalSH2Buffer != null)
+            if (m_globalSHBands >= 2)
                 m_globalPropertyBlock.SetBuffer(k_globalSH2Buffer, m_globalSH2Buffer);
-            if (m_globalSH3Buffer != null)
+            if (m_globalSHBands >= 3)
                 m_globalPropertyBlock.SetBuffer(k_globalSH3Buffer, m_globalSH3Buffer);
-            if (m_globalSH4Buffer != null)
+            if (m_globalSHBands >= 4)
                 m_globalPropertyBlock.SetBuffer(k_globalSH4Buffer, m_globalSH4Buffer);
 
-            var rp = new RenderParams(mat)
+            var rp = new RenderParams(m_globalMaterial.Materials[m_globalSHBands])
             {
                 worldBounds = new Bounds(Vector3.zero, Vector3.one * 1e6f),
-                camera = camera,
                 matProps = m_globalPropertyBlock
             };
 
             int instances = Mathf.CeilToInt(m_totalRemainingCount / (float)GsplatSettings.Instance.SplatInstanceSize);
             Graphics.RenderMeshPrimitives(rp, GsplatSettings.Instance.Mesh, 0, instances);
-
-            cmd?.EndSample(k_samplerDraw.name);
         }
 
 
@@ -546,10 +536,5 @@ namespace Gsplat
             // Drop the build snapshot so the next EnsureGlobalBuffers re-captures counts from scratch.
             m_builtSplatCounts = null;
         }
-
-        /// <summary>
-        /// Call when a renderer's asset changes so the global packed buffer is rebuilt next frame.
-        /// </summary>
-        public void MarkGlobalBuffersDirty() => m_globalBuffersDirty = true;
     }
 }

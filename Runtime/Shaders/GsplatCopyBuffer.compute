@@ -1,0 +1,37 @@
+// Copyright (c) 2026 Keir Rice
+// SPDX-License-Identifier: MIT
+
+// Copies a sub-range of a structured buffer into a destination buffer at a given offset.
+// Used to sub-allocate per-renderer splat data into the global packed buffer.
+
+#define GROUP_SIZE 256
+
+#pragma kernel CopyUint4
+#pragma kernel CopyUint2
+
+// --- uint4 copy (PackedSplatsBuffer, SH2Buffer, SH3Buffer) ---
+StructuredBuffer<uint4>   _SrcUint4;
+RWStructuredBuffer<uint4> _DstUint4;
+uint _SrcElementCount;
+uint _DstElementOffset; // destination start index in elements
+
+[numthreads(GROUP_SIZE, 1, 1)]
+void CopyUint4(uint3 id : SV_DispatchThreadID)
+{
+    uint i = id.x;
+    if (i >= _SrcElementCount) return;
+    _DstUint4[_DstElementOffset + i] = _SrcUint4[i];
+}
+
+// --- uint2 copy (SH1Buffer: 2 uints per splat) ---
+StructuredBuffer<uint2>   _SrcUint2;
+RWStructuredBuffer<uint2> _DstUint2;
+// Reuses _SrcElementCount and _DstElementOffset
+
+[numthreads(GROUP_SIZE, 1, 1)]
+void CopyUint2(uint3 id : SV_DispatchThreadID)
+{
+    uint i = id.x;
+    if (i >= _SrcElementCount) return;
+    _DstUint2[_DstElementOffset + i] = _SrcUint2[i];
+}

@@ -1,4 +1,5 @@
 ﻿// Copyright (c) 2025 Yize Wu
+// Copyright (c) 2026 Keir Rice
 // SPDX-License-Identifier: MIT
 
 using System.Collections.Generic;
@@ -17,6 +18,11 @@ namespace Gsplat
         public bool Valid { get; }
         public bool ComputeSortRequired { get; }
         public void ComputeDepth(CommandBuffer cmd, Matrix4x4 matrixMv);
+
+        // Used by GsplatSorter to populate the global packed buffer.
+        public GsplatResource GsplatResource { get; }
+        public uint SplatCount { get; }
+        public byte SHBands { get; }
     }
 
     public interface ISorterResource
@@ -57,18 +63,33 @@ namespace Gsplat
 
         public static GsplatSorter Instance => s_instance ??= new GsplatSorter();
         static GsplatSorter s_instance;
+
         CommandBuffer m_commandBuffer;
         readonly HashSet<IGsplat> m_gsplats = new();
         readonly HashSet<Camera> m_camerasInjected = new();
         readonly List<IGsplat> m_activeGsplats = new();
+        readonly HashSet<int> m_warnedUncompressed = new();
         GsplatSortPass m_sortPass;
         public const string k_PassName = "SortGsplats";
+
+        readonly GsplatGlobalRenderer m_globalRenderer = new();
+
+        /// <summary>True when 2+ active renderers are being globally merged this frame.</summary>
+        public bool GlobalRenderEnabled { get; private set; }
+
+        static readonly ProfilingSampler k_samplerDepth = new("Gsplat.DepthPerRenderer");
+        static readonly ProfilingSampler k_samplerSort = new("Gsplat.SortPerRenderer");
 
         public bool Valid => m_sortPass is { Valid: true };
 
         public void InitSorter(ComputeShader computeShader)
         {
             m_sortPass = computeShader ? new GsplatSortPass(computeShader) : null;
+        }
+
+        public void InitGlobal(GsplatGlobalMaterial globalMaterial)
+        {
+            m_globalRenderer.InitGlobal(globalMaterial);
         }
 
         public void RegisterGsplat(IGsplat gsplat)
@@ -80,12 +101,19 @@ namespace Gsplat
             }
 
             m_gsplats.Add(gsplat);
+            m_globalRenderer.MarkGlobalBuffersDirty();
         }
 
         public void UnregisterGsplat(IGsplat gsplat)
         {
             if (!m_gsplats.Remove(gsplat))
                 return;
+
+            if (gsplat is UnityEngine.Object obj)
+                m_warnedUncompressed.Remove(obj.GetInstanceID());
+
+            m_globalRenderer.MarkGlobalBuffersDirty();
+
             if (m_gsplats.Count != 0) return;
 
             if (m_camerasInjected != null)
@@ -100,6 +128,7 @@ namespace Gsplat
             m_commandBuffer?.Dispose();
             m_commandBuffer = null;
             Camera.onPreCull -= OnPreCullCamera;
+            m_globalRenderer.DisposeGlobalBuffers();
         }
 
         public bool GatherGsplatsForCamera(Camera cam)
@@ -110,8 +139,37 @@ namespace Gsplat
             m_activeGsplats.Clear();
             foreach (var gs in m_gsplats.Where(gs => gs is { isActiveAndEnabled: true, Valid: true }))
                 m_activeGsplats.Add(gs);
+
             return m_activeGsplats.Count != 0;
         }
+
+        // Decides scene-wide whether the global merge can run this frame. 
+        bool CanRenderGlobally()
+        {
+            // renderer_id is packed into 8 bits ([31:24]); max 255 renderers.
+            if (m_activeGsplats.Count > 255)
+            {
+                Debug.LogError(
+                    "[GsplatSorter] Global merge supports at most 255 renderers. Falling back to per-renderer rendering.");
+                return false;
+            }
+
+            // Global merge requires every active renderer to use SPARK compression.
+            foreach (var gs in m_activeGsplats)
+            {
+                if (gs.GsplatResource is GsplatResourceSpark) continue;
+                var obj = gs as UnityEngine.Object;
+                var id = obj ? obj.GetInstanceID() : 0;
+                if (m_warnedUncompressed.Add(id))
+                    Debug.LogWarning(
+                        $"[GsplatSorter] '{obj?.name}' uses an uncompressed asset; global sort requires every active renderer to use SPARK compression. Disabling global sort for this scene — all renderers fall back to per-renderer rendering.");
+                return false;
+            }
+
+            return true;
+        }
+
+        public void MarkGlobalBuffersDirty() => m_globalRenderer.MarkGlobalBuffersDirty();
 
         void InitialClearCmdBuffer(Camera cam)
         {
@@ -137,10 +195,21 @@ namespace Gsplat
 
         public void DispatchSort(CommandBuffer cmd, Camera camera)
         {
+            // --- Per-renderer depth computation ---
+            cmd.BeginSample(k_samplerDepth.name);
             foreach (var gs in m_activeGsplats)
             {
-                var res = (Resource)gs.SorterResource;
+                if (gs.RemainingCount <= 0) continue;
+                gs.ComputeDepth(cmd, camera.worldToCameraMatrix * gs.transform.localToWorldMatrix);
+            }
 
+            cmd.EndSample(k_samplerDepth.name);
+
+            // --- Per-renderer radix sort ---
+            cmd.BeginSample(k_samplerSort.name);
+            foreach (var gs in m_activeGsplats)
+            {
+                if (gs.SorterResource is not Resource res) continue;
                 if (!gs.ComputeSortRequired || gs.RemainingCount <= 0)
                     continue;
 
@@ -150,18 +219,35 @@ namespace Gsplat
                     res.Initialized = true;
                 }
 
-                var sorterArgs = new GsplatSortPass.Args
+                m_sortPass.Dispatch(cmd, new GsplatSortPass.Args
                 {
                     Count = gs.RemainingCount,
                     MatrixMv = camera.worldToCameraMatrix * gs.transform.localToWorldMatrix,
                     InputKeys = res.InputKeys,
                     InputValues = res.OrderBuffer,
                     Resources = res.Resources
-                };
-
-                gs.ComputeDepth(cmd, camera.worldToCameraMatrix * gs.transform.localToWorldMatrix);
-                m_sortPass.Dispatch(cmd, sorterArgs);
+                });
             }
+
+            cmd.EndSample(k_samplerSort.name);
+
+            // --- Global K-way merge ---
+            if (GlobalRenderEnabled)
+                m_globalRenderer.DispatchMerge(cmd, m_activeGsplats);
+        }
+
+        // Called by GsplatPlayerLoopHook once per frame, before Unity's PostLateUpdate phase
+        public void Update()
+        {
+            GlobalRenderEnabled = m_globalRenderer.Valid && GsplatSettings.Instance.EnableGlobalSort &&
+                                  m_activeGsplats.Count >= 2;
+            if (!GlobalRenderEnabled) return;
+            m_activeGsplats.Clear();
+            foreach (var gs in m_gsplats.Where(gs => gs is { isActiveAndEnabled: true, Valid: true }))
+                m_activeGsplats.Add(gs);
+            GlobalRenderEnabled = GlobalRenderEnabled && CanRenderGlobally();
+            if (!GlobalRenderEnabled) return;
+            m_globalRenderer.Update(m_activeGsplats);
         }
 
         public ISorterResource CreateSorterResource(uint count, GraphicsBuffer orderBuffer)

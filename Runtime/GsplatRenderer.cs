@@ -19,6 +19,7 @@ namespace Gsplat
         }
 
         public GsplatAsset GsplatAsset;
+
         // Range is enforced by GsplatRendererEditor based on the bound asset's SHBands.
         public int SHDegree = 3;
         [HideInInspector] public uint RenderOrder = 0;
@@ -45,6 +46,11 @@ namespace Gsplat
         public uint SplatCount => m_renderer != null ? m_renderer.GsplatResource?.UploadedCount ?? 0 : 0;
 
         public ISorterResource SorterResource => m_renderer.SorterResource;
+
+        // IGsplat global-merge members: expose per-renderer GPU buffers for the global sorter.
+        public GsplatResource GsplatResource => m_renderer?.GsplatResource;
+        public byte SHBands => GsplatAsset?.SHBands ?? 0;
+
 
         public uint RemainingCount
         {
@@ -149,6 +155,7 @@ namespace Gsplat
                     var asyncUpload = AsyncUpload;
 #endif
                     m_renderer.BindGsplatAsset(GsplatAsset, asyncUpload);
+                    GsplatSorter.Instance.MarkGlobalBuffersDirty();
                 }
             }
 
@@ -156,8 +163,11 @@ namespace Gsplat
             {
                 m_renderer.EvaluateRefreshRequired(SortMode, SortRefreshRate - 1, CutoutsRefreshRate - 1);
                 m_renderer.DispatchInitOrder(Cutouts, transform.localToWorldMatrix, CutoutsUpdateBounds);
-                m_renderer.Render(transform, gameObject.layer, GammaToLinear, SHDegree, Brightness,
-                    1.0f - SplatDownscaleFactor, RenderOrder);
+                // When the global sorter has merged all renderers into a single draw call,
+                // skip the per-renderer draw — GsplatSorter.DrawAll handles rendering.
+                if (!GsplatSorter.Instance.GlobalRenderEnabled)
+                    m_renderer.Render(transform, gameObject.layer, GammaToLinear, SHDegree, Brightness,
+                        1.0f - SplatDownscaleFactor, RenderOrder);
             }
         }
     }

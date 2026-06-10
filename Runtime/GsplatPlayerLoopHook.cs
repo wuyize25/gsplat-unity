@@ -11,16 +11,20 @@ using UnityEngine.PlayerLoop;
 
 namespace Gsplat
 {
+#if UNITY_EDITOR
     [InitializeOnLoad]
+#endif
     public static class GsplatPlayerLoopHook
     {
         static bool s_installed;
 
+#if UNITY_EDITOR
         static GsplatPlayerLoopHook()
         {
             Install();
             EditorApplication.playModeStateChanged += _ => { Install(); };
         }
+#endif
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void RuntimeInit()
@@ -61,7 +65,7 @@ namespace Gsplat
 
             return false;
         }
-        
+
         static void Update()
         {
             GsplatSorter.Instance.Update();

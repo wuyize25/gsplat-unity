@@ -66,7 +66,7 @@ namespace Gsplat
                              && m_kernelCopyUint4 >= 0
                              && m_kernelCopyUint2 >= 0;
 
-        static readonly ProfilingSampler k_samplerMerge = new("Gsplat.MergeKWay");
+        const string k_mergePassName = "Gsplat.MergeKWay";
 
         // -----------------------------------------------------------------------
         // Shader property IDs — merge / pack
@@ -164,9 +164,9 @@ namespace Gsplat
         public void DispatchMerge(CommandBuffer cmd, List<IGsplat> activeGsplats)
         {
             if (m_totalSplatCount == 0) return;
-            cmd.BeginSample(k_samplerMerge.name);
+            cmd.BeginSample(k_mergePassName);
             DispatchMergeInternal(cmd, activeGsplats);
-            cmd.EndSample(k_samplerMerge.name);
+            cmd.EndSample(k_mergePassName);
         }
 
         /// <summary>

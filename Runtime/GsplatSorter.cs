@@ -70,15 +70,14 @@ namespace Gsplat
         readonly List<IGsplat> m_activeGsplats = new();
         readonly HashSet<int> m_warnedUncompressed = new();
         GsplatSortPass m_sortPass;
-        public const string k_PassName = "SortGsplats";
+        const string k_passName = "SortGsplats";
+        const string k_depthPassName = "Gsplat.ComputeDepth";
+        const string k_radixSortPassName = "Gsplat.RadixSort";
 
         readonly GsplatGlobalRenderer m_globalRenderer = new();
 
         /// <summary>True when 2+ active renderers are being globally merged this frame.</summary>
         public bool GlobalRenderEnabled { get; private set; }
-
-        static readonly ProfilingSampler k_samplerDepth = new("Gsplat.DepthPerRenderer");
-        static readonly ProfilingSampler k_samplerSort = new("Gsplat.SortPerRenderer");
 
         public bool Valid => m_sortPass is { Valid: true };
 
@@ -173,7 +172,7 @@ namespace Gsplat
 
         void InitialClearCmdBuffer(Camera cam)
         {
-            m_commandBuffer ??= new CommandBuffer { name = k_PassName };
+            m_commandBuffer ??= new CommandBuffer { name = k_passName };
             if (!GraphicsSettings.currentRenderPipeline && cam &&
                 !m_camerasInjected.Contains(cam))
             {
@@ -196,17 +195,17 @@ namespace Gsplat
         public void DispatchSort(CommandBuffer cmd, Camera camera)
         {
             // --- Per-renderer depth computation ---
-            cmd.BeginSample(k_samplerDepth.name);
+            cmd.BeginSample(k_depthPassName);
             foreach (var gs in m_activeGsplats)
             {
                 if (gs.RemainingCount <= 0) continue;
                 gs.ComputeDepth(cmd, camera.worldToCameraMatrix * gs.transform.localToWorldMatrix);
             }
 
-            cmd.EndSample(k_samplerDepth.name);
+            cmd.EndSample(k_depthPassName);
 
             // --- Per-renderer radix sort ---
-            cmd.BeginSample(k_samplerSort.name);
+            cmd.BeginSample(k_radixSortPassName);
             foreach (var gs in m_activeGsplats)
             {
                 if (gs.SorterResource is not Resource res) continue;
@@ -229,7 +228,7 @@ namespace Gsplat
                 });
             }
 
-            cmd.EndSample(k_samplerSort.name);
+            cmd.EndSample(k_radixSortPassName);
 
             // --- Global K-way merge ---
             if (GlobalRenderEnabled)

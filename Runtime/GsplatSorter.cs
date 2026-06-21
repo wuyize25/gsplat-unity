@@ -70,7 +70,7 @@ namespace Gsplat
         readonly List<IGsplat> m_activeGsplats = new();
         readonly HashSet<int> m_warnedUncompressed = new();
         GsplatSortPass m_sortPass;
-        const string k_passName = "SortGsplats";
+        public const string k_passName = "SortGsplats";
         const string k_depthPassName = "Gsplat.ComputeDepth";
         const string k_radixSortPassName = "Gsplat.RadixSort";
 

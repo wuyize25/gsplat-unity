@@ -27,7 +27,7 @@ namespace Gsplat
 
             public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
             {
-                using var builder = renderGraph.AddUnsafePass(GsplatSorter.k_PassName, out PassData passData);
+                using var builder = renderGraph.AddUnsafePass(GsplatSorter.k_passName, out PassData passData);
                 passData.CameraData = frameData.Get<UniversalCameraData>();
                 builder.AllowPassCulling(false);
                 builder.SetRenderFunc(static (PassData data, UnsafeGraphContext context) =>

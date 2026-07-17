@@ -26,7 +26,7 @@ namespace Gsplat
     /// </summary>
     public enum SourceCoordinates
     {
-        [InspectorName("Unspecified (treated as RUB)")]
+        [InspectorName("Unspecified / format default")]
         Unspecified = 0,
 
         [InspectorName("LDB — Left-Down-Back")]

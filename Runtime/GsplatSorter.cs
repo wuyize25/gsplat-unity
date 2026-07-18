@@ -68,6 +68,8 @@ namespace Gsplat
         readonly HashSet<IGsplat> m_gsplats = new();
         readonly HashSet<Camera> m_camerasInjected = new();
         readonly List<IGsplat> m_activeGsplats = new();
+        readonly List<IGsplat> m_globalGsplats = new();
+        readonly List<IGsplat> m_fallbackGsplats = new();
         readonly HashSet<int> m_warnedUncompressed = new();
         GsplatSortPass m_sortPass;
         public const string k_passName = "SortGsplats";
@@ -124,6 +126,8 @@ namespace Gsplat
             }
 
             m_activeGsplats.Clear();
+            m_globalGsplats.Clear();
+            m_fallbackGsplats.Clear();
             m_commandBuffer?.Dispose();
             m_commandBuffer = null;
             Camera.onPreCull -= OnPreCullCamera;
@@ -146,7 +150,7 @@ namespace Gsplat
         bool CanRenderGlobally()
         {
             // renderer_id is packed into 8 bits ([31:24]); max 255 renderers.
-            if (m_activeGsplats.Count > 255)
+            if (m_globalGsplats.Count > 255)
             {
                 Debug.LogError(
                     "[GsplatSorter] Global merge supports at most 255 renderers. Falling back to per-renderer rendering.");
@@ -154,16 +158,22 @@ namespace Gsplat
             }
 
             // Global merge requires every active renderer to use SPARK compression.
-            foreach (var gs in m_activeGsplats)
+            foreach (var gs in m_globalGsplats)
             {
                 if (gs.GsplatResource is GsplatResourceSpark) continue;
                 var obj = gs as UnityEngine.Object;
                 var id = obj ? obj.GetInstanceID() : 0;
                 if (m_warnedUncompressed.Add(id))
                     Debug.LogWarning(
-                        $"[GsplatSorter] '{obj?.name}' uses an uncompressed asset; global sort requires every active renderer to use SPARK compression. Disabling global sort for this scene — all renderers fall back to per-renderer rendering.");
+                        $"[GsplatSorter] '{obj?.name}' uses an uncompressed asset; global sort requires every participating renderer to use SPARK compression. Participating renderers will fall back to per-renderer rendering.");
                 return false;
             }
+
+            // A single global draw can only have one Unity layer. Mixed-layer sets must retain
+            // per-renderer draws so each camera's culling mask is respected.
+            var renderLayer = m_globalGsplats[0].transform.gameObject.layer;
+            if (m_globalGsplats.Any(gs => gs.transform.gameObject.layer != renderLayer))
+                return false;
 
             return true;
         }
@@ -232,21 +242,40 @@ namespace Gsplat
 
             // --- Global K-way merge ---
             if (GlobalRenderEnabled)
-                m_globalRenderer.DispatchMerge(cmd, m_activeGsplats);
+                m_globalRenderer.DispatchMerge(cmd, m_globalGsplats);
         }
 
         // Called by GsplatPlayerLoopHook once per frame, before Unity's PostLateUpdate phase
         public void Update()
         {
-            GlobalRenderEnabled = m_globalRenderer.Valid && GsplatSettings.Instance.EnableGlobalSort &&
-                                  m_activeGsplats.Count >= 2;
-            if (!GlobalRenderEnabled) return;
             m_activeGsplats.Clear();
             foreach (var gs in m_gsplats.Where(gs => gs is { isActiveAndEnabled: true, Valid: true }))
                 m_activeGsplats.Add(gs);
-            GlobalRenderEnabled = GlobalRenderEnabled && CanRenderGlobally();
-            if (!GlobalRenderEnabled) return;
-            m_globalRenderer.Update(m_activeGsplats);
+
+            m_globalGsplats.Clear();
+            m_fallbackGsplats.Clear();
+            foreach (var gs in m_activeGsplats)
+            {
+                if (gs is GsplatRenderer { ParticipateInGlobalSort: false })
+                    m_fallbackGsplats.Add(gs);
+                else
+                    m_globalGsplats.Add(gs);
+            }
+
+            GlobalRenderEnabled = m_globalRenderer.Valid && GsplatSettings.Instance.EnableGlobalSort &&
+                                  m_globalGsplats.Count >= 2 && CanRenderGlobally();
+            if (GlobalRenderEnabled)
+            {
+                m_globalRenderer.Update(m_globalGsplats);
+                foreach (var renderer in m_fallbackGsplats.OfType<GsplatRenderer>())
+                    renderer.Render();
+                return;
+            }
+
+            // Select and submit the fallback path here as well, so a runtime transition cannot
+            // make GsplatRenderer.Update observe the previous frame's global-render state.
+            foreach (var renderer in m_activeGsplats.OfType<GsplatRenderer>())
+                renderer.Render();
         }
 
         public ISorterResource CreateSorterResource(uint count, GraphicsBuffer orderBuffer)

@@ -57,6 +57,7 @@ namespace Gsplat
         Matrix4x4[] m_rendererTransformsCache;
         RendererParams[] m_rendererParamsCache;
         MaterialPropertyBlock m_globalPropertyBlock;
+        int m_renderLayer;
 
         public bool Valid => m_globalMaterial
                              && m_globalMaterial.Valid()
@@ -156,6 +157,7 @@ namespace Gsplat
         {
             EnsureGlobalBuffers(activeGsplats);
             if (m_totalSplatCount == 0) return;
+            m_renderLayer = activeGsplats[0].transform.gameObject.layer;
             UpdateRendererTransforms(activeGsplats);
             UpdateRendererParams(activeGsplats);
             Render();
@@ -492,7 +494,8 @@ namespace Gsplat
             var rp = new RenderParams(m_globalMaterial.Materials[m_globalSHBands])
             {
                 worldBounds = new Bounds(Vector3.zero, Vector3.one * 1e6f),
-                matProps = m_globalPropertyBlock
+                matProps = m_globalPropertyBlock,
+                layer = m_renderLayer
             };
 
             int instances = Mathf.CeilToInt(m_totalRemainingCount / (float)GsplatSettings.Instance.SplatInstanceSize);

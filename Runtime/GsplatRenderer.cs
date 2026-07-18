@@ -34,6 +34,24 @@ namespace Gsplat
         public bool AsyncUpload;
         public bool RenderBeforeUploadComplete = true;
 
+        [SerializeField]
+        [Tooltip("When enabled, this renderer can be merged with other compatible renderers for global depth sorting. Disable it for isolated previews or other renderers that must retain an independent draw.")]
+        bool m_participateInGlobalSort = true;
+
+        public bool ParticipateInGlobalSort
+        {
+            get => m_participateInGlobalSort;
+            set
+            {
+                if (m_participateInGlobalSort == value)
+                    return;
+
+                m_participateInGlobalSort = value;
+                if (isActiveAndEnabled)
+                    GsplatSorter.Instance.MarkGlobalBuffersDirty();
+            }
+        }
+
         [Tooltip("Does cutouts update the Gsplat world bounds? (Costly on moving cutouts)")]
         public bool CutoutsUpdateBounds = true;
 
@@ -123,6 +141,7 @@ namespace Gsplat
         void OnValidate()
         {
             ForceRefresh();
+            GsplatSorter.Instance.MarkGlobalBuffersDirty();
 #if UNITY_EDITOR
             if (GsplatAsset &&
                 AssetDatabase.TryGetGUIDAndLocalFileIdentifier(GsplatAsset, out var guid, out long localId))
@@ -163,12 +182,17 @@ namespace Gsplat
             {
                 m_renderer.EvaluateRefreshRequired(SortMode, SortRefreshRate - 1, CutoutsRefreshRate - 1);
                 m_renderer.DispatchInitOrder(Cutouts, transform.localToWorldMatrix, CutoutsUpdateBounds);
-                // When the global sorter has merged all renderers into a single draw call,
-                // skip the per-renderer draw — GsplatSorter.DrawAll handles rendering.
-                if (!GsplatSorter.Instance.GlobalRenderEnabled)
-                    m_renderer.Render(transform, gameObject.layer, GammaToLinear, SHDegree, Brightness,
-                        1.0f - SplatDownscaleFactor, RenderOrder);
             }
+        }
+
+        // Called by GsplatSorter after it has selected one render path for the frame.
+        internal void Render()
+        {
+            if (!Valid || !GsplatSettings.Instance.Valid || !GsplatSorter.Instance.Valid)
+                return;
+
+            m_renderer.Render(transform, gameObject.layer, GammaToLinear, SHDegree, Brightness,
+                1.0f - SplatDownscaleFactor, RenderOrder);
         }
     }
 }

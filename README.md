@@ -55,7 +55,7 @@ The next steps depend on the Render Pipeline you are using:
 
 - BiRP: Does not need any extra setup.
 - URP: Add `Gsplat URP Feature` to the URP renderer settings.
-  - Find the `Universal Renderer Data` your project is using (this will default to PC_Renderer in a new URP project), click the `Add Renderer Feature` button, and choose `Gsplat URP Feature.`
+  - Find the `Universal Renderer Data` your project is using (this will default to `Assets/Settings/PC_Renderer` in a new URP project), click the `Add Renderer Feature` button, and choose `Gsplat URP Feature.`
   - If you are using Unity 6 or later, the Render Graph "Compatibility Mode" in URP settings must be turned off! This is off by default in new URP projects.
 - HDRP: Add `Custom Pass` volume object in your scene and a `Gsplat HDRP Pass` entry to it. The injection Point should be set to `Before Transparent`.
 

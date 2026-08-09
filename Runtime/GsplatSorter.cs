@@ -6,6 +6,9 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.Rendering;
+#if UNITY_6000_0_OR_NEWER
+using UnityEngine.Rendering.RenderGraphModule;
+#endif
 
 namespace Gsplat
 {
@@ -18,6 +21,12 @@ namespace Gsplat
         public bool Valid { get; }
         public bool ComputeSortRequired { get; }
         public void ComputeDepth(CommandBuffer cmd, Matrix4x4 matrixMv);
+        public void RenderColor(CommandBuffer cmd, Camera camera);
+        public void RenderDepthPrepass(CommandBuffer cmd, Camera camera);
+#if UNITY_6000_0_OR_NEWER
+        public void RenderColor(RasterCommandBuffer cmd, Camera camera);
+        public void RenderDepthPrepass(RasterCommandBuffer cmd, Camera camera);
+#endif
 
         // Used by GsplatSorter to populate the global packed buffer.
         public GsplatResource GsplatResource { get; }
@@ -165,7 +174,21 @@ namespace Gsplat
                 return false;
             }
 
+            // One merged draw cannot represent multiple Unity layers. Use per-renderer draws
+            // for mixed layers so each camera can apply its culling mask independently.
+            var renderLayer = m_activeGsplats[0].transform.gameObject.layer;
+            if (m_activeGsplats.Any(gs => gs.transform.gameObject.layer != renderLayer))
+                return false;
+
             return true;
+        }
+
+        bool CameraRendersGlobalLayer(Camera camera)
+        {
+            if (!camera)
+                return true;
+            var layer = m_activeGsplats[0].transform.gameObject.layer;
+            return (camera.cullingMask & (1 << layer)) != 0;
         }
 
         public void MarkGlobalBuffersDirty() => m_globalRenderer.MarkGlobalBuffersDirty();
@@ -235,18 +258,100 @@ namespace Gsplat
                 m_globalRenderer.DispatchMerge(cmd, m_activeGsplats);
         }
 
+        public void RenderDepthPrepass(CommandBuffer cmd, Camera camera)
+        {
+            if (GlobalRenderEnabled)
+            {
+                if (CameraRendersGlobalLayer(camera))
+                    m_globalRenderer.RenderDepthPrepass(cmd);
+                return;
+            }
+
+            foreach (var gs in m_activeGsplats)
+            {
+                if (gs.RemainingCount <= 0) continue;
+                var layer = gs.transform.gameObject.layer;
+                if (camera && (camera.cullingMask & (1 << layer)) == 0) continue;
+                gs.RenderDepthPrepass(cmd, camera);
+            }
+        }
+
+        public void RenderColor(CommandBuffer cmd, Camera camera)
+        {
+            if (GlobalRenderEnabled)
+            {
+                if (CameraRendersGlobalLayer(camera))
+                    m_globalRenderer.RenderColor(cmd);
+                return;
+            }
+
+            foreach (var gs in m_activeGsplats.OrderBy(gs => (gs as GsplatRenderer)?.RenderOrder ?? 0))
+            {
+                if (gs.RemainingCount <= 0) continue;
+                var layer = gs.transform.gameObject.layer;
+                if (camera && (camera.cullingMask & (1 << layer)) == 0) continue;
+                gs.RenderColor(cmd, camera);
+            }
+        }
+
+#if UNITY_6000_0_OR_NEWER
+        public void RenderDepthPrepass(RasterCommandBuffer cmd, Camera camera)
+        {
+            if (GlobalRenderEnabled)
+            {
+                if (CameraRendersGlobalLayer(camera))
+                    m_globalRenderer.RenderDepthPrepass(cmd);
+                return;
+            }
+
+            foreach (var gs in m_activeGsplats)
+            {
+                if (gs.RemainingCount <= 0) continue;
+                var layer = gs.transform.gameObject.layer;
+                if (camera && (camera.cullingMask & (1 << layer)) == 0) continue;
+                gs.RenderDepthPrepass(cmd, camera);
+            }
+        }
+
+        public void RenderColor(RasterCommandBuffer cmd, Camera camera)
+        {
+            if (GlobalRenderEnabled)
+            {
+                if (CameraRendersGlobalLayer(camera))
+                    m_globalRenderer.RenderColor(cmd);
+                return;
+            }
+
+            foreach (var gs in m_activeGsplats.OrderBy(gs => (gs as GsplatRenderer)?.RenderOrder ?? 0))
+            {
+                if (gs.RemainingCount <= 0) continue;
+                var layer = gs.transform.gameObject.layer;
+                if (camera && (camera.cullingMask & (1 << layer)) == 0) continue;
+                gs.RenderColor(cmd, camera);
+            }
+        }
+#endif
+
         // Called by GsplatPlayerLoopHook once per frame, before Unity's PostLateUpdate phase
         public void Update()
         {
-            GlobalRenderEnabled = m_globalRenderer.Valid && GsplatSettings.Instance.EnableGlobalSort &&
-                                  m_activeGsplats.Count >= 2;
-            if (!GlobalRenderEnabled) return;
             m_activeGsplats.Clear();
             foreach (var gs in m_gsplats.Where(gs => gs is { isActiveAndEnabled: true, Valid: true }))
                 m_activeGsplats.Add(gs);
-            GlobalRenderEnabled = GlobalRenderEnabled && CanRenderGlobally();
-            if (!GlobalRenderEnabled) return;
-            m_globalRenderer.Update(m_activeGsplats);
+
+            GlobalRenderEnabled = m_globalRenderer.Valid && GsplatSettings.Instance.EnableGlobalSort &&
+                                  m_activeGsplats.Count >= 2 && CanRenderGlobally();
+            if (GlobalRenderEnabled)
+            {
+                m_globalRenderer.Update(m_activeGsplats);
+                return;
+            }
+
+            // The built-in pipeline has no explicit SRP pass to own fallback submission.
+            // URP and HDRP record their per-renderer draws later in their dedicated passes.
+            if (!GraphicsSettings.currentRenderPipeline)
+                foreach (var renderer in m_activeGsplats.OfType<GsplatRenderer>())
+                    renderer.Render();
         }
 
         public ISorterResource CreateSorterResource(uint count, GraphicsBuffer orderBuffer)

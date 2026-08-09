@@ -5,6 +5,9 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.Rendering;
+#if UNITY_6000_0_OR_NEWER
+using UnityEngine.Rendering.RenderGraphModule;
+#endif
 
 namespace Gsplat
 {
@@ -57,6 +60,7 @@ namespace Gsplat
         Matrix4x4[] m_rendererTransformsCache;
         RendererParams[] m_rendererParamsCache;
         MaterialPropertyBlock m_globalPropertyBlock;
+        int m_renderLayer;
 
         public bool Valid => m_globalMaterial
                              && m_globalMaterial.Valid()
@@ -111,6 +115,7 @@ namespace Gsplat
         static readonly int k_rendererParamsProp = Shader.PropertyToID("_RendererParams");
         static readonly int k_totalSplatCount = Shader.PropertyToID("_TotalSplatCount");
         static readonly int k_splatInstanceSize = Shader.PropertyToID("_SplatInstanceSize");
+        static readonly int k_depthPrepassAlphaCutoff = Shader.PropertyToID("_DepthPrepassAlphaCutoff");
 
         public void InitGlobal(GsplatGlobalMaterial globalMaterial)
         {
@@ -156,9 +161,11 @@ namespace Gsplat
         {
             EnsureGlobalBuffers(activeGsplats);
             if (m_totalSplatCount == 0) return;
+            m_renderLayer = activeGsplats[0].transform.gameObject.layer;
             UpdateRendererTransforms(activeGsplats);
             UpdateRendererParams(activeGsplats);
-            Render();
+            if (!GraphicsSettings.currentRenderPipeline)
+                Render();
         }
 
         public void DispatchMerge(CommandBuffer cmd, List<IGsplat> activeGsplats)
@@ -479,6 +486,7 @@ namespace Gsplat
             m_globalPropertyBlock.SetBuffer(k_rendererParamsProp, m_rendererParamsBuffer);
             m_globalPropertyBlock.SetInteger(k_totalSplatCount, (int)m_totalRemainingCount);
             m_globalPropertyBlock.SetInteger(k_splatInstanceSize, (int)GsplatSettings.Instance.SplatInstanceSize);
+            m_globalPropertyBlock.SetFloat(k_depthPrepassAlphaCutoff, GsplatSettings.Instance.DepthPrepassAlphaCutoff);
 
             if (m_globalSHBands >= 1)
                 m_globalPropertyBlock.SetBuffer(k_globalSH1Buffer, m_globalSH1Buffer);
@@ -492,11 +500,87 @@ namespace Gsplat
             var rp = new RenderParams(m_globalMaterial.Materials[m_globalSHBands])
             {
                 worldBounds = new Bounds(Vector3.zero, Vector3.one * 1e6f),
-                matProps = m_globalPropertyBlock
+                matProps = m_globalPropertyBlock,
+                layer = m_renderLayer
             };
 
             int instances = Mathf.CeilToInt(m_totalRemainingCount / (float)GsplatSettings.Instance.SplatInstanceSize);
             Graphics.RenderMeshPrimitives(rp, GsplatSettings.Instance.Mesh, 0, instances);
+        }
+
+        public void RenderColor(CommandBuffer cmd)
+        {
+            if (m_globalBuffersDirty || m_globalOrderBuffer == null || m_totalRemainingCount == 0) return;
+
+            BindGlobalDrawProperties();
+
+            int instances = Mathf.CeilToInt(m_totalRemainingCount / (float)GsplatSettings.Instance.SplatInstanceSize);
+            cmd.DrawMeshInstancedProcedural(GsplatSettings.Instance.Mesh, 0, m_globalMaterial.Materials[m_globalSHBands],
+                0, instances, m_globalPropertyBlock);
+        }
+
+        public void RenderDepthPrepass(CommandBuffer cmd)
+        {
+            if (GsplatSettings.Instance.DepthPrepassAlphaCutoff > 1.0f)
+                return;
+
+            if (m_globalBuffersDirty || m_globalOrderBuffer == null || m_totalRemainingCount == 0) return;
+
+            BindGlobalDrawProperties();
+
+            int instances = Mathf.CeilToInt(m_totalRemainingCount / (float)GsplatSettings.Instance.SplatInstanceSize);
+            cmd.DrawMeshInstancedProcedural(GsplatSettings.Instance.Mesh, 0,
+                m_globalMaterial.DepthMaterials[m_globalSHBands], 0, instances, m_globalPropertyBlock);
+        }
+
+#if UNITY_6000_0_OR_NEWER
+        public void RenderColor(RasterCommandBuffer cmd)
+        {
+            if (m_globalBuffersDirty || m_globalOrderBuffer == null || m_totalRemainingCount == 0) return;
+
+            BindGlobalDrawProperties();
+
+            int instances = Mathf.CeilToInt(m_totalRemainingCount / (float)GsplatSettings.Instance.SplatInstanceSize);
+            cmd.DrawMeshInstancedProcedural(GsplatSettings.Instance.Mesh, 0, m_globalMaterial.Materials[m_globalSHBands],
+                0, instances, m_globalPropertyBlock);
+        }
+
+        public void RenderDepthPrepass(RasterCommandBuffer cmd)
+        {
+            if (GsplatSettings.Instance.DepthPrepassAlphaCutoff > 1.0f)
+                return;
+
+            if (m_globalBuffersDirty || m_globalOrderBuffer == null || m_totalRemainingCount == 0) return;
+
+            BindGlobalDrawProperties();
+
+            int instances = Mathf.CeilToInt(m_totalRemainingCount / (float)GsplatSettings.Instance.SplatInstanceSize);
+            cmd.DrawMeshInstancedProcedural(GsplatSettings.Instance.Mesh, 0,
+                m_globalMaterial.DepthMaterials[m_globalSHBands], 0, instances, m_globalPropertyBlock);
+        }
+#endif
+
+        void BindGlobalDrawProperties()
+        {
+            m_globalPropertyBlock ??= new MaterialPropertyBlock();
+            m_globalPropertyBlock.Clear();
+            m_globalPropertyBlock.SetBuffer(k_globalOrderBuffer, m_globalOrderBuffer);
+            m_globalPropertyBlock.SetBuffer(k_globalPackedBuffer, m_globalPackedBuffer);
+            m_globalPropertyBlock.SetBuffer(k_rendererOffsetsProp, m_rendererOffsetsBuffer);
+            m_globalPropertyBlock.SetBuffer(k_rendererTransformsProp, m_rendererTransformsBuffer);
+            m_globalPropertyBlock.SetBuffer(k_rendererParamsProp, m_rendererParamsBuffer);
+            m_globalPropertyBlock.SetInteger(k_totalSplatCount, (int)m_totalRemainingCount);
+            m_globalPropertyBlock.SetInteger(k_splatInstanceSize, (int)GsplatSettings.Instance.SplatInstanceSize);
+            m_globalPropertyBlock.SetFloat(k_depthPrepassAlphaCutoff, GsplatSettings.Instance.DepthPrepassAlphaCutoff);
+
+            if (m_globalSHBands >= 1)
+                m_globalPropertyBlock.SetBuffer(k_globalSH1Buffer, m_globalSH1Buffer);
+            if (m_globalSHBands >= 2)
+                m_globalPropertyBlock.SetBuffer(k_globalSH2Buffer, m_globalSH2Buffer);
+            if (m_globalSHBands >= 3)
+                m_globalPropertyBlock.SetBuffer(k_globalSH3Buffer, m_globalSH3Buffer);
+            if (m_globalSHBands >= 4)
+                m_globalPropertyBlock.SetBuffer(k_globalSH4Buffer, m_globalSH4Buffer);
         }
 
 

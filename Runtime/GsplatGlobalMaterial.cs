@@ -9,10 +9,12 @@ namespace Gsplat
     public class GsplatGlobalMaterial : ScriptableObject
     {
         public Material DefaultMaterial;
+        public Material DefaultDepthMaterial;
         public ComputeShader MergeShader;
         public ComputeShader CopyBufferShader;
 
         Material[] m_materials; // indexed by SH band (0–4)
+        Material[] m_depthMaterials; // indexed by SH band (0–4)
 
         /// <summary>
         /// Returns five Material instances — one per SH band level — with the appropriate
@@ -41,8 +43,35 @@ namespace Gsplat
             }
         }
 
-        public void Reset() => m_materials = null;
+        public Material[] DepthMaterials
+        {
+            get
+            {
+                if (m_depthMaterials != null && m_depthMaterials[0] != null)
+                    return m_depthMaterials;
 
-        public bool Valid() => MergeShader && CopyBufferShader && DefaultMaterial;
+                m_depthMaterials = new Material[5];
+                for (int i = 0; i < 5; i++)
+                {
+                    m_depthMaterials[i] = new Material(DefaultDepthMaterial);
+                    m_depthMaterials[i].DisableKeyword("SH_BANDS_0");
+                    m_depthMaterials[i].DisableKeyword("SH_BANDS_1");
+                    m_depthMaterials[i].DisableKeyword("SH_BANDS_2");
+                    m_depthMaterials[i].DisableKeyword("SH_BANDS_3");
+                    m_depthMaterials[i].DisableKeyword("SH_BANDS_4");
+                    m_depthMaterials[i].EnableKeyword($"SH_BANDS_{i}");
+                }
+
+                return m_depthMaterials;
+            }
+        }
+
+        public void Reset()
+        {
+            m_materials = null;
+            m_depthMaterials = null;
+        }
+
+        public bool Valid() => MergeShader && CopyBufferShader && DefaultMaterial && DefaultDepthMaterial;
     }
 }

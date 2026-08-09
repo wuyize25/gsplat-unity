@@ -5,6 +5,9 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
+#if UNITY_6000_0_OR_NEWER
+using UnityEngine.Rendering.RenderGraphModule;
+#endif
 using Vector3 = UnityEngine.Vector3;
 
 namespace Gsplat
@@ -34,6 +37,7 @@ namespace Gsplat
         static readonly int k_shDegree = Shader.PropertyToID("_SHDegree");
         static readonly int k_brightness = Shader.PropertyToID("_Brightness");
         static readonly int k_scaleFactor = Shader.PropertyToID("_ScaleFactor");
+        static readonly int k_depthPrepassAlphaCutoff = Shader.PropertyToID("_DepthPrepassAlphaCutoff");
 
         uint m_framesBeforeRecomputeSort = 0;
         uint m_sortsBeforeRecomputeCutouts = 0;
@@ -272,6 +276,7 @@ namespace Gsplat
             m_propertyBlock.SetInteger(k_shDegree, Math.Min(m_gsplatAsset.SHBands, shDegree));
             m_propertyBlock.SetFloat(k_brightness, brightness);
             m_propertyBlock.SetFloat(k_scaleFactor, scaleFactor);
+            m_propertyBlock.SetFloat(k_depthPrepassAlphaCutoff, GsplatSettings.Instance.DepthPrepassAlphaCutoff);
             m_propertyBlock.SetMatrix(k_matrixM, transform.localToWorldMatrix);
 
             uint order = Math.Clamp(renderOrder, 0, GsplatSettings.Instance.MaxRenderOrder - 1);
@@ -285,5 +290,89 @@ namespace Gsplat
             Graphics.RenderMeshPrimitives(rp, GsplatSettings.Instance.Mesh, 0,
                 Mathf.CeilToInt(m_remainingCount / (float)GsplatSettings.Instance.SplatInstanceSize));
         }
+
+        public void RenderDepthPrepass(CommandBuffer cmd, Transform transform, float scaleFactor = 1.0f,
+            uint renderOrder = 0)
+        {
+            if (m_remainingCount <= 0 || GsplatSettings.Instance.DepthPrepassAlphaCutoff > 1.0f)
+                return;
+
+            m_propertyBlock.SetInteger(k_splatCount, (int)m_remainingCount);
+            m_propertyBlock.SetInteger(k_splatInstanceSize, (int)GsplatSettings.Instance.SplatInstanceSize);
+            m_propertyBlock.SetFloat(k_scaleFactor, scaleFactor);
+            m_propertyBlock.SetFloat(k_depthPrepassAlphaCutoff, GsplatSettings.Instance.DepthPrepassAlphaCutoff);
+            m_propertyBlock.SetMatrix(k_matrixM, transform.localToWorldMatrix);
+
+            uint order = Math.Clamp(renderOrder, 0, GsplatSettings.Instance.MaxRenderOrder - 1);
+            int instances = Mathf.CeilToInt(m_remainingCount / (float)GsplatSettings.Instance.SplatInstanceSize);
+            cmd.DrawMeshInstancedProcedural(GsplatSettings.Instance.Mesh, 0,
+                m_gsplatAsset.GsplatMaterial.DepthMaterials[m_gsplatAsset.SHBands][order], 0, instances,
+                m_propertyBlock);
+        }
+
+#if UNITY_6000_0_OR_NEWER
+        public void RenderDepthPrepass(RasterCommandBuffer cmd, Transform transform, float scaleFactor = 1.0f,
+            uint renderOrder = 0)
+        {
+            if (m_remainingCount <= 0 || GsplatSettings.Instance.DepthPrepassAlphaCutoff > 1.0f)
+                return;
+
+            m_propertyBlock.SetInteger(k_splatCount, (int)m_remainingCount);
+            m_propertyBlock.SetInteger(k_splatInstanceSize, (int)GsplatSettings.Instance.SplatInstanceSize);
+            m_propertyBlock.SetFloat(k_scaleFactor, scaleFactor);
+            m_propertyBlock.SetFloat(k_depthPrepassAlphaCutoff, GsplatSettings.Instance.DepthPrepassAlphaCutoff);
+            m_propertyBlock.SetMatrix(k_matrixM, transform.localToWorldMatrix);
+
+            uint order = Math.Clamp(renderOrder, 0, GsplatSettings.Instance.MaxRenderOrder - 1);
+            int instances = Mathf.CeilToInt(m_remainingCount / (float)GsplatSettings.Instance.SplatInstanceSize);
+            cmd.DrawMeshInstancedProcedural(GsplatSettings.Instance.Mesh, 0,
+                m_gsplatAsset.GsplatMaterial.DepthMaterials[m_gsplatAsset.SHBands][order], 0, instances,
+                m_propertyBlock);
+        }
+#endif
+
+        public void RenderColor(CommandBuffer cmd, Transform transform, bool gammaToLinear = false, int shDegree = 3,
+            float brightness = 1.0f, float scaleFactor = 1.0f, uint renderOrder = 0)
+        {
+            if (m_remainingCount <= 0)
+                return;
+
+            m_propertyBlock.SetInteger(k_splatCount, (int)m_remainingCount);
+            m_propertyBlock.SetInteger(k_gammaToLinear, gammaToLinear ? 1 : 0);
+            m_propertyBlock.SetInteger(k_splatInstanceSize, (int)GsplatSettings.Instance.SplatInstanceSize);
+            m_propertyBlock.SetInteger(k_shDegree, Math.Min(m_gsplatAsset.SHBands, shDegree));
+            m_propertyBlock.SetFloat(k_brightness, brightness);
+            m_propertyBlock.SetFloat(k_scaleFactor, scaleFactor);
+            m_propertyBlock.SetFloat(k_depthPrepassAlphaCutoff, GsplatSettings.Instance.DepthPrepassAlphaCutoff);
+            m_propertyBlock.SetMatrix(k_matrixM, transform.localToWorldMatrix);
+
+            uint order = Math.Clamp(renderOrder, 0, GsplatSettings.Instance.MaxRenderOrder - 1);
+            int instances = Mathf.CeilToInt(m_remainingCount / (float)GsplatSettings.Instance.SplatInstanceSize);
+            cmd.DrawMeshInstancedProcedural(GsplatSettings.Instance.Mesh, 0, m_gsplatAsset.Materials[order], 0,
+                instances, m_propertyBlock);
+        }
+
+#if UNITY_6000_0_OR_NEWER
+        public void RenderColor(RasterCommandBuffer cmd, Transform transform, bool gammaToLinear = false,
+            int shDegree = 3, float brightness = 1.0f, float scaleFactor = 1.0f, uint renderOrder = 0)
+        {
+            if (m_remainingCount <= 0)
+                return;
+
+            m_propertyBlock.SetInteger(k_splatCount, (int)m_remainingCount);
+            m_propertyBlock.SetInteger(k_gammaToLinear, gammaToLinear ? 1 : 0);
+            m_propertyBlock.SetInteger(k_splatInstanceSize, (int)GsplatSettings.Instance.SplatInstanceSize);
+            m_propertyBlock.SetInteger(k_shDegree, Math.Min(m_gsplatAsset.SHBands, shDegree));
+            m_propertyBlock.SetFloat(k_brightness, brightness);
+            m_propertyBlock.SetFloat(k_scaleFactor, scaleFactor);
+            m_propertyBlock.SetFloat(k_depthPrepassAlphaCutoff, GsplatSettings.Instance.DepthPrepassAlphaCutoff);
+            m_propertyBlock.SetMatrix(k_matrixM, transform.localToWorldMatrix);
+
+            uint order = Math.Clamp(renderOrder, 0, GsplatSettings.Instance.MaxRenderOrder - 1);
+            int instances = Mathf.CeilToInt(m_remainingCount / (float)GsplatSettings.Instance.SplatInstanceSize);
+            cmd.DrawMeshInstancedProcedural(GsplatSettings.Instance.Mesh, 0, m_gsplatAsset.Materials[order], 0,
+                instances, m_propertyBlock);
+        }
+#endif
     }
 }

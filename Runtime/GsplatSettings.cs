@@ -76,6 +76,8 @@ namespace Gsplat
 
         public uint SplatInstanceSize;
         public uint UploadBatchSize;
+        [Tooltip("Alpha cutoff used by the optional depth prepass. Values above 1 disable depth writes.")]
+        [Range(0f, 1.1f)] public float DepthPrepassAlphaCutoff = 1.1f;
         [Range(1, 20)] public uint MaxRenderOrder;
         public bool DisplayBoundingBoxes;
 
@@ -136,6 +138,7 @@ namespace Gsplat
             Materials = DefaultMaterials;
             SplatInstanceSize = 128;
             UploadBatchSize = 100000;
+            DepthPrepassAlphaCutoff = 1.1f;
             MaxRenderOrder = 1;
             DisplayBoundingBoxes = false;
             CameraTranslationRefreshTreshold = 0.2f;

@@ -109,7 +109,10 @@ void MergeTwo(uint3 id : SV_DispatchThreadID)
     float dA = (i < _CountA) ? _DepthsA[_OffsetA + i] : FLOAT_MAX;
     float dB = (j < _CountB) ? _DepthsB[_OffsetB + j] : FLOAT_MAX;
 
-    _OutputOrders[_OutputOffset + p] = (dA <= dB) ? _OrdersA[_OffsetA + i] : _OrdersB[_OffsetB + j];
+    if (dA <= dB)
+        _OutputOrders[_OutputOffset + p] = _OrdersA[_OffsetA + i];
+    else
+        _OutputOrders[_OutputOffset + p] = _OrdersB[_OffsetB + j];
 }
 
 // Intermediate merge pass — writes merged orders AND depths to scratch.

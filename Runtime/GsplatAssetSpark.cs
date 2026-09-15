@@ -55,7 +55,7 @@ namespace Gsplat
         public float ColorScale = 1f;
 
         // Assets serialised before ColorScale existed read back as 0; treat that as no scaling.
-        float EffectiveColorScale => ColorScale > 0f ? ColorScale : 1f;
+        public float EffectiveColorScale => ColorScale > 0f ? ColorScale : 1f;
 
         static readonly int k_packedSplatsBuffer = Shader.PropertyToID("_PackedSplatsBuffer");
         static readonly int k_packedSH1Buffer = Shader.PropertyToID("_PackedSH1Buffer");

@@ -37,6 +37,7 @@ struct RendererParams
 {
     float brightness;
     float scaleFactor;
+    float colorScale;
     uint  gammaToLinear;
     uint  shDegree;
 };

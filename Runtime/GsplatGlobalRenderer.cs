@@ -38,11 +38,12 @@ namespace Gsplat
         GraphicsBuffer m_rendererParamsBuffer;
 
         // Per-renderer visual settings, looked up by renderer_id during the merged draw.
-        // Matches the RendererParams struct in GsplatSparkGlobal.hlsl (16-byte stride).
+        // Matches the RendererParams struct in GsplatSparkGlobal.hlsl (20-byte stride).
         struct RendererParams
         {
             public float Brightness;
             public float ScaleFactor;
+            public float ColorScale;
             public uint GammaToLinear;
             public uint SHDegree;
         }
@@ -225,7 +226,7 @@ namespace Gsplat
                 { name = "Gsplat.RendererOffsets" };
             m_rendererTransformsBuffer = new GraphicsBuffer(st, activeGsplats.Count, sizeof(float) * 16)
                 { name = "Gsplat.RendererTransforms" };
-            m_rendererParamsBuffer = new GraphicsBuffer(st, activeGsplats.Count, sizeof(float) * 2 + sizeof(uint) * 2)
+            m_rendererParamsBuffer = new GraphicsBuffer(st, activeGsplats.Count, sizeof(float) * 3 + sizeof(uint) * 2)
                 { name = "Gsplat.RendererParams" };
 
             if (m_globalSHBands >= 1)
@@ -311,6 +312,8 @@ namespace Gsplat
                     {
                         Brightness = gs.Brightness,
                         ScaleFactor = 1.0f - gs.SplatDownscaleFactor,
+                        // Spark divides colour and SH by this at import; the shader multiplies back.
+                        ColorScale = gs.GsplatAsset is GsplatAssetSpark spark ? spark.EffectiveColorScale : 1.0f,
                         GammaToLinear = gs.GammaToLinear ? 1u : 0u,
                         // Clamp to the asset's own bands so EvalSH never reads slots that
                         // weren't copied for this renderer (the global buffers are sized to
@@ -324,6 +327,7 @@ namespace Gsplat
                     {
                         Brightness = 1.0f,
                         ScaleFactor = 1.0f,
+                        ColorScale = 1.0f,
                         GammaToLinear = 0u,
                         SHDegree = activeGsplats[k].SHBands,
                     };

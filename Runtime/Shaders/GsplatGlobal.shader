@@ -85,6 +85,11 @@ Shader "Gsplat/Global"
                 color.rgb += EvalSH(sh, dir, (int)_RendererParams[source.rendererId].shDegree);
                 #endif
 
+                // Same clamp as Gsplat.shader: undo the import-time colour scale, then clamp after
+                // the full SH sum. Without it the premultiplied blend subtracts colour for splats
+                // whose DC term sits below zero, and the import-time scale is never undone.
+                color.rgb = max(color.rgb * _RendererParams[source.rendererId].colorScale, 0.0);
+
                 ClipCorner(corner, color.a);
 
                 o.vertex = center.proj + float4(corner.offset.x, _ProjectionParams.x * corner.offset.y, 0, 0);

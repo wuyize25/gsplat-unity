@@ -86,6 +86,7 @@ namespace Gsplat
             m_kernelInitOrder = cs.FindKernel("InitOrder");
 
             var res = (GsplatResourceUncompressed)resource;
+            propertyBlock.SetFloat(k_colorScale, 1f); // colour is stored as float here, no headroom needed
             propertyBlock.SetBuffer(k_positionBuffer, res.PositionBuffer);
             propertyBlock.SetBuffer(k_scaleBuffer, res.ScaleBuffer);
             propertyBlock.SetBuffer(k_rotationBuffer, res.RotationBuffer);

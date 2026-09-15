@@ -10,7 +10,7 @@ using UnityEngine;
 
 namespace Gsplat.Editor
 {
-    [ScriptedImporter(1, new[] { "ply", "spz" })]
+    [ScriptedImporter(2, new[] { "ply", "spz" })]
     public class GsplatImporter : ScriptedImporter
     {
         public CompressionMode Compression = CompressionMode.Spark;
@@ -20,6 +20,15 @@ namespace Gsplat.Editor
                  "Currently only supported for .ply import.")]
         [Range(0f, 0.99f)]
         public float OpacityPruneThreshold = 0f;
+
+        [Tooltip("Colour range for Spark compression. Spark stores colour as uint8, so anything above 1.0 " +
+                 "saturates and an over-bright splat loses its hue (red and green pin to 1.0 while blue does " +
+                 "not, which reads as yellow-green).\n" +
+                 "Raising this buys headroom above 1.0 at the cost of some resolution inside 0..1. " +
+                 "1 keeps the plain 0..1 range; around 1.5 is a good starting point.\n" +
+                 "Only affects Spark .ply import (.spz colour is already 8-bit over 0..1, so it is ignored).")]
+        [Range(1f, 4f)]
+        public float ColorScale = 1.5f;
 
         [Tooltip("The coordinate frame the source asset was authored in.\n\n" +
                  "Positions, rotations, and SH coefficients are converted to Unity (RUF) at import time.\n\n" +
@@ -42,6 +51,10 @@ namespace Gsplat.Editor
                     : ScriptableObject.CreateInstance<GsplatAssetSpark>(),
                 _ => throw new ArgumentOutOfRangeException()
             };
+
+            // SPZ colour is already 8-bit over 0..1, so extra headroom would only cost precision.
+            if (!isSpz && gsplatAsset is GsplatAssetSpark sparkAsset)
+                sparkAsset.ColorScale = ColorScale;
 
 #if GSPLAT_VERBOSE_IMPORT_LOGGING
             Stopwatch swTotal = Stopwatch.StartNew();

@@ -22,6 +22,7 @@ namespace Gsplat.Editor
             if (targets.OfType<GsplatImporter>().All(imp => Path.GetExtension(imp.assetPath).ToLowerInvariant() == ".ply"))
             {
                 EditorGUILayout.PropertyField(serializedObject.FindProperty("OpacityPruneThreshold"));
+                EditorGUILayout.PropertyField(serializedObject.FindProperty("ColorScale"));
                 if (GUILayout.Button("Open Mesh Generator"))
                 {
                     var firstImporter = targets[0] as GsplatImporter;

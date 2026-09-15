@@ -47,6 +47,16 @@ namespace Gsplat
         [HideInInspector] public uint[] PackedSH4;
         [HideInInspector] public uint4[] PackedSplats;
 
+        // Spark keeps colour in uint8, so anything above 1.0 saturates. A splat that should read
+        // as over-bright then loses its hue - red and green pin to 1.0 while blue does not, which
+        // looks yellow-green. Colour and SH are divided by this on import and multiplied back after
+        // the SH sum, buying headroom above 1.0 at the cost of some resolution inside 0..1.
+        // 1 keeps the plain 0..1 range. Only the PLY path sets it; SPZ colour is already 8-bit.
+        public float ColorScale = 1f;
+
+        // Assets serialised before ColorScale existed read back as 0; treat that as no scaling.
+        float EffectiveColorScale => ColorScale > 0f ? ColorScale : 1f;
+
         static readonly int k_packedSplatsBuffer = Shader.PropertyToID("_PackedSplatsBuffer");
         static readonly int k_packedSH1Buffer = Shader.PropertyToID("_PackedSH1Buffer");
         static readonly int k_packedSH2Buffer = Shader.PropertyToID("_PackedSH2Buffer");
@@ -122,6 +132,7 @@ namespace Gsplat
             m_kernelInitOrder = cs.FindKernel("InitOrder");
 
             var res = (GsplatResourceSpark)resource;
+            propertyBlock.SetFloat(k_colorScale, EffectiveColorScale);
             propertyBlock.SetBuffer(k_packedSplatsBuffer, res.PackedSplatsBuffer);
             if (SHBands >= 1)
                 propertyBlock.SetBuffer(k_packedSH1Buffer, res.PackedSH1Buffer);
@@ -206,8 +217,10 @@ namespace Gsplat
             float rotZSign = posXSign * posYSign;
 
             Allocate();
+            float colorScale = EffectiveColorScale;
             var buffer = new byte[plyInfo.PropertyCount * sizeof(float)];
             var shBandData = new float[9 * 3]; // max band 4: 9 coeffs × 3 channels; reused each splat
+            var shChannelBlack = new bool[3]; // reused each splat
             uint w = 0; // write index; splats below the prune threshold are skipped
             for (uint i = 0; i < plyInfo.VertexCount; i++)
             {
@@ -221,15 +234,25 @@ namespace Gsplat
                 if (GsplatUtils.Sigmoid(properties[plyInfo.OpacityOffset]) < opacityPruneThreshold)
                     continue;
 
+                // The reference rasterisers clamp the summed colour at zero, so a channel whose DC is
+                // already negative stays black from almost every angle. Spark cannot store a negative
+                // DC - it clamps to black - and then adding the SH on top lights that channel up over
+                // half the view sphere, which reads as coloured speckle in shadow. Dropping the SH
+                // along with the DC tracks the reference far more closely: on LichtFeld Studio 0.5.3
+                // exports it is ~6x closer in display space, and it does not regress older exports.
+                for (int c = 0; c < 3; c++)
+                    shChannelBlack[c] = properties[plyInfo.ColorOffset + c] * shC0 + 0.5f <= 0f;
+
                 for (int j = 1, shReadOffset = 0; j <= SHBands; j++)
                 {
                     var bandSize = j * 2 + 1;
                     for (int k = 0; k < bandSize; k++)
                     {
                         float sign = GsplatUtils.ShSign(sourceCoordinates, j, k);
-                        shBandData[k * 3]     = sign * properties[shReadOffset + k + plyInfo.SHOffset];
-                        shBandData[k * 3 + 1] = sign * properties[shReadOffset + k + plyInfo.SHOffset + shCoeffs];
-                        shBandData[k * 3 + 2] = sign * properties[shReadOffset + k + plyInfo.SHOffset + shCoeffs * 2];
+                        for (int c = 0; c < 3; c++)
+                            shBandData[k * 3 + c] = shChannelBlack[c]
+                                ? 0f
+                                : sign * properties[shReadOffset + k + plyInfo.SHOffset + shCoeffs * c] / colorScale;
                     }
 
                     if (j == 1) PackSH1(shBandData, PackedSH1.AsSpan((int)w * 2, 2));
@@ -265,7 +288,7 @@ namespace Gsplat
                     rotYSign * properties[plyInfo.RotationOffset + 2],
                     rotZSign * properties[plyInfo.RotationOffset + 3]);
 
-                PackedSplats[w] = PackSplat(color, position, scale, rotation);
+                PackedSplats[w] = PackSplat(color, position, scale, rotation, colorScale);
                 w++;
             }
 
@@ -397,11 +420,12 @@ namespace Gsplat
 
         const float shC0 = 0.28209479177387814f;
 
-        public static uint4 PackSplat(Vector4 color, Vector3 position, Vector3 scale, Quaternion rotation)
+        public static uint4 PackSplat(Vector4 color, Vector3 position, Vector3 scale, Quaternion rotation,
+            float colorScale = 1f)
         {
-            byte uR = GsplatUtils.FloatToByte(color.x * shC0 + 0.5f);
-            byte uG = GsplatUtils.FloatToByte(color.y * shC0 + 0.5f);
-            byte uB = GsplatUtils.FloatToByte(color.z * shC0 + 0.5f);
+            byte uR = GsplatUtils.FloatToByte((color.x * shC0 + 0.5f) / colorScale);
+            byte uG = GsplatUtils.FloatToByte((color.y * shC0 + 0.5f) / colorScale);
+            byte uB = GsplatUtils.FloatToByte((color.z * shC0 + 0.5f) / colorScale);
             byte uA = GsplatUtils.FloatToByte(GsplatUtils.Sigmoid(color.w));
 
             ushort uPosX = Mathf.FloatToHalf(position.x);

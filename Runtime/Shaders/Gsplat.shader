@@ -41,6 +41,7 @@ Shader "Gsplat/Standard"
             int _SHDegree;
             float4x4 _MATRIX_M;
             float _Brightness;
+            float _ColorScale;
             float _ScaleFactor;
             StructuredBuffer<uint> _OrderBuffer;
 
@@ -102,6 +103,11 @@ Shader "Gsplat/Standard"
                 InitSH(source.id, sh);
                 color.rgb += EvalSH(sh, dir, _SHDegree);
                 #endif
+
+                // Undo the import-time colour scale, then clamp after the full SH sum, matching
+                // the reference 3DGS rasteriser. Premultiplied Blend One OneMinusSrcAlpha would
+                // otherwise subtract colour for splats whose DC term sits far below zero.
+                color.rgb = max(color.rgb * _ColorScale, 0.0);
 
                 ClipCorner(corner, color.w);
 

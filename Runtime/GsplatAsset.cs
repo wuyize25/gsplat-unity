@@ -150,6 +150,7 @@ namespace Gsplat
         static readonly protected int k_boundsBuffer = Shader.PropertyToID("_BoundsBuffer");
         static readonly protected int k_cutoutsBuffer = Shader.PropertyToID("_CutoutsBuffer");
         static readonly protected int k_cutoutsCount = Shader.PropertyToID("_CutoutsCount");
+        static readonly protected int k_colorScale = Shader.PropertyToID("_ColorScale");
 
         public GsplatMaterial GsplatMaterial => GsplatSettings.Instance.Materials[(int)Compression];
         public Material[] Materials => GsplatMaterial.Materials[SHBands];

@@ -195,7 +195,8 @@ namespace Gsplat
                 throw new NotSupportedException($"unexpected SH property count {plyInfo.SHPropertyCount}");
 
             if (plyInfo.PositionOffset == -1 || plyInfo.ColorOffset == -1 || plyInfo.OpacityOffset == -1 ||
-                plyInfo.ScaleOffset == -1 || plyInfo.RotationOffset == -1)
+                plyInfo.ScaleOffset == -1 || plyInfo.RotationOffset == -1 ||
+                plyInfo.SHOffsets.Contains(-1))
                 throw new NotSupportedException("missing required properties in PLY header");
 
             // Decompose source frame into per-axis sign flips relative to Unity (RUF).
@@ -227,9 +228,9 @@ namespace Gsplat
                     for (int k = 0; k < bandSize; k++)
                     {
                         float sign = GsplatUtils.ShSign(sourceCoordinates, j, k);
-                        shBandData[k * 3]     = sign * properties[shReadOffset + k + plyInfo.SHOffset];
-                        shBandData[k * 3 + 1] = sign * properties[shReadOffset + k + plyInfo.SHOffset + shCoeffs];
-                        shBandData[k * 3 + 2] = sign * properties[shReadOffset + k + plyInfo.SHOffset + shCoeffs * 2];
+                        shBandData[k * 3]     = sign * properties[plyInfo.SHOffsets[shReadOffset + k]];
+                        shBandData[k * 3 + 1] = sign * properties[plyInfo.SHOffsets[shReadOffset + k + shCoeffs]];
+                        shBandData[k * 3 + 2] = sign * properties[plyInfo.SHOffsets[shReadOffset + k + shCoeffs * 2]];
                     }
 
                     if (j == 1) PackSH1(shBandData, PackedSH1.AsSpan((int)w * 2, 2));

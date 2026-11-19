@@ -62,6 +62,11 @@ namespace Gsplat
         public int PositionOffset = -1;
         public int ColorOffset = -1;
         public int SHOffset = -1;
+        /// <summary>
+        /// Property index of each f_rest_k, by k. Readers must use this rather than SHOffset + k: some exporters
+        /// (e.g. Brush) write the f_rest properties in lexicographic order (f_rest_0, f_rest_1, f_rest_10, ...).
+        /// </summary>
+        public List<int> SHOffsets = new List<int>();
         public int OpacityOffset = -1;
         public int ScaleOffset = -1;
         public int RotationOffset = -1;
@@ -128,8 +133,12 @@ namespace Gsplat
                         break;
                 }
 
-                if (tokens[2].StartsWith("f_rest_"))
+                if (tokens[2].StartsWith("f_rest_") && int.TryParse(tokens[2].Substring(7), out var k))
+                {
+                    while (SHOffsets.Count <= k) SHOffsets.Add(-1);
+                    SHOffsets[k] = PropertyCount;
                     SHPropertyCount++;
+                }
                 PropertyCount++;
             }
         }

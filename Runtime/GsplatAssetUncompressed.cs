@@ -156,7 +156,8 @@ namespace Gsplat
                 throw new NotSupportedException($"unexpected SH property count {plyInfo.SHPropertyCount}");
 
             if (plyInfo.PositionOffset == -1 || plyInfo.ColorOffset == -1 || plyInfo.OpacityOffset == -1 ||
-                plyInfo.ScaleOffset == -1 || plyInfo.RotationOffset == -1)
+                plyInfo.ScaleOffset == -1 || plyInfo.RotationOffset == -1 ||
+                plyInfo.SHOffsets.Contains(-1))
                 throw new NotSupportedException("missing required properties in PLY header");
 
             var (posXSign, posYSign, posZSign) = GsplatUtils.AxisSigns(sourceCoordinates);
@@ -198,9 +199,9 @@ namespace Gsplat
                         float sign = GsplatUtils.ShSign(sourceCoordinates, j + 1, k);
                         int idx = (int)w * shCoeffs + bandOffset + k;
                         SHs[idx] = sign * new Vector3(
-                            properties[bandOffset + k + plyInfo.SHOffset],
-                            properties[bandOffset + k + plyInfo.SHOffset + shCoeffs],
-                            properties[bandOffset + k + plyInfo.SHOffset + shCoeffs * 2]);
+                            properties[plyInfo.SHOffsets[bandOffset + k]],
+                            properties[plyInfo.SHOffsets[bandOffset + k + shCoeffs]],
+                            properties[plyInfo.SHOffsets[bandOffset + k + shCoeffs * 2]]);
                     }
                     bandOffset += bandSize;
                 }
